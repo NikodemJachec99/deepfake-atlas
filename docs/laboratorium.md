@@ -64,6 +64,35 @@ Na danych organizatora (odczyt z bazy):
 | nask/1 do nask/2, kampania A | 2 grupy: treść i obrazy | ta sama kampania → ten sam operator |
 | backup/p3 do backup/p7, operator A | nie znaleziono wśród pojedynczych grup i par (21 scenariuszy) | relacja się utrzymuje |
 
+## Scenariusz pokazu laboratorium (#52)
+
+**Dane i wersja.** Obie paczki organizatora zaimportowane od nowa 2026-11-21 (import 16:26 UTC), model `fs-5`, kod `main` po #63. Identyfikatory krawędzi zmieniają się przy każdym imporcie, więc krawędzie wskazujemy po sprawach. Aktualne id: `GET /api/ads/{id}/edges` dla reklamy ze sprawy 2.
+
+**Czas.** Ok. 40 sekund na oba kroki.
+
+| Krok | Co robimy | Oczekiwane | Zaobserwowane 2026-11-21 |
+|---|---|---|---|
+| 1 | Investigation, reklama sprawy 2 (`acrosscommunities.live`), krawędź do sprawy 1, "Laboratorium dowodów" | lista dowodów z polami wyboru, napis "Symulacja bez zapisu" | tak; krawędź "ta sama kampania", 78,5 bitu, 43 dowody |
+| 2 | "Sprawdź najsłabszy punkt" | najmniejszy zestaw ma 2 grupy: treść strony i kreacja | tak: "2 grupy śladów, 45 scenariuszy, przeszukano cały zakres" |
+| 3 | rozwinąć "Scenariusz 1", "Otwórz w ręcznej symulacji" | ta sama kampania → ten sam operator; zostają ślady silnika i trackingu | tak; powód: "za mało zgodnej opowieści (0 bitów z wymaganych 4)" |
+| 4 | dla kontrastu: odznaczyć tylko treść strony | relacja zostaje ("ta sama kampania"), bo obrazy nadal potwierdzają opowieść | API: 68,7 bitu, "ta sama kampania", krawędź nadal spina grupę |
+| 5 | krawędź operatora B: drugi HAR sprawy 2 (`healthlinkq.pro`) do sprawy p5, "Sprawdź najsłabszy punkt" | 1 grupa wystarcza: host zasobów albo ślady silnika | tak, 2 rozwiązania po 1 grupie; bez hosta "podobna koncepcja", a grupa rozpadłaby się w tym miejscu (brak innej ścieżki) |
+| 6 | "Przywróć wszystkie dowody", pasek stanu | nic się nie zmieniło | pasek: 28 reklam, 4 kampanie, 3 operatorów; w bazie 0 decyzji, 0 wpisów audytu, `updated_at` krawędzi sprzed pokazu |
+
+**Co mówimy.** "System sam wskazuje, na czym trzyma się hipoteza. Kampania A ma zapas: trzeba stracić i treść, i obrazy, żeby zostało tylko wspólne zaplecze. Operator B trzyma się na jednym hoście zasobów, więc zanim ktoś na nim oprze decyzję, warto zdobyć drugi ślad." Nie mówimy "odporna w X procentach", "dowód tożsamości" ani "grupa się rozpadnie": symulacja liczy jedną parę, a wpływ na grupę tylko jako brak innej ścieżki.
+
+**Ścieżka alternatywna.** Dla kampanii A krawędź nadal spina grupę po każdym pojedynczym wyłączeniu. Dla operatora B obie reklamy nie mają innej ścieżki w grafie, co pokazuje `group_impact.operator.pair_still_connected: false`.
+
+**Plan awaryjny.** Gdy interfejs nie działa:
+
+```bash
+curl -s localhost:8000/api/ads/<id reklamy sprawy 2>/edges          # id krawędzi do sprawy 1
+curl -s -X POST localhost:8000/api/edges/<id>/weakest-link -H "Content-Type: application/json" -d '{}'
+curl -s -X POST localhost:8000/api/edges/<id>/simulate -H "Content-Type: application/json" -d '{"exclude":[<excluded_evidence z wyniku>]}'
+```
+
+**Ograniczenia.** Symulacja korzysta z dowodów zapisanych przy krawędzi i rzadkości z chwili importu. Grupy śladów to reguły metodyki, nie wyuczony model. Przy krawędzi policzonej starszym modelem odpowiedź ostrzega o różnicy.
+
 ## Relacja do prezentacji i demo
 
 Główne demo z [prezentacja.md](prezentacja.md) (#15) zostaje bez zmian: nowa sprawa dołącza do znanego operatora. Laboratorium wchodzi jako dodatek, gdy panel z #49 będzie w `main`: na krawędzi operatora B wyłączamy host zasobów i pokazujemy, że system sam mówi, które połączenie jest kruche. Scenariusz z czasami i planem awaryjnym przygotowuje #52.

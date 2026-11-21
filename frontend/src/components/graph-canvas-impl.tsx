@@ -224,8 +224,20 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
       instance.resize();
       instance.scheduleRefresh();
     });
-    observer.observe(container.current);
+    const surface = container.current;
+    function rotate(event: WheelEvent) {
+      if (event.ctrlKey || event.metaKey || !event.deltaY) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? surface.clientHeight : 1;
+      const delta = Math.max(-240, Math.min(240, event.deltaY * unit));
+      const camera = instance.getCamera();
+      camera.setState({ angle: camera.getState().angle + delta * Math.PI / 1500 });
+    }
+    surface.addEventListener("wheel", rotate, { capture: true, passive: false });
+    observer.observe(surface);
     return () => {
+      surface.removeEventListener("wheel", rotate, true);
       observer.disconnect();
       instance.kill();
       sigma.current = null;
@@ -364,7 +376,7 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
 
   return (
     <div className="relative h-full min-h-0 w-full min-w-0 overflow-hidden bg-bg">
-      <div ref={container} tabIndex={0} role="region" aria-label="Graf powiązań. Przeciągnij tło lub użyj strzałek." className="absolute inset-0 cursor-grab active:cursor-grabbing" onKeyDown={event => {
+      <div ref={container} tabIndex={0} role="region" aria-label="Graf powiązań. Przeciągnij tło lub użyj strzałek. Kółko obraca graf." className="absolute inset-0 cursor-grab active:cursor-grabbing" onKeyDown={event => {
         const direction = directions.find(item => item.key === event.key);
         if (direction) { event.preventDefault(); pan(direction.dx, direction.dy); }
       }} />
@@ -444,7 +456,7 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
           </>
         ) : (
           <span>
-            {nodes.length} węzłów · {edges.filter((e) => !e.hidden).length} z {edges.length} krawędzi · krawędź otwiera dowody, węzeł kartę reklamy
+            {nodes.length} węzłów · {edges.filter((e) => !e.hidden).length} z {edges.length} krawędzi · kółko obraca graf · krawędź otwiera dowody, węzeł kartę reklamy
           </span>
         )}
       </div>

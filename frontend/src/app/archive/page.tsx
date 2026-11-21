@@ -26,9 +26,9 @@ export default function Archive() {
     next.set("page", String(number));
     navigate(next);
   }
-  return <main className="flex flex-col gap-4 p-4">
-    <h1 className="text-lg">Archiwum reklam</h1>
-    <form key={query} onReset={() => { if (query) router.push("/archive"); }} className="flex flex-wrap items-end gap-2" onSubmit={event => {
+  return <main className="atlas-page">
+    <h1 className="atlas-title">Archiwum reklam</h1>
+    <form key={query} onReset={() => { if (query) router.push("/archive"); }} className="atlas-filters" onSubmit={event => {
       event.preventDefault();
       const form = new FormData(event.currentTarget);
       const next = new URLSearchParams();
@@ -38,18 +38,18 @@ export default function Archive() {
       }
       navigate(next);
     }}>
-      {filters.map(([key, label]) => <label key={key} className="flex flex-col text-muted">
-        {label}{key === "source" ? <select name={key} defaultValue={params.get(key) ?? ""} className="border border-line bg-panel p-1">
+      {filters.map(([key, label]) => <label key={key} className="grid gap-1 text-sm font-medium text-muted">
+        {label}{key === "source" ? <select name={key} defaultValue={params.get(key) ?? ""} className="rounded-md border border-line-strong bg-raised px-2 py-2">
           <option value="">Wszystkie</option>{Object.entries(SOURCE_LABELS).map(([value, name]) => <option key={value} value={value}>{name}</option>)}
-        </select> : <input name={key} defaultValue={params.get(key) ?? ""} className="w-40 border border-line bg-panel p-1 text-fg"
+        </select> : <input name={key} defaultValue={params.get(key) ?? ""} className="w-40 rounded-md border border-line-strong bg-raised px-2 py-2 text-fg"
           type={key === "campaign" || key === "operator" ? "number" : "text"} min="1" />}
       </label>)}
-      <button className="border border-line p-1">Zastosuj filtry</button>
+      <button className="rounded-md bg-accent px-3 py-2 font-medium text-white">Zastosuj filtry</button>
       <button type="reset" className="p-1 text-accent">Wyczyść</button>
     </form>
     {data.loading ? <Loading /> : data.error ? <ErrorBox message={data.error} onRetry={data.reload} /> : data.data &&
       <><p>Wyniki: {data.data.count}</p>
-      {data.data.results.length ? <div className="overflow-x-auto"><table className="dense"><thead><tr>
+      {data.data.results.length ? <div className="atlas-table"><table className="dense"><thead><tr>
         <th>Reklama</th><th>Źródło</th><th>Sprawa</th><th>Kampania</th><th>Operator</th>
       </tr></thead><tbody>{data.data.results.map(ad => <tr key={ad.id}>
         <td><Link className="text-accent" href={`/ads/${ad.id}`}>#{ad.id} · {adTitle(ad)}</Link></td>

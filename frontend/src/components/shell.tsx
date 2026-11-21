@@ -41,18 +41,18 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }, []);
   return <div className="flex h-dvh flex-col bg-bg text-fg">
     <div className="flex min-h-0 flex-1">
-      <nav aria-label="Nawigacja główna" className="flex shrink-0 flex-col gap-1 overflow-auto border-r border-line bg-panel p-1.5 md:p-2">
-        <strong className="hidden px-2 py-3 text-lg tracking-tight md:block">SCAM DNA</strong>
+      <nav aria-label="Nawigacja główna" className="flex shrink-0 flex-col gap-1 overflow-auto border-r border-line atlas-sidebar bg-panel p-1.5 md:p-3">
+        <strong className="hidden px-2 py-3 text-xl tracking-tight md:block">Deepfake Atlas</strong>
         {navigation.map(({ href, Icon }) =>
           <Link key={href} href={href} aria-current={root === href ? "page" : undefined}
-            title={sections[href]} className="flex items-center gap-2 rounded-md px-2 py-2 font-medium hover:bg-hover aria-[current=page]:bg-accent-soft aria-[current=page]:text-accent"><Icon size={16} aria-hidden /><span className="sr-only md:not-sr-only">{sections[href]}</span></Link>)}
+            title={sections[href]} className="flex items-center gap-3 rounded-lg px-2 py-2.5 font-medium hover:bg-hover aria-[current=page]:bg-accent-soft aria-[current=page]:text-accent"><Icon size={16} aria-hidden /><span className="sr-only md:not-sr-only">{sections[href]}</span></Link>)}
       </nav>
       <div className="flex min-w-0 flex-1 flex-col">
         {root !== "/investigation" && <header className="border-b border-line bg-panel/95 px-4 py-2.5 font-semibold backdrop-blur">{sections[root] ?? "SCAM DNA"}{id && " › #" + id}</header>}
         <div className="flex min-h-0 flex-1 flex-col overflow-auto">{children}</div>
       </div>
     </div>
-    <footer aria-label="Stan korpusu" className="flex shrink-0 gap-5 overflow-x-auto whitespace-nowrap border-t border-line bg-panel px-3 py-1 font-mono">
+    <footer aria-label="Stan korpusu" className="flex shrink-0 gap-5 overflow-x-auto whitespace-nowrap text-xs text-muted border-t border-line bg-panel px-3 py-1 font-mono">
       {failed ? "Statystyki korpusu niedostępne" : !stats ? "Pobieranie statystyk…" : <>
         <span>Reklamy {stats.ads}</span><span>Kampanie {stats.campaigns}</span><span>Operatorzy {stats.operators}</span>
         {Object.entries(RELATION_LABELS).map(([key, label]) => <span key={key}>{label} {stats.edges[key as keyof Stats["edges"]] ?? 0}</span>)}

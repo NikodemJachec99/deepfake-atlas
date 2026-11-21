@@ -286,7 +286,7 @@ export function Split({
 
   const fixedStyle = row ? { width: size } : { height: size };
   return (
-    <div className={cx("flex min-h-0 min-w-0 flex-1", row ? "flex-row" : "flex-col")}>
+    <div data-split={id} className={cx("flex min-h-0 min-w-0 flex-1", row ? "flex-row" : "flex-col")}>
       <div className={cx("flex min-h-0 min-w-0", fixed === "first" ? "shrink-0" : "flex-1")} style={fixed === "first" ? fixedStyle : undefined}>
         {children[0]}
       </div>

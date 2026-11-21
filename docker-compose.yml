@@ -59,7 +59,8 @@ services:
 
   backend:
     <<: *backend
-    command: ["sh", "-c", "python manage.py migrate --noinput && uvicorn scamdna.asgi:application --host 0.0.0.0 --port 8000 --reload"]
+    # --reload tylko przy BACKEND_RELOAD=1 w .env (praca nad kodem). Demo działa bez niego: bez restartów w trakcie pokazu.
+    command: ["sh", "-c", "python manage.py migrate --noinput && uvicorn scamdna.asgi:application --host 0.0.0.0 --port 8000 $${BACKEND_RELOAD:+--reload}"]
     ports: ["${BACKEND_PORT:-8000}:8000"]
 
   worker:

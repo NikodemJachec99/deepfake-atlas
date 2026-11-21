@@ -22,6 +22,20 @@ STOPWORDS = frozenset(
     wczoraj jutro rok roku lata lat dzień dnia dni godzin minut razy raz jeden jedna jedno dwa dwie trzy
     cookies polityka prywatności regulamin kontakt strona stronie menu zaloguj szukaj więcej czytaj komentarze
     komentarz odpowiedz odpowiedź udostępnij reklama https http www godz lubię temu minut sekund wczoraj zobacz kliknij tutaj
+    czas czasu szczegóły szczegółów szczegóty ucieka dowiedz dowiedź sprawdź sprawdz zamów teraz działaj skorzystaj
+    kliknij więcej dalej wróć zamknij akceptuję akceptuj zgadzam zgoda polityka
+    """.split()
+) | frozenset(
+    # Strony oszustów po polsku dokładają angielskie wyrazy z szablonów i przycisków. Nie niosą tematu.
+    """
+    have has had having been being were was will would could should shall might must can cannot did does done
+    this that these those there their them they then than what when where which while whom whose with without within
+    from into onto over under about above after again against before below between both down during each further
+    here just more most other only same some such very your yours our ours his her hers its out off once
+    found find finding improve improved improving results result poland polish best better good great new free
+    click read more learn know like make made get got use used using need want help show shown take taken
+    people person time times year years today now also even every many much really still well since because
+    home page site website contact privacy policy terms cookies menu login search share follow comment comments
     """.split()
 )
 

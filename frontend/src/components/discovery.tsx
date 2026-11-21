@@ -39,6 +39,20 @@ export function Discovery() {
   const [ad, setAd] = useState<AdDetail | null>(null);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
+  const evidenceHeading = useRef<HTMLHeadingElement>(null);
+  function focusEvidence() {
+    evidenceHeading.current?.focus({ preventScroll: true });
+    evidenceHeading.current?.scrollIntoView({ block: "start" });
+  }
+  useEffect(() => {
+    if (selected !== null) focusEvidence();
+  }, [selected]);
+
+  function openEvidence(id: number) {
+    if (id === selected) focusEvidence();
+    else setSelected(id);
+  }
+
   const [assessment, setAssessment] = useState("");
   const [batch, setBatch] = useState<Analysis[]>([]);
   const [activeId, setActiveId] = useState("");
@@ -244,7 +258,7 @@ export function Discovery() {
             {edges.map((edge) => (
               <li key={edge.id}>
                 <button
-                  onClick={() => setSelected(edge.id)}
+                  onClick={() => openEvidence(edge.id)}
                   className="flex w-full items-center justify-between gap-3 rounded border border-neutral-700 px-3 py-2 text-left hover:border-sky-500"
                 >
                   <span>
@@ -259,8 +273,11 @@ export function Discovery() {
         </section>
       </div>
 
-      <LiveGraph events={events} onEdge={setSelected} />
-      {selected !== null && <EdgePanel key={selected} edgeId={selected} />}
+      <LiveGraph events={events} onEdge={openEvidence} />
+      {selected !== null && <section aria-labelledby="discovery-evidence">
+        <h2 id="discovery-evidence" ref={evidenceHeading} tabIndex={-1} className="font-semibold">Dowody powiązania #{selected}</h2>
+        <EdgePanel key={selected} edgeId={selected} />
+      </section>}
     </main>
   );
 }

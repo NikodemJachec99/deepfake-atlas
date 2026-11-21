@@ -11,7 +11,7 @@ System łączy pozornie niezależne fałszywe reklamy w kampanie i operatorów n
 - Dwie strony pod jednym adresem w sprawie 61, audyt przechwyceń: [docs/dwie-twarze.md](docs/dwie-twarze.md)
 - Prompt do designu interfejsu: [docs/design-prompt.md](docs/design-prompt.md)
 - Biblioteki, modele, usługi, dane i ich licencje: [docs/licencje.md](docs/licencje.md)
-- Plan roczny, pełny inwentarz danych i modeli: https://claude.ai/artifact/LJNbSpF3byJLrYPdA8haFt
+- Plan rozwoju na rok: [docs/plan-roczny.md](docs/plan-roczny.md)
 
 ## Start
 

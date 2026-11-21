@@ -1,6 +1,6 @@
 # Wymagania wyzwania i zgodność z regulaminem
 
-Źródła: opis wyzwania NASK "Kolekcjoner fejków" (wersja z 21.11.2026, `docs/zrodla/`) i regulamin HackNation obowiązujący od 28.09.2026. Stan na 21.11.2026.
+Źródła: opis wyzwania NASK "Kolekcjoner fejków" (pełna wersja z 21.11.2026: opis, kryteria, walidacja i zajawka "Follow the Fake", [docs/zrodla/opis-zadania.pdf](zrodla/opis-zadania.pdf)) i regulamin HackNation obowiązujący od 28.09.2026. Stan na 21.11.2026.
 
 ## Kryteria oceny (pkt 9 opisu wyzwania)
 
@@ -59,13 +59,23 @@ Organizator przetestuje rozwiązanie na nieudostępnionym zbiorze z nowymi waria
 |---|---|
 | Identyfikowanie podobnych materiałów i wariantów | 6 stron jednej kampanii na 5 domenach połączone |
 | Przypisywanie nowych materiałów do istniejących grup | sprawy z drugiej paczki dołączyły do kampanii i operatora z pierwszej |
-| Niełączenie tego, co nie powinno być połączone | 12 stron na innych zapleczach zostało osobno; kopia treści na innym zapleczu to tylko `similar` |
+| Niełączenie tego, co nie powinno być połączone | 14 stron bez operatora; kopia treści na innym zapleczu i ten sam silnik lejka bez śladu operatora to tylko `similar`; każda krawędź między sprawami przejrzana ręcznie ([dane-organizatora.md](dane-organizatora.md)) |
 | Przydatność i różnorodność cech | 7 rodzin |
 | Odporność na duplikaty, niekompletne dane, różne formaty | duplikat oznaczony; obsługa zapisanych stron, HAR, `page-capture`, archiwum NASK, zrzutów, wideo |
 | Interpretowalność | dowody przy każdej krawędzi |
 | Kompletność od wczytania do wyniku | `import_bundle` albo upload w interfejsie |
 
 Nie mamy zbioru z oznaczonymi kampaniami, więc **nie podajemy liczbowej skuteczności**. Wyniki z dwóch paczek sprawdziliśmy ręcznie, przeglądając dowody.
+
+## Czego organizator oczekuje poza demonstratorem (pkt 10)
+
+| Oczekiwanie | Stan | Gdzie |
+|---|---|---|
+| Wzbogacony i uporządkowany zbiór danych | częściowo | korpus z markerami, krawędziami i dowodami w Postgresie, dostępny przez API, Neo4j i OpenSearch; brak eksportu do pliku |
+| Opis zidentyfikowanych wzorców kampanii | jest | [dane-organizatora.md](dane-organizatora.md): silnik lejka z nagrywaniem sesji, cloaking, ślad językowy, pokrycie listą CERT |
+| Metodyka łączenia cech | jest | [metodyka.md](metodyka.md) |
+| Wskazanie użytecznych źródeł metadanych | jest | [metodyka.md](metodyka.md) pkt 10; które ślady rozstrzygały na danych organizatora: [dane-organizatora.md](dane-organizatora.md) |
+| Rozpoznawanie nowych wariantów znanych kampanii | jest | ocena nowego materiału: `known_campaign`, `known_operator` |
 
 ## Zasady korzystania z danych (pkt 8)
 

@@ -10,9 +10,10 @@ from pathlib import Path
 from asgiref.sync import sync_to_async
 from django.core.management import call_command
 from django.db.models import Case, Count, IntegerField, Q, Value, When
-from django.http import Http404, HttpResponse, JsonResponse, StreamingHttpResponse
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, parser_classes, throttle_classes
@@ -24,11 +25,11 @@ from ads.models import Ad, Analysis, Source
 from collectors import bundle
 from evidence import store
 from evidence.kinds import BAND_KINDS, FAMILIES, KINDS
-from evidence.models import AdMarker, Artifact
+from evidence.models import AdMarker, Artifact, AuditLog
 from extractors import video
 from extractors.url import redact_url
 from people.display import display_value, person_names
-from similarity import assist_view, decisions, observations, precedents, simulation, stix, suggestions, timeline, weakest
+from similarity import assist_view, decisions, observations, package, precedents, simulation, stix, suggestions, timeline, weakest
 from similarity.models import Alert, Campaign, CampaignMembership, Edge, EdgeDecision, Operator, OperatorMembership
 from similarity.service import assign_campaign, assign_operator, recluster
 from workflows import runner
@@ -62,12 +63,25 @@ def analysis_create(request):
     return Response(s.AnalysisSerializer(analysis).data, status=status.HTTP_201_CREATED)
 
 
-def _safe_extract(upload, target: Path) -> None:
-    """Rozpakowuje archiwum tylko do katalogu docelowego i z limitem rozmiaru."""
+class _Budget:
+    """Wspólny limit bajtów i plików rozpakowania na całe żądanie, żeby wiele archiwów nie omijało limitu jednego."""
+
+    def __init__(self) -> None:
+        self.bytes, self.files = MAX_ZIP_BYTES, MAX_ZIP_FILES
+
+    def take(self, files: int, size: int) -> None:
+        if files > self.files or size > self.bytes:
+            raise ValueError("Archiwum jest za duże")
+        self.files -= files
+        self.bytes -= size
+
+
+def _safe_extract(upload, target: Path, budget: _Budget | None = None) -> None:
+    """Rozpakowuje archiwum tylko do katalogu docelowego i z limitem rozmiaru (wspólnym dla żądania)."""
+    budget = budget or _Budget()
     with zipfile.ZipFile(upload) as archive:
         members = archive.infolist()
-        if len(members) > MAX_ZIP_FILES or sum(m.file_size for m in members) > MAX_ZIP_BYTES:
-            raise ValueError("Archiwum jest za duże")
+        budget.take(len(members), sum(m.file_size for m in members))
         root = target.resolve()
         for member in members:
             destination = (target / member.filename).resolve()
@@ -96,14 +110,17 @@ def analysis_upload(request):
         case_root = Path(tmp) / "sprawa"
         case_root.mkdir()
         try:
+            budget = _Budget()
             for upload in files:
                 filename = Path(upload.name or "").name
                 if filename in ("", ".", "..") or filename.startswith("."):
                     raise ValueError("Niedozwolona nazwa pliku")
                 if filename.lower().endswith(".zip"):
-                    _safe_extract(upload, case_root)
+                    _safe_extract(upload, case_root, budget)
                 else:
-                    (case_root / filename).write_bytes(upload.read())
+                    data = upload.read()
+                    budget.take(1, len(data))
+                    (case_root / filename).write_bytes(data)
         except (ValueError, zipfile.BadZipFile) as exc:
             return Response({"files": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         directories = bundle.case_dirs(case_root)
@@ -345,6 +362,38 @@ def export_stix(request):
     return response
 
 
+def _package_response(request, kind: str, model, pk: int):
+    group = get_object_or_404(model, pk=pk)
+    raw = request.query_params.get("surowe", "1")
+    if raw not in ("0", "1"):
+        return Response({"detail": "surowe musi być 0 albo 1"}, status=400)
+    try:
+        built = package.build(kind, group, include_raw=raw == "1")
+    except package.GroupNotFound:
+        return Response({"detail": f"{group.key} nie ma żadnej reklamy, więc nie ma z czego zrobić pakietu"}, status=404)
+    AuditLog.objects.create(
+        action="package", object_type=kind, object_id=group.key,
+        payload={"file": built.filename, "files": built.files, "bytes": built.size, "skipped": built.skipped, "raw": raw == "1", "sha256": built.sha256},
+    )
+    response = FileResponse(built.file, as_attachment=True, filename=built.filename, content_type="application/zip")
+    response["X-Package-SHA256"] = built.sha256
+    return response
+
+
+@extend_schema(responses={(200, "application/zip"): OpenApiTypes.BINARY})
+@api_view(["GET"])
+def operator_package(request, pk):
+    """Pakiet dowodowy operatora jako ZIP: raport do druku, artefakty z manifestem SHA-256, STIX, krawędzie, skrypt weryfikacji. `?surowe=0` pomija HAR i HTML."""
+    return _package_response(request, "operator", Operator, pk)
+
+
+@extend_schema(responses={(200, "application/zip"): OpenApiTypes.BINARY})
+@api_view(["GET"])
+def campaign_package(request, pk):
+    """Pakiet dowodowy kampanii, ta sama zawartość co dla operatora. `?surowe=0` pomija HAR i HTML."""
+    return _package_response(request, "campaign", Campaign, pk)
+
+
 def _group_detail(group, serializer, relations: list[str]) -> dict:
     """Wspólny kształt karty kampanii i operatora: reklamy, krawędzie i markery, które grupę spinają."""
     ad_ids = list(group.memberships.values_list("ad_id", flat=True))
@@ -493,10 +542,13 @@ def graph(request):
     limit = int_param(params, "limit", GRAPH_DEFAULT_LIMIT, minimum=1, maximum=GRAPH_MAX_LIMIT)
     edges = Edge.objects.all()
     focus: set[int] = set()
+    group_view = False
     if campaign is not None:
         focus = set(get_object_or_404(Campaign, pk=campaign).memberships.values_list("ad_id", flat=True))
+        group_view = True
     elif operator is not None:
         focus = set(get_object_or_404(Operator, pk=operator).memberships.values_list("ad_id", flat=True))
+        group_view = True
     elif ad is not None:
         get_object_or_404(Ad, pk=ad)
         focus = {ad}
@@ -531,6 +583,7 @@ def graph(request):
                     "operator": n.operator_membership.operator.key if hasattr(n, "operator_membership") else None,
                     "case": n.labels.get("case"),
                     "listed": "cert_pl" in n.labels,
+                    **({"member": n.pk in focus} if group_view else {}),
                 }
                 for n in nodes
             ],

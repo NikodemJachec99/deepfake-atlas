@@ -39,14 +39,37 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | POST | `/api/hunt/run` | `{"operator":<id>,"days":30,"max_queries":12,"max_crawl":20,"crawl":true}` (wszystko opcjonalne) | `HuntRun` (202), przebieg w tle (`ANALYSIS_RUNNER`); `409` z danymi trwającego przebiegu, gdy poprzedni (do 2 godzin) jeszcze trwa; `400` dla złych wartości; zapis chroniony jak inne |
 | GET | `/api/hunt/runs`, `/api/hunt/runs/{id}` | | strona `HuntRun` albo jeden przebieg: status i liczby |
 | POST | `/api/hunt/{id}/analyze` | | `Analysis` (201): domena kandydata idzie do pełnego potoku jak `POST /api/analyses`; `409` z istniejącą analizą, gdy już zgłoszona |
-| GET | `/api/graph` | `?campaign=` \| `?operator=` \| `?ad=`, `?relation=a,b`, `?source=capture` (tylko krawędzie między materiałami z tego źródła), `?limit=` (1 do 20000, domyślnie 2000) | `Graph`: `{nodes, edges, truncated, limit, total, total_by_relation, returned_by_relation}` dla Sigma.js. Ucinanie do `limit` jest jawne i ma kolejność ważności: najpierw `same_operator`, potem `similar`, potem `same_campaign`; powtórne przechwycenia (`duplicate`) na końcu; w obrębie relacji najpierw pary materiałów ze spraw (`capture`), potem malejąco po pewności. `total` to liczba krawędzi po filtrach przed ucięciem, `truncated` mówi, czy `total` jest większe niż `edges.length`. Nieznana kampania, operator albo reklama: `404` |
+| GET | `/api/graph` | `?campaign=` \| `?operator=` \| `?ad=`, `?relation=a,b`, `?source=capture` (tylko krawędzie między materiałami z tego źródła), `?limit=` (1 do 20000, domyślnie 2000) | `Graph`: `{nodes, edges, truncated, limit, total, total_by_relation, returned_by_relation}` dla Sigma.js. Ucinanie do `limit` jest jawne i ma kolejność ważności: najpierw `same_operator`, potem `similar`, potem `same_campaign`; powtórne przechwycenia (`duplicate`) na końcu; w obrębie relacji najpierw pary materiałów ze spraw (`capture`), potem malejąco po pewności. `total` to liczba krawędzi po filtrach przed ucięciem, `truncated` mówi, czy `total` jest większe niż `edges.length`. Nieznana kampania, operator albo reklama: `404`. Przy `?campaign=` i `?operator=` każdy węzeł ma `member: bool`: czy reklama należy do tej grupy (`false` to sąsiad spoza grupy, dołączony krawędzią). Przy `?ad=` i bez filtra pola nie ma |
 | GET | `/api/kinds` | | słownik 7 rodzin i typów markerów |
 | GET | `/api/stats` | | liczby do paska stanu, w tym `alerts_unseen` (liczba nieprzejrzanych alertów) |
 | GET | `/api/export/stix` | `?operator=ID` \| `?campaign=ID` (opcjonalnie) | bundle STIX 2.1 (`application/stix+json`): operator jako `intrusion-set`, kampania jako `campaign` z `attributed-to`, wskaźniki (`indicator`) dla domen, adresów IP, numerów certyfikatów i hostów zasobów z relacją `indicates`; identyfikatory trackerów i paneli lejka w `x_scamdna_identifiers`. Tylko grupy z materiałów zgłoszonych jako podejrzane (przechwycenia, zgłoszenia ręczne), bez reklam z bibliotek, osób i tokenów. Identyfikatory deterministyczne |
+| GET | `/api/operators/{id}/package` | `?surowe=0` (opcjonalnie) | pakiet dowodowy operatora jako ZIP (`application/zip`, `Content-Disposition: attachment; filename="scamdna-pakiet-O-0001-RRRRMMDD.zip"`), zawartość w sekcji "Pakiet dowodowy" niżej; grupa bez reklam albo nieznana `404`, złe `surowe` `400`; każde pobranie trafia do dziennika audytu (`action=package`) |
+| GET | `/api/campaigns/{id}/package` | `?surowe=0` (opcjonalnie) | to samo dla kampanii (relacje `same_campaign`) |
 | GET | `/api/export` | `?source=capture` (opcjonalnie) | ZIP z wzbogaconym korpusem: `korpus/reklamy.jsonl` (reklamy z markerami), `korpus/krawedzie.jsonl` (krawędzie z dowodami), `korpus/grupy.csv`, `korpus/opis.json`; tokeny tylko jako skróty; nieznane źródło `400` |
 | GET | `/api/artifacts/{sha256}` | | surowy dowód jako załącznik (nigdy się nie renderuje) |
 | GET | `/api/artifacts/{sha256}/image` | | zrzut reklamy, zrzut strony z crawlera albo klatka poglądowa nagrania jako obraz (tylko artefakty obrazów) |
 | GET | `/api/artifacts/{sha256}/video` | nagłówek `Range` (opcjonalny) | nagranie do odtworzenia (MP4, MOV, WebM po sygnaturze bajtów), `206` dla zakresu, `416` poza plikiem |
+
+## Pakiet dowodowy
+
+`GET /api/operators/{id}/package` i `GET /api/campaigns/{id}/package` zwracają jeden ZIP do przekazania prokuraturze albo innemu CERT. Wszystko leży w jednym katalogu o nazwie pliku (bez `.zip`):
+
+| Plik | Zawartość |
+|---|---|
+| `raport.html` | samodzielny raport do druku (A4), bez zewnętrznych zasobów, z CSP `default-src 'none'`; obrazy osadzone jako miniatury JPEG. Streszczenie (reklamy, kampanie, okres obserwacji, domeny z datą rejestracji i wpisem CERT, reklamodawcy, osoby i marki), najmocniejsze dowody z wkładem w bitach i pewnością pary (agregat po całej grupie oraz 5 najmocniejszych par z dowodami), najsłabszy punkt (test najsłabszego ogniwa dla 3 najmocniejszych par i 2 najsłabszych powiązań grupy), oś czasu (do 80 zdarzeń), lista reklam, zrzuty (do 40), łańcuch dowodu i instrukcja weryfikacji, metoda z wersją modelu, ograniczenia. Treść stron oszustów nigdy nie trafia do raportu |
+| `dowody/obrazy/{sha256}.{png,jpg,webp,gif}` | kreacje reklam, klatki nagrań, zrzuty stron (artefakty `creative_image`, `video_frame`, `page_screenshot`), bajt w bajt |
+| `dowody/wideo/{sha256}.{mp4,mov,webm}` | nagrania reklam (`creative_video`) |
+| `dowody/surowe/{sha256}.har`, `{sha256}.html.txt`, `OSTRZEZENIE.txt` | HAR i HTML stron oszustów wyłącznie jako pliki, bajt w bajt, niezredagowane (mogą zawierać tokeny z przechwycenia). HTML ma końcówkę `.html.txt`, żeby dwuklik nie otworzył go w przeglądarce. `?surowe=0` pomija cały katalog |
+| `manifest.json` | `format`, `wygenerowano`, `grupa` (`typ`, `klucz`, `id`, `reklam`), `model`, `pliki[]` (`sciezka`, `sha256`, `rozmiar`, `rodzaj`, `typ_mime`, `zrodlo` po `redact_url`, `czas_pozyskania` = `Artifact.created_at` w UTC, `reklamy[]` z `id` i `external_id`), `pliki_pakietu[]` (sumy raportu, STIX, krawędzi, osi czasu i skryptu), `pominiete[]` (`sha256`, `rodzaj`, `rozmiar`, `powod`), `reklamy[]` (`id`, `external_id`, `zrodlo`, `adres` po redakcji, `pierwsza_obserwacja`, `rodzaj_czasu`) |
+| `SHA256SUMS` | sumy wszystkich plików pakietu poza sobą, format `sha256sum -c` (`suma`, dwie spacje, ścieżka) |
+| `weryfikuj.py` | sprawdzenie `SHA256SUMS` i `manifest.json` samym Pythonem (stdlib, 3.8+): `python weryfikuj.py`; kod wyjścia 0 zgodne, 1 niezgodności (zła suma, brak pliku, plik spoza listy, ścieżka poza pakietem), 2 brak pliku z sumami albo manifestu |
+| `stix.json` | `GET /api/export/stix` zawężony do tej grupy |
+| `krawedzie.jsonl` | krawędzie grupy (kształt jak w `export_corpus`, plus `raw_bits`, `artifact_a`, `artifact_b` i ścieżki plików w `dowody/` przy każdym dowodzie), także odrzucone (`verdict: rejected`), które nie liczą się w raporcie |
+| `os-czasu.json` | pełna oś obserwacji (`Timeline`) |
+
+Limity: artefakt większy niż 50 MB, ponad łączny limit 1 GiB, brakujący w magazynie albo z sumą niezgodną z zapisaną (uszkodzony) nie wchodzi do pakietu i ma wpis w `pominiete` z powodem. Surowe pliki nie są redagowane, bo redakcja zmieniłaby sumę i zerwała łańcuch dowodu; wszystko, co generujemy (raport, manifest, krawędzie, STIX, oś czasu), ma adresy po `redact_url`. Pakiet nie jest podpisany elektronicznie: sumy w pakiecie potwierdzają zgodność zawartości z chwilą utworzenia pakietu, nie autentyczność oryginału. Niezmienność od tej chwili potwierdza dopiero skrót SHA-256 całego ZIP, przekazany osobno: odpowiedź ma nagłówek `X-Package-SHA256` (to samo jest w `AuditLog`). Odbiorca porównuje go ze skrótem pobranego pliku (`sha256sum plik.zip`).
+
+Artefakty z dowodów na krawędziach grupy (np. favicony, rodzaj `favicon`) wchodzą do pakietu w `dowody/obrazy/` tak samo jak zrzuty. `weryfikuj.py` sprawdza też `krawedzie.jsonl`: dowód wskazujący artefakt, którego nie ma w pakiecie ani w `pominiete` z powodem, to błąd.
 
 ## Błędy
 
@@ -181,11 +204,13 @@ Zdarzenie `crawl/info` niesie łańcuch przekierowań (`payload.chain`, `via`: `
 
 | Relacja | Znaczenie | Warunek |
 |---|---|---|
-| `same_campaign` | to samo źródło i ta sama opowieść | pewność co najmniej 0,9, marker rozstrzygający albo dwa niezależne potwierdzenia, zgodna narracja |
+| `same_campaign` | to samo źródło i ta sama opowieść | wynik modelu co najmniej 0,9, marker rozstrzygający albo dwa niezależne potwierdzenia, zgodna narracja |
 | `same_operator` | to samo zaplecze, inna opowieść | jak wyżej, bez zgodnej narracji |
 | `similar` | podobna koncepcja | zgodna narracja, kreacja albo osoby, albo ten sam silnik lejka bez śladu operatora; brak dowodu wspólnego zaplecza |
 
 Na listach grup `sources` to liczba reklam według źródła (`capture` to materiały spraw, `microsoft` i inne to biblioteki reklam), `cases` to liczba różnych spraw, a `cert_pl` to liczba reklam z domeną na Liście Ostrzeżeń CERT Polska. `?source=capture` zostawia grupy, w których jest choć jedna reklama z materiałów spraw. Rozmiar i skład grupy są zawsze pełne, a kolejność to dalej od największej.
+
+`probability` (w tym API też jako "pewność") to wynik modelu `1/(1+2^-(bity+szansa wstępna))`, niekalibrowany: nie jest prawdopodobieństwem w sensie częstości. Kalibracja jest liczona (`GET /api/weights`, pole `calibration`), ale nie jest stosowana przy ocenie par. Kopia kreacji (`creative_phash`) nie jest markerem rozstrzygającym, więc sama z podobnym tekstem daje najwyżej `similar`.
 
 Kampania (`K-0033`) to reklamy spięte krawędziami `same_campaign`. Operator (`O-0001`) to reklamy spięte `same_campaign` albo `same_operator`, więc jeden operator ma zwykle kilka kampanii.
 
@@ -387,7 +412,7 @@ Pełny słownik zwraca `/api/kinds`. Najważniejsze:
 | Pole | Znaczenie |
 |---|---|
 | `active` | `expert` albo `learned`: wagi, którymi silnik liczy teraz (ustawienie `MODEL_WEIGHTS`) |
-| `model_version` | `fs-5` przy `expert`, `fs-6` przy `learned` |
+| `model_version` | `fs-5.1` przy `expert`, `fs-6` przy `learned` |
 | `learned_available` | czy jest czytelny plik z wagami uczonymi |
 | `learned_error` | `null` albo powód: plik nieczytelny, albo `learned` bez pliku |
 | `meta` | `null` albo metadane uczenia: `ads`, `pairs`, `iterations`, `converged`, `created`, `stable`, `unstable_kinds`, `classes` (osobno `source` i `story`: `match_share`, `expected_matches`) |

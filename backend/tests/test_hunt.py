@@ -255,11 +255,13 @@ def test_cert_pl_list_is_a_second_source():
     WarningDomain.objects.create(domain="wiosenna-kuracja8.example", added_at=now - timedelta(days=2))
     WarningDomain.objects.create(domain="wiosenna-dawna.example", added_at=now - timedelta(days=90))
     WarningDomain.objects.create(domain="wiosenna-zdjeta.example", added_at=now - timedelta(days=2), removed_at=now)
+    WarningDomain.objects.create(domain="wiosenna-wrocila.example", added_at=now - timedelta(days=1), removed_at=now - timedelta(days=5))
     fakes.CT["wiosenna"] = [cert("wiosenna-kuracja8.example")]
     run = run_hunt(operator, crawl=False)
-    assert run.stats["cert_pl_hits"] == 1
-    candidate = HuntCandidate.objects.get()
-    assert candidate.domain == "wiosenna-kuracja8.example" and candidate.sources == ["cert_pl", "crtsh"]
+    assert run.stats["cert_pl_hits"] == 2
+    domains = {c.domain for c in HuntCandidate.objects.all()}
+    assert domains == {"wiosenna-kuracja8.example", "wiosenna-wrocila.example"}
+    assert HuntCandidate.objects.get(domain="wiosenna-kuracja8.example").sources == ["cert_pl", "crtsh"]
 
 
 def test_rerun_does_not_duplicate_candidates_or_alerts():
@@ -381,3 +383,23 @@ def test_hunt_writes_need_the_api_key(client):
     assert client.post("/api/hunt/run", {}, content_type="application/json").status_code == 401
     assert client.post("/api/hunt/1/analyze").status_code == 401
     assert client.get("/api/hunt").status_code == 200
+
+
+def test_weak_and_rejected_candidates_are_rechecked_after_seven_days():
+    operator = make_operator()
+    fakes.CT["wiosenna"] = [cert("wiosenna-kuracja9.example")]
+    fakes.page("https://wiosenna-kuracja9.example/", OTHER)
+    run_hunt(operator)
+    candidate = HuntCandidate.objects.get()
+    assert candidate.status == HuntCandidate.Status.REJECTED and candidate.attempts == 1
+
+    fakes.FETCH_CALLS.clear()
+    HuntCandidate.objects.update(checked_at=timezone.now() - timedelta(days=6))
+    run_hunt(operator)
+    assert fakes.FETCH_CALLS == []  # za wcześnie
+
+    HuntCandidate.objects.update(checked_at=timezone.now() - timedelta(days=8))
+    kit_page("wiosenna-kuracja9.example")  # strona się zmieniła
+    run_hunt(operator)
+    candidate.refresh_from_db()
+    assert candidate.status == HuntCandidate.Status.CONFIRMED and candidate.attempts == 2

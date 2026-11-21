@@ -67,7 +67,7 @@ def parse_actions(lines: Iterable[str]) -> Iterator[tuple[str, WarningDomain]]:
         when = _dt(row["ActionTime"])
         domain = WarningDomain(domain=row["DomainAddress"].lower(), register_position=row.get("RegisterPositionId"))
         if row["ActionType"] == "block":
-            domain.added_at = when
+            domain.added_at, domain.removed_at = when, None  # ponowna blokada kasuje stare wykreślenie
             yield "block", domain
         else:
             domain.removed_at = when
@@ -83,6 +83,6 @@ def sync_history(year: int, client: httpx.Client | None = None) -> dict:
         response.raise_for_status()
         for action, row in parse_actions(response.iter_lines()):
             (blocks if action == "block" else unblocks).append(row)
-    added = store(blocks, ["register_position", "added_at"])
+    added = store(blocks, ["register_position", "added_at", "removed_at"])
     removed = store(unblocks, ["removed_at"])
     return {"year": year, "blocked": added, "unblocked": removed}

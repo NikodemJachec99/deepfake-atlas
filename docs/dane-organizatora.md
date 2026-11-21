@@ -160,6 +160,22 @@ Wagi są eksperckie, więc sprawdziliśmy, jak bardzo wynik od nich zależy (202
 - **Ruszają się 4 pary graniczne, zawsze te same.** Drugi HAR sprawy 2 z p5 (operator B na jednym hoście zasobów), dwie strony sprawy 61 (zrzut reklamy i nazwa reklamodawcy), sprawa 48 ze sprawą 61 i p11 z p8 (ta sama treść albo ten sam silnik na innym zapleczu). To dokładnie pary, które laboratorium dowodów i przegląd krawędzi opisują jako kruche albo celowo tylko "podobne".
 - **Słabsze wagi niczego nie sklejają, mocniejsze sklejają tylko pary graniczne.** Przy wagach ×1,5 albo progu 3 bitów kopie treści stałyby się kampaniami, dlatego zostawiamy próg 4 bity i obecne wagi.
 
+### Kopia kreacji przestała być markerem rozstrzygającym (22.11.2026)
+
+`creative_phash` ma `decisive=False`: sama kopia zrzutu reklamy plus podobny tekst to pokrewieństwo treści, więc najwyżej `similar`. Uzasadnienie w [metodyka.md](metodyka.md), sekcja 6. Kontakty zostają rozstrzygające.
+
+Pomiar na stosie 8010, tylko odczyt: zapisane dowody wszystkich 3121 krawędzi przeliczone `fusion.score_pair` z `decisive` True (stan zapisany, zgodny z bazą w 3121 z 3121 krawędzi) i False.
+
+| Zbiór | Krawędzi | Zmienione relacje | Grupy operatorów przed i po | Grupy kampanii przed i po |
+|---|---|---|---|---|
+| wszystkie | 3121 | 1 (`same_campaign` na `similar`) | 34 i 34, wszystkie bez zmian | 33 i 33, wszystkie bez zmian |
+| materiały spraw (`capture`) | 67 | 1 (ta sama) | 3 i 3, bez zmian | 4 i 4, bez zmian |
+| pozostałe źródła | 3054 | 0 | 31 i 31 | 29 i 29 |
+
+Relacje w materiałach spraw przed: 20 `same_campaign`, 13 `same_operator`, 34 `similar`. Po: 19, 13, 35. Rdzeń operatora A (8 reklam z 8 w jednej grupie operatora) zostaje w całości, żadna grupa się nie rozpada.
+
+Jedyna zmieniona krawędź to para wewnątrz sprawy nask/61 (reklamy 11 i 13, oferta i neutralna strona "portal analiz"). Łączyły je wyłącznie zrzut reklamy dołączony do każdej strony sprawy (`creative_phash`, 12 bitów), nazwa reklamodawcy z tego samego zrzutu (`page_name`, 8 bitów) i embedding obrazu, bez żadnego śladu zaplecza. Po zmianie to `similar`. To trafiona pułapka: kopia zrzutu i nazwa z jego OCR to ta sama treść, nie wspólne zaplecze. Skład grup się nie zmienia, bo reklamy zostają w jednej kampanii przez krawędzie z reklamą 12 (strona sprawy 61 z kontem Google Ads). Wersja modelu: `fs-5.1`.
+
 ### Wagi uczone (EM) zamiast eksperckich
 
 Zadanie #207, 2026-11-21, `python manage.py estimate_weights` (tylko odczyt bazy, wynik w `data/models/wagi.json`, poza gitem). EM Fellegi-Sunter bez etykiet na parach kandydatów, tych samych, które ocenia `link_ad`. Start z wag eksperckich. Powtórzenie pomiaru: ta sama komenda, `--source capture --bootstrap 30 --seed 7`.

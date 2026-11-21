@@ -115,3 +115,40 @@ def test_registry_queues_one_analysis_per_new_ad(monkeypatch):
     assert run("microsoft", {"query": "inwestycje"})["analyses"] == []
     with pytest.raises(KeyError):
         run("nieznany", {})
+
+
+def test_registry_queues_again_after_content_change_and_after_failed_analysis(monkeypatch):
+    from ads.models import Analysis
+
+    monkeypatch.setattr(microsoft, "fetch", lambda query, country=151, limit=200: MS_PAGE["value"][:1])
+    first = run("microsoft", {"query": "inwestycje"})
+    assert len(first["analyses"]) == 1
+    Analysis.objects.update(status=Analysis.Status.DONE)
+    assert run("microsoft", {"query": "inwestycje"})["analyses"] == []  # treść ta sama
+
+    changed = [{**MS_PAGE["value"][0], "Description": "Nowy opis oferty"}]
+    monkeypatch.setattr(microsoft, "fetch", lambda query, country=151, limit=200: changed)
+    second = run("microsoft", {"query": "inwestycje"})
+    assert len(second["analyses"]) == 1  # migawka nowsza niż ostatnia udana analiza
+    Analysis.objects.filter(pk=second["analyses"][0]).update(status=Analysis.Status.FAILED)
+    third = run("microsoft", {"query": "inwestycje"})
+    assert len(third["analyses"]) == 1  # nieudana nie blokuje ponownej
+
+
+def test_cert_block_unblock_block_is_active_again():
+    lines = "\n".join(
+        [
+            '{"RegisterPositionId": 1, "DomainAddress": "wraca.example", "ActionTime": "2026-01-01T00:00:00+00:00", "ActionType": "block"}',
+            '{"RegisterPositionId": 1, "DomainAddress": "wraca.example", "ActionTime": "2026-02-01T00:00:00+00:00", "ActionType": "unblock"}',
+            '{"RegisterPositionId": 1, "DomainAddress": "wraca.example", "ActionTime": "2026-03-01T00:00:00+00:00", "ActionType": "block"}',
+            '{"RegisterPositionId": 2, "DomainAddress": "zdjeta.example", "ActionTime": "2026-01-01T00:00:00+00:00", "ActionType": "block"}',
+            '{"RegisterPositionId": 2, "DomainAddress": "zdjeta.example", "ActionTime": "2026-02-01T00:00:00+00:00", "ActionType": "unblock"}',
+            "",
+        ]
+    )
+    cert_pl.sync_history(2026, client_for(lambda request: httpx.Response(200, text=lines)))
+    assert set(WarningDomain.objects.active().values_list("domain", flat=True)) == {"wraca.example"}
+    # Ponowna blokada w późniejszym roczniku czyści wcześniejsze wykreślenie zapisane w bazie.
+    again = '{"RegisterPositionId": 2, "DomainAddress": "zdjeta.example", "ActionTime": "2027-01-01T00:00:00+00:00", "ActionType": "block"}\n'
+    cert_pl.sync_history(2027, client_for(lambda request: httpx.Response(200, text=again)))
+    assert set(WarningDomain.objects.active().values_list("domain", flat=True)) == {"wraca.example", "zdjeta.example"}

@@ -1,5 +1,6 @@
 import pytest
 
+from similarity import fusion
 from similarity.fusion import Shared, Soft, connected_components, score_pair
 
 N = 100_000
@@ -166,9 +167,24 @@ def test_copied_content_alone_is_similar_not_the_same_source():
     assert result.relation == "similar"
 
 
-def test_the_same_ad_creative_is_the_same_campaign():
+def test_a_copied_ad_creative_with_the_same_text_is_only_similar():
+    # Pułapka: obraz i tekst da się skopiować bez dostępu do zaplecza. Kopia kreacji (12 bitów) plus
+    # prawie identyczny tekst to pokrewieństwo treści, więc najwyżej `similar`, bez kampanii i operatora.
     result = score_pair(shared=[Shared("creative_phash", "c41e0f0f3c3c7e7e", df=2)], soft=[Soft("text_minhash", 1.0)], corpus_n=N)
-    assert result.decisive is True and result.relation == "same_campaign"
+    assert result.decisive is False
+    assert result.probability >= fusion.SAME_PROBABILITY
+    assert result.checks["independent"] == ["crea", "narr"] and result.checks["backed"] is False
+    assert result.relation == "similar"
+
+
+def test_a_copied_creative_plus_a_backend_trace_is_still_the_same_source():
+    # Ta sama kopia kreacji, ale z rzadkim śladem zaplecza (identyfikator lejka): wspólne źródło wraca.
+    result = score_pair(
+        shared=[Shared("creative_phash", "c41e0f0f3c3c7e7e", df=2), Shared("funnel_id", "9f1c2e7a-0000-4000-8000-000000000001", df=2)],
+        soft=[Soft("text_minhash", 1.0)],
+        corpus_n=N,
+    )
+    assert result.relation == "same_campaign"
 
 
 def test_the_same_funnel_engine_alone_is_not_the_same_operator():

@@ -179,6 +179,35 @@ export interface OperatorDetail extends GroupDetail {
   campaigns: string[];
 }
 
+// Oś czasu kampanii albo operatora. Zdarzenie bez daty w bazie się nie pojawia.
+export type TimelineEventType =
+  | "domain_registered"
+  | "cert_issued"
+  | "ad_first_seen"
+  | "snapshot"
+  | "ad_last_seen"
+  | "cert_pl_added"
+  | "cert_pl_removed";
+
+export interface TimelineEvent {
+  type: TimelineEventType;
+  label: string;
+  at: string;
+  ads: number[];
+  value: string;
+  detail: {
+    registrar?: string;
+    issuer?: string;
+    domains?: string[];
+    active?: boolean;
+  };
+}
+
+export interface Timeline {
+  group: string;
+  events: TimelineEvent[];
+}
+
 export interface Graph {
   nodes: { id: number; label: string; source: Source; campaign: string | null; operator: string | null; case: string | null; listed: boolean }[];
   edges: {
@@ -250,6 +279,8 @@ export const api = {
   campaign: (id: number) => request<GroupDetail>(`/api/campaigns/${id}`),
   operators: () => request<Page<Group>>("/api/operators"),
   operator: (id: number) => request<OperatorDetail>(`/api/operators/${id}`),
+  campaignTimeline: (id: number) => request<Timeline>(`/api/campaigns/${id}/timeline`),
+  operatorTimeline: (id: number) => request<Timeline>(`/api/operators/${id}/timeline`),
   // Filtry: ?campaign=ID, ?operator=ID, ?ad=ID, ?relation=same_campaign,same_operator, ?limit=
   graph: (query = "") => request<Graph>(`/api/graph${query}`),
   kinds: () => request<Kinds>("/api/kinds"),

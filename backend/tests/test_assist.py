@@ -134,8 +134,11 @@ def test_abstain_is_kept_as_abstain():
         (lambda r: httpx.Response(503, json={"error": "warming up"}), "unavailable"),
         (lambda r: httpx.Response(504, json={"error": "timeout"}), "timeout"),
         (lambda r: httpx.Response(422, json={"error": "bad"}), "error"),
-        (lambda r: httpx.Response(402), "error"),
-        (lambda r: httpx.Response(429), "error"),
+        (lambda r: httpx.Response(401, json={"error": "invalid key"}), "unauthorized"),
+        (lambda r: httpx.Response(402), "payment"),
+        (lambda r: httpx.Response(429, headers={"retry-after": "3"}), "rate_limited"),
+        (lambda r: httpx.Response(529), "rate_limited"),
+        (lambda r: httpx.Response(400, json={"error": {"code": "max_tokens_exceeded", "message": "za długie"}}), "error"),
         (lambda r: httpx.Response(200, text="<html>"), "error"),
         (lambda r: httpx.Response(200, content=b"{" + b" " * (assist.MAX_BODY_BYTES + 10) + b"}"), "error"),
         (lambda r: httpx.Response(302, headers={"location": "https://zewnetrzny.example/"}), "error"),
@@ -195,3 +198,62 @@ def test_command_stops_when_service_is_down(monkeypatch):
     assert len(calls) == 3 and "przerywam" in out.getvalue()
     assert set(AssistSuggestion.objects.values_list("status", flat=True)) == {"unavailable"}
     assert Edge.objects.filter(verdict="").count() == 5
+
+
+def test_error_code_and_tokens_are_kept_without_body():
+    transport, _ = service(lambda r: httpx.Response(400, json={"error": {"code": "max_tokens_exceeded", "message": "sekretna treść"}}))
+    suggestion = assist.review_edge(make_edge(), assist.JevClient(config(), transport))
+    assert suggestion.error == "HTTP 400: max_tokens_exceeded" and "sekretna" not in suggestion.error
+    transport, _ = service(lambda r: httpx.Response(200, json={**answer(), "usage": {"input_tokens": 312}}))
+    assert assist.review_edge(make_edge(), assist.JevClient(config(), transport)).input_tokens == 312
+    transport, _ = service(lambda r: httpx.Response(200, json={**answer(), "usage": {"input_tokens": "dużo"}}))
+    assert assist.review_edge(make_edge(), assist.JevClient(config(), transport)).input_tokens is None
+
+
+ORIGINAL_INIT = assist.JevClient.__init__
+JEV_ON = {"JEV_MODE": "shadow", "JEV_MODEL": "jev-1.14.0", "TYPESAFE_API_KEY": "test", "JEV_ALLOW_CASE_DATA": True}
+
+
+def _run_command(monkeypatch, handler, **settings_overrides) -> tuple[list, str]:
+    calls = []
+
+    def wrapped(request):
+        calls.append(request)
+        return handler(request)
+
+    monkeypatch.setattr(assist.JevClient, "__init__", lambda self, cfg, transport=None: ORIGINAL_INIT(self, cfg, httpx.MockTransport(wrapped)))
+    monkeypatch.setattr("similarity.management.commands.jev_review.time.sleep", lambda s: calls.append(("sleep", s)))
+    out = StringIO()
+    with override_settings(**{**JEV_ON, **settings_overrides}):
+        call_command("jev_review", stdout=out)
+    return calls, out.getvalue()
+
+
+@pytest.mark.parametrize("code", [401, 402])
+def test_command_stops_at_once_on_auth_or_payment(monkeypatch, code):
+    for _ in range(4):
+        make_edge()
+    calls, out = _run_command(monkeypatch, lambda r: httpx.Response(code))
+    assert len(calls) == 1 and "Przerywam" in out
+    assert AssistSuggestion.objects.count() == 1
+
+
+def test_command_waits_on_rate_limit_and_stops_after_three(monkeypatch):
+    for _ in range(5):
+        make_edge()
+    calls, out = _run_command(monkeypatch, lambda r: httpx.Response(429, headers={"retry-after": "120"}))
+    requests = [c for c in calls if not isinstance(c, tuple)]
+    sleeps = [c[1] for c in calls if isinstance(c, tuple)]
+    assert len(requests) == 3 and sleeps == [30.0, 30.0]  # Retry-After przycięte do 30 s, po trzeciej odmowie stop
+    assert "przerywam" in out
+
+
+def test_command_respects_request_cap_and_budget(monkeypatch):
+    for _ in range(6):
+        make_edge()
+    ok = lambda r: httpx.Response(200, json={**answer(), "usage": {"input_tokens": 1_000_000}})  # noqa: E731
+    calls, out = _run_command(monkeypatch, ok, JEV_MAX_REQUESTS=4, JEV_BUDGET_USD=1.0, JEV_PRICE_PER_MTOK=0.042)
+    assert len(calls) == 4 and "zapytań 4" in out and "tokenów wejściowych 4000000" in out
+    AssistSuggestion.objects.all().delete()
+    calls, out = _run_command(monkeypatch, ok, JEV_MAX_REQUESTS=100, JEV_BUDGET_USD=0.08, JEV_PRICE_PER_MTOK=0.042)
+    assert len(calls) == 2 and "Budżet" in out  # po 2 zapytaniach koszt 0,084 USD przekracza 0,08

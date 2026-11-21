@@ -139,6 +139,8 @@ class Outcome:
     served_model: str = ""
     latency_ms: int | None = None
     error: str = ""
+    input_tokens: int | None = None
+    retry_after: float | None = None
 
 
 def parse_answer(payload) -> Outcome:
@@ -175,6 +177,7 @@ class JevClient:
     def __init__(self, config: Config, transport: httpx.BaseTransport | None = None):
         config.check()
         self.config = config
+        self.last_retry_after: float | None = None
         headers = {"Authorization": f"Bearer {config.api_key}"} if config.api_key else {}
         self.http = httpx.Client(base_url=config.url.rstrip("/"), timeout=config.timeout, headers=headers, transport=transport,
                                  follow_redirects=False, trust_env=False)
@@ -188,12 +191,20 @@ class JevClient:
         except httpx.HTTPError as exc:
             return Outcome("unavailable", error=type(exc).__name__)
         latency = int((time.monotonic() - started) * 1000)
-        if response.status_code in (502, 503):
-            return Outcome("unavailable", latency_ms=latency, error=f"HTTP {response.status_code}")
-        if response.status_code == 504:
+        code = response.status_code
+        if code == 401:
+            return Outcome("unauthorized", latency_ms=latency, error="HTTP 401: brak albo zły TYPESAFE_API_KEY")
+        if code == 402:
+            return Outcome("payment", latency_ms=latency, error="HTTP 402: brak środków na koncie TypeSafe")
+        if code in (429, 529):
+            self.last_retry_after = _retry_after(response)
+            return Outcome("rate_limited", latency_ms=latency, error=f"HTTP {code}", retry_after=self.last_retry_after)
+        if code in (502, 503):
+            return Outcome("unavailable", latency_ms=latency, error=f"HTTP {code}")
+        if code == 504:
             return Outcome("timeout", latency_ms=latency, error="HTTP 504")
-        if response.status_code != 200:
-            return Outcome("error", latency_ms=latency, error=f"HTTP {response.status_code}")
+        if code != 200:
+            return Outcome("error", latency_ms=latency, error=f"HTTP {code}{_error_code(response)}")
         if len(response.content) > MAX_BODY_BYTES:
             return Outcome("error", latency_ms=latency, error="odpowiedź za duża")
         try:
@@ -202,7 +213,35 @@ class JevClient:
             return Outcome("error", latency_ms=latency, error="odpowiedź nie jest JSON")
         outcome = parse_answer(payload)
         outcome.latency_ms = latency
+        outcome.input_tokens = _input_tokens(payload)
         return outcome
+
+
+def _retry_after(response: httpx.Response) -> float | None:
+    try:
+        return max(0.0, float(response.headers.get("retry-after", "")))
+    except ValueError:
+        return None
+
+
+def _error_code(response: httpx.Response) -> str:
+    """Kod błędu z treści (np. max_tokens_exceeded), bez przepisywania reszty odpowiedzi do bazy."""
+    try:
+        body = response.json()
+    except ValueError:
+        return ""
+    if isinstance(body, dict):
+        error = body.get("error")
+        code = body.get("code") or (error.get("code") if isinstance(error, dict) else None)
+        if isinstance(code, str) and code.replace("_", "").isalnum():
+            return f": {code[:40]}"
+    return ""
+
+
+def _input_tokens(payload) -> int | None:
+    usage = payload.get("usage") if isinstance(payload, dict) else None
+    tokens = usage.get("input_tokens") if isinstance(usage, dict) else None
+    return tokens if isinstance(tokens, int) and not isinstance(tokens, bool) and tokens >= 0 else None
 
 
 def review_edge(edge: Edge, client: JevClient) -> AssistSuggestion:
@@ -219,5 +258,5 @@ def review_edge(edge: Edge, client: JevClient) -> AssistSuggestion:
         status=outcome.status, answer=outcome.answer, probabilities=outcome.probabilities, confidence=outcome.confidence,
         model=config.model, revision=config.revision, variant=config.variant, served_model=outcome.served_model,
         question_version=QUESTION_VERSION, state_fingerprint=fingerprint(body), edge_version=edge.updated_at.isoformat(),
-        latency_ms=outcome.latency_ms, error=outcome.error[:300],
+        latency_ms=outcome.latency_ms, input_tokens=outcome.input_tokens, error=outcome.error[:300],
     )

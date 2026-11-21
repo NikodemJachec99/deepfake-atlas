@@ -322,7 +322,7 @@ def stage_enrich(analysis: Analysis) -> dict:
 
     markers.attach(ad, observations)
 
-    listed = WarningDomain.objects.filter(domain__in={domain, host}).first()
+    listed = WarningDomain.objects.active().filter(domain__in={domain, host}).first()
     if listed:
         ad.labels["cert_pl"] = {
             "domain": listed.domain,

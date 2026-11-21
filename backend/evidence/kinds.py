@@ -89,7 +89,7 @@ _KINDS = [
     Kind("dom_minhash", "tmpl", "Podobieństwo szablonu", m=0.0, f0=1.0, cap=7, soft=True, lo=0.5, hi=0.9, candidate=False),
     # Kreacja
     Kind("creative_sha256", "crea", "Plik kreacji", m=0.8, f0=1e-6, cap=9, story=True),
-    Kind("creative_phash", "crea", "Hash percepcyjny zrzutu reklamy", m=0.8, f0=1e-6, cap=12, decisive=True, story=True),
+    Kind("creative_phash", "crea", "Hash percepcyjny zrzutu reklamy", m=0.8, f0=1e-6, cap=12, story=True),
     Kind("image_band", "crea", "Klucz wyszukiwania obrazów", m=0.0, f0=1.0, cap=0),
     Kind("image_set", "crea", "Wspólne obrazy na stronie", m=0.0, f0=1.0, cap=7, soft=True, lo=0.25, hi=0.7, candidate=False, story=True),
     Kind("video_band", "crea", "Klucz wyszukiwania klatek nagrania", m=0.0, f0=1.0, cap=0),

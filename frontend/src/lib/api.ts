@@ -438,7 +438,7 @@ export interface Graph {
   total: number;
   total_by_relation: Partial<Record<Relation, number>>;
   returned_by_relation: Partial<Record<Relation, number>>;
-  nodes: { id: number; label: string; source: Source; campaign: string | null; operator: string | null; case: string | null; listed: boolean }[];
+  nodes: { id: number; label: string; source: Source; campaign: string | null; operator: string | null; case: string | null; listed: boolean; /** Tylko przy `?campaign=` i `?operator=`: czy reklama należy do tej grupy (false = sąsiad spoza grupy). */ member?: boolean }[];
   edges: {
     id: number;
     source: number;
@@ -843,6 +843,12 @@ export const artifactDownloadUrl = (sha256: string) => `${API_URL}/api/artifacts
 export const exportStixUrl = (filter: { operator?: number; campaign?: number } = {}) =>
   `${API_URL}/api/export/stix${filter.operator ? `?operator=${filter.operator}` : filter.campaign ? `?campaign=${filter.campaign}` : ""}`;
 export const exportCorpusUrl = (source?: Source) => `${API_URL}/api/export${source ? `?source=${source}` : ""}`;
+// Pakiet dowodowy grupy jako ZIP do przekazania dalej (raport do druku, artefakty z sumami SHA-256, STIX, krawędzie, skrypt weryfikacji).
+// raw=false pomija surowy HAR i HTML stron oszustów (zostają obrazy i nagrania). Link otwiera pobieranie, to nie jest wywołanie fetch.
+export const operatorPackageUrl = (id: number, options: { raw?: boolean } = {}) =>
+  `${API_URL}/api/operators/${id}/package${options.raw === false ? "?surowe=0" : ""}`;
+export const campaignPackageUrl = (id: number, options: { raw?: boolean } = {}) =>
+  `${API_URL}/api/campaigns/${id}/package${options.raw === false ? "?surowe=0" : ""}`;
 
 export const api = {
   createAnalysis: (kind: "url" | "text", value: string) =>

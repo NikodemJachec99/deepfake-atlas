@@ -89,7 +89,7 @@ def learned_file(tmp_path):
 def test_learned_switch_changes_version_and_bits(settings, learned_file):
     shared = [Shared("phone", "+48 000 000 000", df=2)]
     expert = score_pair(shared, [], 100_000)
-    assert fusion.MODEL_VERSION == "fs-5"
+    assert fusion.MODEL_VERSION == "fs-5.1"
     settings.MODEL_WEIGHTS = "learned"
     settings.MODEL_WEIGHTS_PATH = learned_file
     learned = score_pair(shared, [], 100_000)
@@ -109,7 +109,7 @@ def test_use_weights_overrides_settings(settings, learned_file):
     settings.MODEL_WEIGHTS_PATH = learned_file
     shared = [Shared("phone", "x", df=2)]
     with fusion.use_weights(None):
-        assert fusion.model_version() == "fs-5"
+        assert fusion.model_version() == "fs-5.1"
         expert_bits = score_pair(shared, [], 1000).bits
     assert fusion.model_version() == "fs-6"
     assert score_pair(shared, [], 1000).bits < expert_bits
@@ -165,7 +165,7 @@ def test_command_writes_loadable_file_and_reports_no_calibration(tmp_path, monke
 def test_weights_api_without_file_returns_expert_only(client, settings, tmp_path):
     settings.MODEL_WEIGHTS_PATH = tmp_path / "nie-ma.json"
     body = client.get("/api/weights").json()
-    assert body["active"] == "expert" and body["model_version"] == "fs-5"
+    assert body["active"] == "expert" and body["model_version"] == "fs-5.1"
     assert body["learned_available"] is False and body["calibration"] is None
     phone = next(k for k in body["kinds"] if k["code"] == "phone")
     assert phone["learned"] is None and phone["expert"]["m"] == 0.9 and phone["family"] == "narr"

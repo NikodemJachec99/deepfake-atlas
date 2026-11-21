@@ -27,7 +27,7 @@ from evidence.models import AdMarker, Artifact
 from extractors import video
 from extractors.url import redact_url
 from people.display import display_value, person_names
-from similarity import assist_view, decisions, observations, precedents, simulation, suggestions, timeline, weakest
+from similarity import assist_view, decisions, observations, precedents, simulation, stix, suggestions, timeline, weakest
 from similarity.models import Campaign, CampaignMembership, Edge, EdgeDecision, Operator, OperatorMembership
 from similarity.service import assign_campaign, assign_operator
 from workflows import runner
@@ -306,6 +306,22 @@ def export_corpus(request):
     name = f"scamdna-korpus-{source or 'wszystko'}-{timezone.now():%Y%m%d-%H%M}.zip"
     response = HttpResponse(buffer.getvalue(), content_type="application/zip")
     response["Content-Disposition"] = f'attachment; filename="{name}"'
+    return response
+
+
+@api_view(["GET"])
+def export_stix(request):
+    """Operatorzy i kampanie jako bundle STIX 2.1 (`?operator=ID`, `?campaign=ID`). Tylko grupy z materiałów zgłoszonych jako podejrzane."""
+    params = {}
+    for name in ("operator", "campaign"):
+        raw = request.query_params.get(name)
+        if raw:
+            if not raw.isdigit():
+                return Response({"detail": f"{name} musi być liczbą"}, status=400)
+            params[f"{name}_id"] = int(raw)
+    data = stix.bundle(**params)
+    response = HttpResponse(json.dumps(data, ensure_ascii=False, indent=1), content_type="application/stix+json;version=2.1")
+    response["Content-Disposition"] = f'attachment; filename="scamdna-stix-{timezone.now():%Y%m%d-%H%M}.json"'
     return response
 
 

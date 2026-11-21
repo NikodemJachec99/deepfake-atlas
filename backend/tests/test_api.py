@@ -3,6 +3,7 @@ from asgiref.sync import async_to_sync
 from django.test import AsyncClient
 from rest_framework.test import APIClient
 
+from ads.models import Ad
 from evidence.models import AuditLog
 from similarity.models import Edge
 from tests import fakes
@@ -62,6 +63,18 @@ def test_discovery_flow_from_submission_to_evidence(client):
     assert len(graph["nodes"]) == 2 and len(graph["edges"]) == 1
     assert graph["nodes"][0]["campaign"] == campaigns[0]["key"]
     assert graph["edges"][0]["family"] in {"track", "narr", "tmpl", "infra"}
+    assert all(n["member"] is True for n in graph["nodes"])
+    assert "member" not in client.get(f"/api/graph?ad={ad_id}").json()["nodes"][0]
+
+    # Sąsiad spoza grupy, dołączony krawędzią podobieństwa, ma member=false, a członkowie true.
+    outsider = Ad.objects.create(source="capture", external_id="outsider/1")
+    a, b = sorted([ad_id, outsider.pk])
+    Edge.objects.create(ad_a_id=a, ad_b_id=b, relation="similar", bits=5.0, probability=0.5, model_version="fs-5")
+    graph = client.get(f"/api/graph?campaign={campaigns[0]['id']}").json()
+    by_id = {n["id"]: n["member"] for n in graph["nodes"]}
+    assert by_id[outsider.pk] is False and by_id[ad_id] is True and sum(by_id.values()) == 2
+    operator = client.get("/api/operators").json()["results"][0]
+    assert {n["member"] for n in client.get(f"/api/graph?operator={operator['id']}").json()["nodes"]} == {True, False}
 
 
 @pytest.mark.django_db(transaction=True)

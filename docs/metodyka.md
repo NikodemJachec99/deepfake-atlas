@@ -105,9 +105,9 @@ Skutek: adres z puli Cloudflare jest wart ułamek bita, a identyfikator strony w
 - **Dwie klasy, nie jedna.** Zaplecze (infrastruktura, tracking, szablon, zachowanie) i opowieść (narracja, kreacja, osoby) uczymy osobno. Jedna klasa mylnie uznaje operatora z różnymi kampaniami za niepasującego, bo jego strony różnią się treścią.
 - **`u` względem wszystkich par.** Po typach kandydackich szukamy kandydatów, więc wśród kandydatów zgodność jest zawyżona. Dla nich `u` liczymy względem N(N-1)/2 par. Dla pozostałych jest warunkowe (pole `u_basis`).
 - **Typ z mniej niż 5 parami zgodności** zostaje przy wadze eksperckiej (`source: expert`).
-- **Przełącznik.** `MODEL_WEIGHTS=expert|learned` (domyślnie `expert`, wersja `fs-5`) i `MODEL_WEIGHTS_PATH` (domyślnie `data/models/wagi.json`). Przy `learned` wersja to `fs-6`: typy twarde liczą `log2(m/f)` z uczonym `m` i `f0=u`, nadal z rzadkością po źródłach, typy miękkie dostają uczony limit zamiast `cap`. Rodziny, rabat w rodzinie, grupy niezależności, reguły relacji i limit zostają. Brak pliku przy `learned` to błąd `WeightsError` z poleceniem, co uruchomić, a nie ciche wrócenie do wag eksperckich, bo wersja `fs-6` na krawędzi musi znaczyć to, co znaczy.
+- **Przełącznik.** `MODEL_WEIGHTS=expert|learned` (domyślnie `expert`, wersja `fs-5.1`) i `MODEL_WEIGHTS_PATH` (domyślnie `data/models/wagi.json`). Przy `learned` wersja to `fs-6`: typy twarde liczą `log2(m/f)` z uczonym `m` i `f0=u`, nadal z rzadkością po źródłach, typy miękkie dostają uczony limit zamiast `cap`. Rodziny, rabat w rodzinie, grupy niezależności, reguły relacji i limit zostają. Brak pliku przy `learned` to błąd `WeightsError` z poleceniem, co uruchomić, a nie ciche wrócenie do wag eksperckich, bo wersja `fs-6` na krawędzi musi znaczyć to, co znaczy.
 - **Rozrzut.** Bootstrap po reklamach (nie po parach, bo pary jednej reklamy są zależne) daje odchylenie wagi każdego typu. Raport oznacza zestaw jako niestabilny, gdy ponad 25% typów ma odchylenie powyżej 3 bitów.
-- **Kalibracja.** Gdy w bazie jest co najmniej 20 decyzji analityka (potwierdzone i odrzucone, po 5 z klasy), regresja logistyczna z regularyzacją L2 na bitach i bitach rodzin (metoda Newtona, bez bibliotek) daje skalibrowaną pewność, a współczynniki trafiają do tego samego JSON. Bez decyzji raport mówi "brak kalibracji: 0 decyzji".
+- **Kalibracja jest liczona, ale nie jest stosowana.** Gdy w bazie jest co najmniej 20 decyzji analityka (potwierdzone i odrzucone, po 5 z klasy), regresja logistyczna z regularyzacją L2 na bitach i bitach rodzin (metoda Newtona, bez bibliotek) liczy współczynniki kalibracji i zapisuje je w raporcie (`GET /api/weights`, pole `calibration`). Ocena par ich nie czyta: `fusion.load_weights` bierze z pliku tylko wagi typów markerów. Do czasu decyzji analityków, że kalibracja ma wejść do oceny, "pewność" przy krawędzi to wynik modelu, czyli `1/(1+2^-(bity+szansa wstępna))` z szansą wstępną 1e-4, a nie skalibrowane prawdopodobieństwo. Bez decyzji raport mówi "brak kalibracji: 0 decyzji".
 - **`GET /api/weights`** zwraca wagę ekspercką i uczoną każdego typu.
 
 Wynik na danych organizatora i ocena stabilności: [dane-organizatora.md](dane-organizatora.md). Krótko: grupowanie takie samo, rdzeń operatora A zostaje, ale 28 reklam to za mało, żeby zmienić domyślne wagi.
@@ -118,7 +118,7 @@ Sama wysoka suma nie wystarcza. Reguły:
 
 | Relacja | Warunek |
 |---|---|
-| wspólne źródło | pewność co najmniej 0,9 **oraz** rzadki marker rozstrzygający albo dwa niezależne silne potwierdzenia, z których co najmniej jedno dotyczy zaplecza |
+| wspólne źródło | wynik modelu (niekalibrowana "pewność") co najmniej 0,9 **oraz** rzadki marker rozstrzygający albo dwa niezależne silne potwierdzenia, z których co najmniej jedno dotyczy zaplecza |
 | `same_campaign` | wspólne źródło i ta sama opowieść: zgodna treść, obrazy albo kontakt |
 | `same_operator` | wspólne źródło, inna opowieść |
 | `similar` | brak dowodu wspólnego źródła, ale zgodna treść lub obrazy, kilka zgodnych motywów naraz (osoba, marka, tematyka) albo te same ścieżki zaplecza bez śladu operatora |
@@ -127,6 +127,7 @@ Sama wysoka suma nie wystarcza. Reguły:
 Dlaczego tak:
 
 - **Treść i obrazy da się skopiować.** Dwie strony z tym samym artykułem na różnych zapleczach to `similar`, nie wspólne źródło.
+- **Kopia kreacji to pokrewieństwo treści, nie wspólne zaplecze.** Zrzut reklamy (`creative_phash`) liczy się do bitów i do opowieści, ale nie jest markerem rozstrzygającym. Ten sam obraz może wrzucić dowolny, kto go skopiował, a w materiałach spraw ten sam zrzut dołączamy do każdej strony sprawy. Para z samą kopią kreacji i podobnym tekstem to najwyżej `similar`. Kontakty (telefon, e-mail, Telegram, WhatsApp, adresy kryptowalut, rachunek) zostają rozstrzygające: kanał kontaktu i płatności to infrastruktura operatora, bo ofiara ma tam dotrzeć i zapłacić, więc jego współdzielenie wskazuje wspólne zaplecze, a nie wspólną treść.
 - **Wspólny motyw to nie wspólna opowieść.** Różni operatorzy używają tych samych nazwisk i udają te same redakcje, więc osoba, marka i tematyka nie robią z operatora kampanii.
 - **Silnik lejka to program, nie operator.** Ścieżki zaplecza, szablon ścieżki i zestaw parametrów ustawia ten sam silnik, więc przy liczeniu niezależnych potwierdzeń są jednym, choć należą do dwóch rodzin. Silnik mógł kupić każdy. Operatora wskazuje dopiero ślad jego konta albo infrastruktury: identyfikator w panelu, piksel, konto reklamowe, własny host zasobów, adres, certyfikat.
 - **Motyw nie potwierdza źródła.** Wzmianka o osobie, podszycie pod markę i tematyka dodają bity, ale nie liczą się jako niezależne potwierdzenie, nawet kilka naraz.

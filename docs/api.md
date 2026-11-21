@@ -39,7 +39,7 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | POST | `/api/hunt/run` | `{"operator":<id>,"days":30,"max_queries":12,"max_crawl":20,"crawl":true}` (wszystko opcjonalne) | `HuntRun` (202), przebieg w tle (`ANALYSIS_RUNNER`); `409` z danymi trwającego przebiegu, gdy poprzedni (do 2 godzin) jeszcze trwa; `400` dla złych wartości; zapis chroniony jak inne |
 | GET | `/api/hunt/runs`, `/api/hunt/runs/{id}` | | strona `HuntRun` albo jeden przebieg: status i liczby |
 | POST | `/api/hunt/{id}/analyze` | | `Analysis` (201): domena kandydata idzie do pełnego potoku jak `POST /api/analyses`; `409` z istniejącą analizą, gdy już zgłoszona |
-| GET | `/api/graph` | `?campaign=` \| `?operator=` \| `?ad=`, `?relation=a,b`, `?source=capture` (tylko krawędzie między materiałami z tego źródła), `?limit=` (1 do 20000, domyślnie 2000) | `Graph`: `{nodes, edges, truncated, limit, total, total_by_relation, returned_by_relation}` dla Sigma.js. Ucinanie do `limit` jest jawne i ma kolejność ważności: najpierw `same_operator`, potem `similar`, potem `same_campaign`; powtórne przechwycenia (`duplicate`) na końcu; w obrębie relacji najpierw pary materiałów ze spraw (`capture`), potem malejąco po pewności. `total` to liczba krawędzi po filtrach przed ucięciem, `truncated` mówi, czy `total` jest większe niż `edges.length`. Nieznana kampania, operator albo reklama: `404` |
+| GET | `/api/graph` | `?campaign=` \| `?operator=` \| `?ad=`, `?relation=a,b`, `?source=capture` (tylko krawędzie między materiałami z tego źródła), `?limit=` (1 do 20000, domyślnie 2000) | `Graph`: `{nodes, edges, truncated, limit, total, total_by_relation, returned_by_relation}` dla Sigma.js. Ucinanie do `limit` jest jawne i ma kolejność ważności: najpierw `same_operator`, potem `similar`, potem `same_campaign`; powtórne przechwycenia (`duplicate`) na końcu; w obrębie relacji najpierw pary materiałów ze spraw (`capture`), potem malejąco po pewności. `total` to liczba krawędzi po filtrach przed ucięciem, `truncated` mówi, czy `total` jest większe niż `edges.length`. Nieznana kampania, operator albo reklama: `404`. Przy `?campaign=` i `?operator=` każdy węzeł ma `member: bool`: czy reklama należy do tej grupy (`false` to sąsiad spoza grupy, dołączony krawędzią). Przy `?ad=` i bez filtra pola nie ma |
 | GET | `/api/kinds` | | słownik 7 rodzin i typów markerów |
 | GET | `/api/stats` | | liczby do paska stanu, w tym `alerts_unseen` (liczba nieprzejrzanych alertów) |
 | GET | `/api/export/stix` | `?operator=ID` \| `?campaign=ID` (opcjonalnie) | bundle STIX 2.1 (`application/stix+json`): operator jako `intrusion-set`, kampania jako `campaign` z `attributed-to`, wskaźniki (`indicator`) dla domen, adresów IP, numerów certyfikatów i hostów zasobów z relacją `indicates`; identyfikatory trackerów i paneli lejka w `x_scamdna_identifiers`. Tylko grupy z materiałów zgłoszonych jako podejrzane (przechwycenia, zgłoszenia ręczne), bez reklam z bibliotek, osób i tokenów. Identyfikatory deterministyczne |
@@ -202,11 +202,13 @@ Zdarzenie `crawl/info` niesie łańcuch przekierowań (`payload.chain`, `via`: `
 
 | Relacja | Znaczenie | Warunek |
 |---|---|---|
-| `same_campaign` | to samo źródło i ta sama opowieść | pewność co najmniej 0,9, marker rozstrzygający albo dwa niezależne potwierdzenia, zgodna narracja |
+| `same_campaign` | to samo źródło i ta sama opowieść | wynik modelu co najmniej 0,9, marker rozstrzygający albo dwa niezależne potwierdzenia, zgodna narracja |
 | `same_operator` | to samo zaplecze, inna opowieść | jak wyżej, bez zgodnej narracji |
 | `similar` | podobna koncepcja | zgodna narracja, kreacja albo osoby, albo ten sam silnik lejka bez śladu operatora; brak dowodu wspólnego zaplecza |
 
 Na listach grup `sources` to liczba reklam według źródła (`capture` to materiały spraw, `microsoft` i inne to biblioteki reklam), `cases` to liczba różnych spraw, a `cert_pl` to liczba reklam z domeną na Liście Ostrzeżeń CERT Polska. `?source=capture` zostawia grupy, w których jest choć jedna reklama z materiałów spraw. Rozmiar i skład grupy są zawsze pełne, a kolejność to dalej od największej.
+
+`probability` (w tym API też jako "pewność") to wynik modelu `1/(1+2^-(bity+szansa wstępna))`, niekalibrowany: nie jest prawdopodobieństwem w sensie częstości. Kalibracja jest liczona (`GET /api/weights`, pole `calibration`), ale nie jest stosowana przy ocenie par. Kopia kreacji (`creative_phash`) nie jest markerem rozstrzygającym, więc sama z podobnym tekstem daje najwyżej `similar`.
 
 Kampania (`K-0033`) to reklamy spięte krawędziami `same_campaign`. Operator (`O-0001`) to reklamy spięte `same_campaign` albo `same_operator`, więc jeden operator ma zwykle kilka kampanii.
 
@@ -408,7 +410,7 @@ Pełny słownik zwraca `/api/kinds`. Najważniejsze:
 | Pole | Znaczenie |
 |---|---|
 | `active` | `expert` albo `learned`: wagi, którymi silnik liczy teraz (ustawienie `MODEL_WEIGHTS`) |
-| `model_version` | `fs-5` przy `expert`, `fs-6` przy `learned` |
+| `model_version` | `fs-5.1` przy `expert`, `fs-6` przy `learned` |
 | `learned_available` | czy jest czytelny plik z wagami uczonymi |
 | `learned_error` | `null` albo powód: plik nieczytelny, albo `learned` bez pliku |
 | `meta` | `null` albo metadane uczenia: `ads`, `pairs`, `iterations`, `converged`, `created`, `stable`, `unstable_kinds`, `classes` (osobno `source` i `story`: `match_share`, `expected_matches`) |

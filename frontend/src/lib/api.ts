@@ -128,6 +128,7 @@ export interface Edge {
 }
 
 export interface Evidence {
+  id: number; // stały w obrębie krawędzi, do wyłączania w laboratorium dowodów
   family: Family;
   family_label: string;
   kind: string;
@@ -149,6 +150,39 @@ export interface EdgeDetail extends Edge {
   verdict_at: string | null;
   ads: AdSummary[];
   evidence: Evidence[];
+}
+
+export interface SimulationResult {
+  relation: Relation | null; // null: krawędź by nie powstała
+  relation_label: string;
+  probability: number;
+  bits: number;
+  decisive: boolean;
+  duplicate: boolean;
+  families: Partial<Record<Family, number>>;
+  independent: string[]; // niezależne silne potwierdzenia; "kit" to ślady jednego silnika lejka
+  reasons: string[];
+}
+
+export interface GroupImpact {
+  binds_before: boolean;
+  binds_after: boolean;
+  pair_still_connected: boolean | null; // liczone tylko, gdy krawędź przestałaby spinać grupę
+  path_length: number | null;
+  note: string;
+}
+
+export interface Simulation {
+  edge: number;
+  edge_version: string;
+  model_version: string;
+  stored: { relation: Relation; bits: number; model_version: string };
+  baseline: SimulationResult;
+  simulated: SimulationResult;
+  relation_changed: boolean;
+  excluded: { id: number; family: Family; kind: string; label: string; value: string; weight_bits: number; decisive: boolean }[];
+  group_impact: { campaign: GroupImpact; operator: GroupImpact };
+  warnings: string[];
 }
 
 export interface Group {
@@ -275,6 +309,12 @@ export const api = {
   edge: (id: number) => request<EdgeDetail>(`/api/edges/${id}`),
   setVerdict: (id: number, verdict: Exclude<Verdict, "">, note = "") =>
     request<EdgeDetail>(`/api/edges/${id}/verdict`, { method: "POST", body: JSON.stringify({ verdict, note }) }),
+  // Laboratorium dowodów: przeliczenie bez wybranych dowodów. Niczego nie zapisuje. 409, gdy krawędź się zmieniła.
+  simulateEdge: (id: number, exclude: number[], edgeVersion?: string) =>
+    request<Simulation>(`/api/edges/${id}/simulate`, {
+      method: "POST",
+      body: JSON.stringify({ exclude, ...(edgeVersion ? { edge_version: edgeVersion } : {}) }),
+    }),
   campaigns: () => request<Page<Group>>("/api/campaigns"),
   campaign: (id: number) => request<GroupDetail>(`/api/campaigns/${id}`),
   operators: () => request<Page<Group>>("/api/operators"),

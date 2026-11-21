@@ -100,7 +100,7 @@ class EdgeEvidenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = EdgeEvidence
         fields = [
-            "family", "family_label", "kind", "label", "value_a", "value_b", "similarity", "df", "corpus_n",
+            "id", "family", "family_label", "kind", "label", "value_a", "value_b", "similarity", "df", "corpus_n",
             "raw_bits", "weight_bits", "decisive", "artifact_a", "artifact_b",
         ]
 
@@ -131,6 +131,11 @@ class EdgeDetailSerializer(EdgeSerializer):
 class VerdictSerializer(serializers.Serializer):
     verdict = serializers.ChoiceField(choices=[Edge.Verdict.CONFIRMED, Edge.Verdict.REJECTED, Edge.Verdict.UNSURE])
     note = serializers.CharField(required=False, allow_blank=True, max_length=4000)
+
+
+class SimulationSerializer(serializers.Serializer):
+    exclude = serializers.ListField(child=serializers.IntegerField(min_value=1), allow_empty=True, max_length=500)
+    edge_version = serializers.CharField(required=False, allow_blank=True)
 
 
 class CampaignSerializer(serializers.ModelSerializer):

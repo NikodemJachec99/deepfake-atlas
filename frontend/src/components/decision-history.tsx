@@ -1,18 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { api, type EdgeDetail } from "@/lib/api";
 import { dateTime, VERDICT_LABELS } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 
-export function DecisionHistory({ edge }: { edge: EdgeDetail }) {
-  const [open, setOpen] = useState(false);
+export function DecisionHistory({ edge, open, onToggle }: { edge: EdgeDetail; open: boolean; onToggle: () => void }) {
   const key = open ? JSON.stringify([edge.id, edge.verdict_at, edge.updated_at]) : null;
   const history = useApi(key, () => api.edgeDecisions(edge.id));
   const prior = useApi(key, () => api.edgePrecedents(edge.id));
   return <section className="border-b border-line p-2">
-    <button className="text-accent underline" aria-expanded={open} onClick={() => setOpen(!open)}>Historia decyzji i precedensy</button>
+    <button className="text-accent underline" aria-expanded={open} onClick={onToggle}>Historia decyzji i precedensy</button>
     {open && <div className="grid gap-2 break-words" aria-live="polite">
       <h3 className="mt-2 font-semibold">Historia tej pary</h3>
       {history.loading ? "Pobieranie historii…" : history.error || !Array.isArray(history.data?.decisions) ?

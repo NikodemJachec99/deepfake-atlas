@@ -248,6 +248,8 @@ function Decision({ edge, onSaved }: { edge: EdgeDetail; onSaved: (edge: EdgeDet
 }
 
 export function EdgePanel({ edgeId, onOpenAd, onVerdict }: { edgeId: number; onOpenAd?: (id: number) => void; onVerdict?: (edge: EdgeDetail) => void }) {
+  const [section, setSection] = useState<string | null>(null);
+  const toggle = (name: string) => setSection(current => current === name ? null : name);
   const edge = useApi(`edge:${edgeId}`, () => api.edge(edgeId));
   const data = edge.data;
   const adA = useApi(data ? `ad:${data.ad_a}` : null, () => api.ad(data!.ad_a));
@@ -298,10 +300,10 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict }: { edgeId: number; onO
           {b && <AdSide ad={b} detail={adB.data} side="B" onOpenAd={onOpenAd} />}
         </div>
 
-        <JevReview key={data.id} edge={data} />
-        <DecisionHistory edge={data} />
-        <EdgeSuggestions key={data.id} edgeId={data.id} />
-        <EvidenceLab key={data.id + ":" + data.updated_at} edge={data} refresh={edge.reload} />
+        <JevReview open={section === "jev"} onToggle={() => toggle("jev")} key={`jev-${data.id}`} edge={data} />
+        <DecisionHistory open={section === "history"} onToggle={() => toggle("history")} edge={data} />
+        <EdgeSuggestions open={section === "suggestions"} onToggle={() => toggle("suggestions")} key={`suggestions-${data.id}`} edgeId={data.id} />
+        <EvidenceLab open={section === "lab"} onToggle={() => toggle("lab")} key={data.id + ":" + data.updated_at} edge={data} refresh={edge.reload} />
         <div className="flex h-7 items-center justify-between border-b border-line px-2">
           <span className="cap">Dowody według wkładu</span>
           <span className="text-[0.85rem] text-faint">model {data.model_version}</span>
@@ -315,7 +317,6 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict }: { edgeId: number; onO
             ))}
           </ul>
         )}
-      </div>
       <Decision
         key={`${data.id}:${data.verdict}:${data.verdict_at}`}
         edge={data}
@@ -324,6 +325,7 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict }: { edgeId: number; onO
           onVerdict?.(saved);
         }}
       />
+      </div>
     </div>
   );
 }

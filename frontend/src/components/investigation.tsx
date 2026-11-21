@@ -245,7 +245,7 @@ export function Investigation() {
       />
       <div className="min-h-0 flex-1 overflow-auto">
         {table === "edges" ? (
-          <table className="dense">
+          <table className="dense min-w-max">
             <thead>
               <tr>
                 <th>A</th>

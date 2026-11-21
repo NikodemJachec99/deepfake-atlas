@@ -7,6 +7,7 @@ import { Check, ChevronDown, ChevronRight, Download, HelpCircle, X } from "lucid
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { EdgeSuggestions } from "./edge-suggestions";
+import { JevReview } from "./jev-review";
 import { DecisionHistory } from "./decision-history";
 import type { VerdictReason } from "@/lib/api";
 import { EvidenceLab } from "./evidence-lab";
@@ -293,6 +294,7 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict }: { edgeId: number; onO
           {b && <AdSide ad={b} detail={adB.data} side="B" onOpenAd={onOpenAd} />}
         </div>
 
+        <JevReview key={data.id} edge={data} />
         <DecisionHistory edge={data} />
         <EdgeSuggestions key={data.id} edgeId={data.id} />
         <EvidenceLab key={data.id + ":" + data.updated_at} edge={data} refresh={edge.reload} />

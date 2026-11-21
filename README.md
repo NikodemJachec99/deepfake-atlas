@@ -134,7 +134,6 @@ Jeszcze nie ma:
 - Konektor Mety jest napisany według dokumentacji, nie był uruchomiony na żywym tokenie.
 - Embeddingi tekstu: kolumna i indeks HNSW są, model nie jest podpięty. Podobieństwo tekstu liczy MinHash.
 - Wagi modelu par są eksperckie, nie uczone.
-- Ochrona przed SSRF sprawdza adres przed połączeniem, ale nie przypina wyniku DNS.
 - API nie ma uwierzytelniania. Do pracy lokalnej i demo, nie do wystawienia w sieci.
 
 ## Zasady pracy

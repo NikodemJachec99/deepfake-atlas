@@ -1,26 +1,184 @@
 @import "tailwindcss";
 
+/* System projektowy SCAM DNA. Kolor niesie znaczenie: jeden akcent interfejsu, siedem rodzin markerów, cztery stany. */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
+  --bg: #11141a;
+  --panel: #161a21;
+  --raised: #1c212a;
+  --hover: #232935;
+  --line: #29303c;
+  --line-strong: #3b4454;
+  --fg: #d8dde5;
+  --muted: #929cab;
+  --faint: #636d7c;
+  --accent: #93a9e6;
+  --accent-soft: #93a9e61f;
+  --on-accent: #0f1420;
+
+  --fam-infra: #56b4e9;
+  --fam-track: #e69f00;
+  --fam-tmpl: #2bb894;
+  --fam-crea: #ee7440;
+  --fam-narr: #e5d54a;
+  --fam-pers: #d98ab9;
+  --fam-beh: #93a4b8;
+
+  --st-confirmed: #8bcf5a;
+  --st-unsure: #d8b24a;
+  --st-rejected: #e5605a;
+  --st-new: #4fc3d6;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #e9ecf0;
+  --panel: #f4f5f7;
+  --raised: #ffffff;
+  --hover: #e3e7ec;
+  --line: #d3d8df;
+  --line-strong: #aeb6c2;
+  --fg: #19212d;
+  --muted: #535e6e;
+  --faint: #8590a0;
+  --accent: #2c4aa8;
+  --accent-soft: #2c4aa814;
+  --on-accent: #ffffff;
+
+  --fam-infra: #0b6fae;
+  --fam-track: #a86f00;
+  --fam-tmpl: #00795c;
+  --fam-crea: #c0490f;
+  --fam-narr: #7d7000;
+  --fam-pers: #a34a7c;
+  --fam-beh: #5a6878;
+
+  --st-confirmed: #3f7d1c;
+  --st-unsure: #8f6a00;
+  --st-rejected: #b3261e;
+  --st-new: #0b7285;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-raised: var(--raised);
+  --color-hover: var(--hover);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-confirmed: var(--st-confirmed);
+  --color-unsure: var(--st-unsure);
+  --color-rejected: var(--st-rejected);
+  --color-new: var(--st-new);
+  --font-sans: var(--font-plex-sans), "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), "IBM Plex Mono", ui-monospace, monospace;
+  --radius-sm: 2px;
+  --radius: 3px;
+  --radius-md: 4px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  font-size: 13px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+
+button:not(:disabled),
+a,
+summary,
+label[for],
+select {
+  cursor: pointer;
+}
+
+/* Etykieta sekcji: wersaliki, drobna, używana w nagłówkach paneli i kolumn. */
+.cap {
+  font-size: 0.77rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Gęsta tabela: wiersz 28 px, cyfry tabelaryczne. */
+.dense {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.dense th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  height: 26px;
+  padding: 0 8px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  font-weight: 500;
+  font-size: 0.77rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.dense td {
+  height: 28px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dense tbody tr:hover {
+  background: var(--hover);
+}
+.dense tbody tr[data-selected="true"] {
+  background: var(--accent-soft);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+@keyframes pulse-dot {
+  50% {
+    opacity: 0.35;
+  }
+}
+.pulse {
+  animation: pulse-dot 1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
 }

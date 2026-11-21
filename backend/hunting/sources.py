@@ -59,7 +59,10 @@ def search_certs(token: str, enricher, now: datetime | None = None) -> list[dict
     if raw is None:
         return None
     rows = trim(raw, now)
-    CertLookup.objects.update_or_create(domain=key, defaults={"raw": rows})
+    # Pustej odpowiedzi nie zapisujemy: crt.sh pod obciążeniem potrafi ją zwrócić dla tokenu, który ma certyfikaty
+    # (tak samo jak przy `enrichment.crtsh.lookup`), a zapis ukryłby je na kilka godzin.
+    if rows:
+        CertLookup.objects.update_or_create(domain=key, defaults={"raw": rows})
     return rows
 
 

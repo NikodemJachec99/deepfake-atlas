@@ -17,10 +17,6 @@ services:
       interval: 5s
       retries: 10
 
-  redis:
-    image: redis:7-alpine
-    ports: ["${REDIS_PORT:-6380}:6379"]
-
   temporal:
     image: temporalio/temporal:latest
     user: "0:0"  # serwer deweloperski zapisuje historię do pliku SQLite na wolumenie

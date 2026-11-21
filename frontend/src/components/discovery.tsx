@@ -5,7 +5,7 @@
 
 import { FolderInput, ArrowUpRight } from "lucide-react";
 import { useApi } from "@/lib/hooks";
-import { adTitle } from "@/lib/format";
+import { bits, adTitle } from "@/lib/format";
 import { CrawlShot } from "./crawl-shot";
 import { GroupLink } from "./ui";
 import { LiveGraph } from "./live-graph";
@@ -21,6 +21,7 @@ import {
   RELATION_LABELS,
   streamAnalysis,
   type AdDetail,
+  type AdSummary,
   type AnalysisEvent,
   type Edge,
 
@@ -35,8 +36,18 @@ function FamilyDot({ family }: { family: Family }) {
   return <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: `var(--fam-${family})` }} />;
 }
 
+async function latestCaseMaterials() {
+  const materials: AdSummary[] = [];
+  for (let page = 1; ; page++) {
+    const result = await api.ads(`?page=${page}&page_size=100`);
+    materials.push(...result.results.filter(item => item.case));
+    if (materials.length >= 4 || !result.next) return materials.slice(0, 4);
+  }
+}
+
 export function Discovery() {
-  const archive = useApi("discovery-materials", () => api.ads("?page_size=4"));
+  const archive = useApi("discovery-case-materials", latestCaseMaterials);
+  const [files, setFiles] = useState<File[]>([]);
   const [kind, setKind] = useState<"url" | "text">("url");
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
@@ -194,14 +205,33 @@ export function Discovery() {
           {busy ? "Analiza trwa" : "Analizuj"}
         </button>
       </form>
+      {!value.trim() && <p className="text-sm text-muted">{kind === "url" ? "Wpisz adres URL, aby rozpocząć analizę." : "Wpisz treść reklamy lub nazwę produktu, aby rozpocząć analizę."}</p>}
       </section>
 
-      <label onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); upload(Array.from(event.dataTransfer.files)); }} className="grid content-center justify-items-start gap-2 border-t border-line bg-raised p-5 md:p-7 lg:border-t-0 lg:border-l">
-        <FolderInput size={24} className="text-accent" aria-hidden />
-        <strong className="text-lg">Import plików</strong>
-        <span className="text-muted">Upuść pliki lub wybierz je z dysku: zrzut ekranu reklamy, zapisana strona, HAR, ZIP ze sprawą.</span>
-        <input id="input-files" type="file" multiple disabled={busy} onChange={event => { upload(Array.from(event.target.files ?? [])); event.target.value = ""; }} className="text-xs" />
-      </label>
+      <section className="grid min-w-0 content-center gap-3 bg-raised p-5 md:p-7">
+        <h2 className="text-lg font-semibold">Import plików</h2>
+        <label onDragOver={event => event.preventDefault()} onDrop={event => {
+          event.preventDefault();
+          const added = Array.from(event.dataTransfer.files);
+          if (!busy) setFiles(previous => [...previous, ...added]);
+        }} className="grid cursor-pointer justify-items-start gap-2 rounded-lg border border-dashed border-line-strong p-4 focus-within:outline">
+          <FolderInput size={24} className="text-accent" aria-hidden />
+          <span>Upuść pliki lub wybierz je z dysku</span>
+          <span className="text-sm text-muted">Zrzut reklamy, zapisana strona, HAR lub ZIP ze sprawą</span>
+          <input id="input-files" type="file" multiple disabled={busy} className="sr-only" onChange={event => {
+            const added = Array.from(event.target.files ?? []);
+            setFiles(previous => [...previous, ...added]);
+            event.target.value = "";
+          }} />
+        </label>
+        {files.length > 0 && <>
+          <ul>{files.map((file, index) => <li key={index} className="flex items-baseline justify-between gap-3">
+            <span className="min-w-0 break-all">{file.name}</span>
+            <button disabled={busy} aria-label={`Usuń ${file.name}`} onClick={() => setFiles(previous => previous.filter((_, i) => i !== index))}>Usuń</button>
+          </li>)}</ul>
+          <button disabled={busy} className="justify-self-start rounded bg-accent px-4 py-2 text-on-accent" onClick={() => upload(files)}>Analizuj pliki</button>
+        </>}
+      </section>
       </div>
 
       {batch.length > 1 && <label className="flex items-center gap-2">Materiał z paczki
@@ -253,18 +283,19 @@ export function Discovery() {
 
         <section className="flex min-w-0 flex-col gap-2">
           {!activeId && <section className="mb-4">
-            <div className="flex items-baseline justify-between border-b border-line pb-2"><h2 className="text-lg font-semibold">Materiały w archiwum</h2><Link href="/archive" className="text-accent underline">Całe archiwum</Link></div>
+            <div className="flex items-baseline justify-between border-b border-line pb-2"><h2 className="text-lg font-semibold">Ostatnie materiały ze spraw</h2><Link href="/archive" className="text-accent underline">Całe archiwum</Link></div>
             {archive.loading ? <p>Pobieranie materiałów…</p> : archive.error ? <button onClick={archive.reload} className="text-accent underline">Ponów pobranie materiałów</button> :
-              archive.data?.results.length ? archive.data.results.slice(0, 4).map(item => <Link key={item.id} href={`/ads/${item.id}`} className="flex items-center gap-4 border-b border-line py-3 hover:bg-panel">
+              archive.data?.length ? archive.data.map(item => <Link key={item.id} href={`/ads/${item.id}`} className="flex items-center gap-4 border-b border-line py-3 hover:bg-panel">
                 <span className="font-mono text-muted">#{item.id}</span><strong className="min-w-0 flex-1 truncate">{adTitle(item)}</strong><span className="text-muted">{item.case}</span><ArrowUpRight size={16} aria-hidden />
-              </Link>) : <p>Archiwum jest puste.</p>}
+              </Link>) : <p>Brak materiałów przypisanych do spraw.</p>}
           </section>}
           <h2 className="text-lg font-semibold">{cluster?.assessment_label || assessment || "Powiązania"}</h2>
+          {!ad && !cluster && !edges.length && <p className="text-muted">Po zakończeniu analizy zobaczysz tutaj powiązania materiału.</p>}
           {(ad || cluster) && <p aria-label="Przypisanie do grup">
             Kampania <GroupLink group={ad ? ad.campaign : cluster?.campaign} /> · Operator <GroupLink group={ad ? ad.operator : cluster?.operator} />
           </p>}
           {strongest.length > 0 && <section><h3>Najsilniejsze dowody</h3><ol>{strongest.map(({ best, edges }) => (
-            <li key={JSON.stringify([best.kind, best.value])}><FamilyDot family={best.family} /> {best.label} · {markerValue(best.value, ad?.genome?.find(band => band.family === best.family)?.markers.find(marker => marker.kind === best.kind && marker.value === best.value)?.display_value)} · {best.bits} bitów · liczba powiązań: {edges.size}</li>
+            <li key={JSON.stringify([best.kind, best.value])}><FamilyDot family={best.family} /> {best.label} · {markerValue(best.value, ad?.genome?.find(band => band.family === best.family)?.markers.find(marker => marker.kind === best.kind && marker.value === best.value)?.display_value)} · {bits(best.bits)} bita · liczba powiązań: {edges.size}</li>
           ))}</ol></section>}
           {ad && (
             <p>
@@ -277,7 +308,7 @@ export function Discovery() {
           )}
           {ad && <nav aria-label="Szczegóły wyniku" className="flex flex-wrap gap-4 text-accent">
             <Link href={`/ads/${ad.id}`}>Karta reklamy #{ad.id}</Link>
-            <Link href={`/investigation?ad=${ad.id}`}>Otwórz w Investigation</Link>
+            <Link href={`/investigation?ad=${ad.id}`}>Otwórz w śledztwie</Link>
           </nav>}
           {ad && edges.length === 0 && <p className="text-muted">Brak powiązań powyżej progu.</p>}
           <ul className="flex flex-col gap-1">

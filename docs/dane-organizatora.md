@@ -99,6 +99,30 @@ Sprawdzone 2026-11-21 dla 23 domen z obu paczek. crt.sh odpowiedział dla 18, dl
 
 Analiza wypisuje takie domeny w zdarzeniu etapu `enrich`. Domeny `abundancecaller.com` i `glowpixel.org` mają ponad 50 certyfikatów, bierzemy 50 najnowszych.
 
+### Łowca domen na stosie (22.11.2026)
+
+Przebieg `manage.py hunt --days 30 --max-queries 12 --max-crawl 20` na 34 operatorach korpusu (327 reklam), z kontenera `worker`, crawler `BrowserFetcher` w piaskownicy:
+
+| | Liczba |
+|---|---|
+| tokeny do zapytań (najlepsze 3 na operatora, bez słów ogólnych) | 38 |
+| zapytania do crt.sh (limit 12, przebieg przerwał się po 11) | 11: 9 odpowiedzi z 0 certyfikatów, 2 bez odpowiedzi (`acrosscommunities`, `neonica`) |
+| kandydaci z crt.sh | 0 |
+| domeny z Listy CERT pasujące do tokenów (okno 30 dni) | 11, z nich 10 kandydatów powyżej progu 0,45 |
+| sprawdzone crawlerem | 10: 4 odrzucone (0 bitów wspólnych śladów), 6 niedostępnych, 0 potwierdzonych |
+
+Kandydaci pochodzą z listy CERT, nie z crt.sh: 8 domen `ceneo-*.shop` (operator O-0021, token `ceneo`) i 2 domeny `.info` z tokenem `linea` (O-0012). Operator O-0021 to dwie reklamy prowadzące na prawdziwe `ceneo.pl`, więc strony `ceneo-*.shop` to podszycia pod markę, a nie to samo zaplecze. Trzy z nich działały i dostały 0 bitów (żaden wspólny marker z reklamami operatora), co jest właściwym wynikiem: łowca nie przypisuje podszywacza do operatora, którego marka jest podszywana. Z niedostępnych pięć nie rozwiązało się w DNS (w tym jedna domena `.info`), jedna odpowiedziała 403. "Odrzucony" znaczy brak śladów operatora, nie że domena jest bezpieczna: wszystkie są na liście CERT.
+
+Drugi przebieg, `--operator O-0001 --days 90 --max-queries 3`: 1 zapytanie bez certyfikatów, 2 bez odpowiedzi, lista CERT dała 1 domenę, ale ta jest już w korpusie i została odfiltrowana.
+
+Samokontrola potwierdzenia na prawdziwych stronach: po dwie domeny sześciu operatorów (z korpusu, więc wspólny jest też marker domeny, którego prawdziwy kandydat mieć nie może) przeszły przez `observe` i `evaluate`. 5 z 10 nie odpowiedziało crawlerowi (403, 404, 522), z pięciu pozostałych cztery wyszły jako `confirmed` (21,9 do 77,7 bita, rzadkie markery: GTM, e-mail) i jedna jako `candidate` (13,7 bita, bez markera rozstrzygającego). Bez markera domeny operator O-0008 zostałby `candidate` (sam GTM, 8,9 bita). To sprawdza tor oceny, a nie skuteczność wyszukiwania nowych domen.
+
+Czego ten pomiar nie pokazuje: ani jednego potwierdzenia nowej domeny z certyfikatu. Powody:
+- crt.sh dla naszych tokenów (nazwy własne z bibliotek reklam, np. `freecash`, `bookinghost`) nie ma w ostatnich 30 dniach certyfikatów, więc nie było z czego wybierać. Sprawdzone ręcznie, `curl` na te same tokeny, też bez `exclude=expired`: pusta lista.
+- crt.sh bywa przeciążony: z 14 zapytań tego dnia 4 skończyły się 502 albo brakiem odpowiedzi, a po dwóch porażkach z rzędu przebieg się przerywa. Ten sam token wracał potem z poprawną (pustą) odpowiedzią.
+- Tokeny z korpusu Microsoft Ad Library to w większości jedna domena na operatora i nazwa marki, a nie konwencja nazewnictwa (`inwestycje-12`), po której da się szukać świeżych domen. Najlepszy materiał do łowcy to operatorzy z wieloma domenami o wspólnym wzorcu, takich jak operator A z paczki organizatora.
+- Limit 12 zapytań objął 11 z 34 operatorów. Pozostali czekają na kolejne przebiegi (harmonogram jest założony wstrzymany).
+
 ### Odporność na brak materiału
 
 Obie paczki zaimportowaliśmy od zera w czterech wariantach, na osobnym stosie (2026-11-21, `scripts/odpornosc.py`): pełny, bez plików HAR (także `network.har` z archiwów NASK), bez zapisów stron z przeglądarki (HTML i katalogi `_files`) i bez zrzutów reklam. Liczymy połączenia wspólnego źródła (`same_campaign`, `same_operator`) między stronami z pełnego importu, których jest 33.

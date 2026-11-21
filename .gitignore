@@ -12,3 +12,4 @@ data/raw/*
 data/artifacts/
 staticfiles/
 .superpowers/
+.maszyna

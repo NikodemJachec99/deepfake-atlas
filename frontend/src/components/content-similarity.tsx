@@ -1,6 +1,7 @@
 import { num } from "@/lib/format";
 
 const explanations: Record<string, string> = {
+  image_embedding: "Podobne ujęcie: model CLIP rozpoznał podobną treść obrazów, na przykład tę samą scenę w innym kadrze. Samo podobieństwo obrazu nie wskazuje wspólnego operatora.",
   text_embedding: "Teksty mają podobne znaczenie, nawet gdy użyto innych słów. Samo podobieństwo treści nie dowodzi wspólnego zaplecza.",
   video_frames: "W nagraniach znaleziono podobne klatki, także po ponownym zakodowaniu filmu. Wspólny materiał nie dowodzi wspólnego zaplecza.",
 };

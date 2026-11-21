@@ -14,13 +14,13 @@ export function GroupList({ kind }: { kind: GroupKind }) {
   const groups = useApi(kind, api[kind]);
   if (groups.loading) return <Loading />;
   if (groups.error) return <ErrorBox message={groups.error} onRetry={groups.reload} />;
-  return <main className="p-4">
-    <h1 className="mb-3 text-lg">{kind === "operators" ? "Operatorzy" : "Kampanie"}</h1>
-    {groups.data?.count ? <table className="dense"><thead><tr><th>Grupa</th><th>Nazwa</th><th>Reklamy</th></tr></thead>
+  return <main className="atlas-page">
+    <h1 className="atlas-title">{kind === "operators" ? "Operatorzy" : "Kampanie"}</h1>
+    {groups.data?.count ? <div className="atlas-table"><table className="dense"><thead><tr><th>Grupa</th><th>Nazwa</th><th>Reklamy</th></tr></thead>
       <tbody>{groups.data.results.map(group => <tr key={group.id}>
         <td><Link className="text-accent" href={`/${kind}/${group.id}`}>{group.key}</Link></td>
         <td>{group.label}</td><td>{group.size}</td>
-      </tr>)}</tbody></table> : <p>Brak grup w korpusie.</p>}
+      </tr>)}</tbody></table></div> : <p>Brak grup w korpusie.</p>}
   </main>;
 }
 
@@ -34,9 +34,9 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
   if (result.error) return <ErrorBox message={result.error} onRetry={result.reload} />;
   const group = result.data;
   if (!group) return null;
-  return <main className="flex flex-col gap-4 p-4">
-    <header><h1 className="text-lg">{group.key} {group.label}</h1>
-      <Link className="text-accent" href={`/investigation?${operator ? "operator" : "campaign"}=${id}`}>Otwórz graf grupy</Link></header>
+  return <main className="atlas-page atlas-group">
+    <header className="flex flex-wrap items-center justify-between gap-3"><h1 className="atlas-title">{group.key} {group.label}</h1>
+      <Link className="rounded-md bg-accent px-3 py-2 font-medium text-white" href={`/investigation?${operator ? "operator" : "campaign"}=${id}`}>Otwórz graf grupy</Link></header>
     <ObservationTimeline key={kind + id} id={Number(id)} operator={operator} />
     {"campaigns" in group && Array.isArray(group.campaigns) && <section><h2>Kampanie operatora</h2>
       {group.campaigns.length ? <ul>{group.campaigns.map(key => <li key={key}><GroupLink group={key} /></li>)}</ul> : <p>Brak przypisanych kampanii.</p>}</section>}

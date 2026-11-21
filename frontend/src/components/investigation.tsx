@@ -346,16 +346,16 @@ export function Investigation() {
   return (
     <>
       <TopBar crumbs={crumbs} />
-      <Split id="inv-filters" dir="row" fixed="first" initial={236} min={200} max={360}>
+      <div className="atlas-investigation"><Split id="inv-filters" dir="row" fixed="first" initial={208} min={180} max={360}>
         {filters}
-        <Split id="inv-inspector" dir="row" fixed="second" initial={520} min={380} max={820}>
+        <Split id="inv-inspector" dir="row" fixed="second" initial={380} min={280} max={820}>
           <Split id="inv-table" dir="col" fixed="second" initial={236} min={90} max={560}>
             <div className="flex min-h-0 min-w-0 flex-1">{canvas}</div>
             {bottom}
           </Split>
           {inspector}
         </Split>
-      </Split>
+      </Split></div>
     </>
   );
 }

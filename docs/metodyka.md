@@ -27,7 +27,9 @@ Sześć etapów (`workflows/pipeline.py`). Każdy zapisuje wynik do bazy i zdarz
 1. **Przyjęcie.** Utworzenie rekordu reklamy.
 2. **Strona.** Dla materiału z przechwycenia bierzemy HTML i HAR z plików i niczego nie pobieramy z sieci. Dla adresu na żywo pobieramy stronę dwa razy, jako automat i jako ofiara z telefonu po kliknięciu w reklamę, i zapisujemy łańcuch przekierowań.
 3. **Ekstrakcja cech.** Sekcja 4.
-4. **Wzbogacanie.** Dane rejestrowe domeny (RDAP), obecność na Liście Ostrzeżeń CERT Polska. Dla strony badanej na żywo także DNS, ASN, certyfikat i favicon.
+4. **Wzbogacanie.** Dane rejestrowe domeny (RDAP), obecność na Liście Ostrzeżeń CERT Polska, certyfikaty domeny z dzienników Certificate Transparency (crt.sh). Dla strony badanej na żywo także DNS, ASN, certyfikat i favicon.
+
+   Z crt.sh bierzemy do 50 najnowszych certyfikatów domeny, także dawnych. Numer seryjny każdego trafia do markera `tls_serial`, tego samego co numer z `dns_ssl.json` w paczkach. Certyfikat wystawiony na kilka domen łączy je jako ślad jednego konta, a pozostałe domeny z pola SAN analiza wypisuje jako tropy. Certyfikat CDN na kilkanaście niezwiązanych domen (ponad 10 domen rejestrowych albo host `cloudflaressl.com`) pomijamy. Odpowiedź trzymamy w bazie przez 7 dni, zapytania idą po kolei co 3 sekundy z limitem 25 sekund. Brak odpowiedzi crt.sh pomija ten krok i analiza idzie dalej, a przez kolejne 10 minut crt.sh nie jest pytany wcale, żeby import wielu stron nie czekał na każdy limit czasu.
 5. **Łączenie.** Sekcje 5 i 6.
 6. **Grupowanie.** Sekcja 7.
 
@@ -142,6 +144,7 @@ Każda krawędź ma w bazie listę dowodów (`EdgeEvidence`): rodzina, typ, wart
 | materiały organizatora | korpus | paczka `DANE.zip` i archiwum ze strony z zajawką |
 | Lista Ostrzeżeń CERT Polska | etykieta domeny, daty wpisu | https://hole.cert.pl/domains/v2/ |
 | RDAP rejestru .pl i rdap.org | data rejestracji, rejestrator, serwery nazw | https://rdap.dns.pl, https://rdap.org |
+| crt.sh | certyfikaty domeny z dzienników Certificate Transparency, domeny z pola SAN | https://crt.sh (`output=json`) |
 | Team Cymru | numer AS dla adresu IP | zapytania DNS do `origin.asn.cymru.com` |
 | Microsoft Ad Library API | reklamy z adresem docelowym, tło z reklam legalnych | https://adlibrary.api.bingads.microsoft.com |
 | Meta Ad Library API | reklamy z UE (wymaga tokenu) | https://graph.facebook.com (`ads_archive`) |

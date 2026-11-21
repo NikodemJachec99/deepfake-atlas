@@ -7,11 +7,15 @@ from enrichment.providers import NullEnricher, RdapInfo
 
 PAGES: dict[str, dict] = {}
 DNS: dict[str, dict] = {}
+CERTS: dict[str, list[dict] | None] = {}  # odpowiedź crt.sh; None to brak odpowiedzi
+CERT_CALLS: list[str] = []
 
 
 def reset() -> None:
     PAGES.clear()
     DNS.clear()
+    CERTS.clear()
+    CERT_CALLS.clear()
 
 
 def page(url: str, html: str, *, bot_html: str | None = None, chain: list[str] | None = None, favicon: bytes = b"") -> None:
@@ -59,3 +63,7 @@ class FakeEnricher(NullEnricher):
         return RdapInfo(
             registrar=entry["registrar"], registered_at=datetime(2026, 3, 1, tzinfo=UTC), nameservers=entry.get("ns", [])
         )
+
+    def crtsh(self, domain: str) -> list[dict] | None:
+        CERT_CALLS.append(domain)
+        return CERTS.get(domain, [])

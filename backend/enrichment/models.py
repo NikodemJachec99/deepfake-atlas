@@ -23,3 +23,14 @@ class DomainRecord(models.Model):
     nameservers = models.JSONField(default=list, blank=True)
     raw = models.JSONField(default=dict, blank=True)
     fetched_at = models.DateTimeField(auto_now=True)
+
+
+class CertLookup(models.Model):
+    """Odpowiedź crt.sh dla domeny. Pamięć podręczna, żeby nie pytać o to samo przy każdej analizie."""
+
+    domain = models.CharField(max_length=255, unique=True)
+    raw = models.JSONField(default=list, blank=True)
+    fetched_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        return self.domain

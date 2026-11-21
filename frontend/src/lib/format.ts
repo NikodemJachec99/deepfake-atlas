@@ -95,3 +95,14 @@ export function errorText(reason: unknown): string {
   if (/Failed to fetch|NetworkError|Load failed/i.test(text)) return "Brak połączenia z API. Sprawdź, czy backend działa i czy adres w NEXT_PUBLIC_API_URL jest poprawny.";
   return text;
 }
+
+// Python zapisuje UTC z offsetem i sześcioma cyframi ułamka, jeśli ułamek jest niezerowy.
+// Date potrafi przeliczyć offset, lecz zachowuje tylko milisekundy.
+export function utcEdgeVersion(version: string): string {
+  const parts = /^(.*T\d{2}:\d{2}:\d{2})(?:\.(\d{1,6}))?(Z|[+-]\d{2}:\d{2})$/.exec(version);
+  if (!parts) return version;
+  const instant = new Date(parts[1] + parts[3]);
+  if (!Number.isFinite(instant.getTime())) return version;
+  const fraction = (parts[2] ?? "").padEnd(6, "0");
+  return instant.toISOString().slice(0, 19) + (fraction === "000000" ? "" : "." + fraction) + "+00:00";
+}

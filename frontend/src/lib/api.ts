@@ -417,6 +417,54 @@ export interface EdgeDecision {
   snapshot: DecisionSnapshot | null;
 }
 
+export interface PrecedentGroup {
+  group: string;
+  label: string;
+}
+
+// Podobne wcześniejsze rozstrzygnięcie innej pary. Doradczo: nie przesądza o bieżącej krawędzi.
+export interface Precedent {
+  decision: number;
+  edge: number | null;
+  ad_a: number | null;
+  ad_b: number | null;
+  verdict: Exclude<Verdict, "">;
+  reason: VerdictReason;
+  reason_label: string;
+  reason_known: boolean;
+  note: string;
+  user: string | null;
+  created_at: string;
+  source: string;
+  similarity: number;
+  same_relation: boolean;
+  relation_then: Relation;
+  relation_now: Relation;
+  model_then: string;
+  shared_groups: PrecedentGroup[];
+  only_now: PrecedentGroup[];
+  only_then: PrecedentGroup[];
+  new_independent: PrecedentGroup[];
+  why: string[];
+  differences: string[];
+  evidence_then: { kind: string; label: string; weight_bits: number }[];
+}
+
+export interface Precedents {
+  edge: number;
+  edge_version: string;
+  relation: Relation;
+  groups: PrecedentGroup[];
+  status: "found" | "none";
+  considered: number;
+  matching: number;
+  skipped_without_snapshot: number;
+  limit: number;
+  conflict: boolean;
+  notice: string;
+  precedents: Precedent[];
+}
+
 export interface EdgeDecisions {
   edge: number;
   current: Verdict;
@@ -460,6 +508,7 @@ export const api = {
   setVerdict: (id: number, verdict: Exclude<Verdict, "">, note = "", reason?: Exclude<VerdictReason, "unknown">) =>
     request<EdgeDetail>(`/api/edges/${id}/verdict`, { method: "POST", body: JSON.stringify({ verdict, note, ...(reason ? { reason } : {}) }) }),
   edgeDecisions: (id: number) => request<EdgeDecisions>(`/api/edges/${id}/decisions`),
+  edgePrecedents: (id: number, limit = 5) => request<Precedents>(`/api/edges/${id}/precedents?limit=${limit}`),
   // Laboratorium dowodów: przeliczenie bez wybranych dowodów. Niczego nie zapisuje. 409, gdy krawędź się zmieniła.
   simulateEdge: (id: number, exclude: number[], edgeVersion?: string) =>
     request<Simulation>(`/api/edges/${id}/simulate`, {

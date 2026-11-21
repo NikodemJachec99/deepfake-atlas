@@ -95,6 +95,20 @@ Skutek: adres z puli Cloudflare jest wart ułamek bita, a identyfikator strony w
 
 **Pewność.** Suma bitów po rodzinach plus szansa wstępna 1 do 10 000, przeliczone na prawdopodobieństwo.
 
+### Wagi uczone
+
+`manage.py estimate_weights` (`similarity/learning.py`) szacuje `m` i `u` z par kandydatów algorytmem EM bez etykiet. Para ma wektor zgodności: dla każdego typu markera 1, gdy dzieli wartość (marker miękki: podobieństwo co najmniej `hi`). Klasa ukryta to "ta sama grupa". Szacujemy `m` (zgodność przy tej samej grupie), `u` (zgodność przy różnych) i udział par pasujących, z inicjalizacją z wag eksperckich, wygładzaniem ku wartości eksperckiej (żeby `u` nie było 0), limitem 500 iteracji i progiem zbieżności 1e-7. Wynik to JSON: `m`, `u`, bity `log2(m/u)` obcięte do `cap`, liczba par ze zgodnością i metadane (liczba par, iteracje, data, wersja modelu).
+
+- **Dwie klasy, nie jedna.** Zaplecze (infrastruktura, tracking, szablon, zachowanie) i opowieść (narracja, kreacja, osoby) uczymy osobno. Jedna klasa mylnie uznaje operatora z różnymi kampaniami za niepasującego, bo jego strony różnią się treścią.
+- **`u` względem wszystkich par.** Po typach kandydackich szukamy kandydatów, więc wśród kandydatów zgodność jest zawyżona. Dla nich `u` liczymy względem N(N-1)/2 par. Dla pozostałych jest warunkowe (pole `u_basis`).
+- **Typ z mniej niż 5 parami zgodności** zostaje przy wadze eksperckiej (`source: expert`).
+- **Przełącznik.** `MODEL_WEIGHTS=expert|learned` (domyślnie `expert`, wersja `fs-5`) i `MODEL_WEIGHTS_PATH` (domyślnie `data/models/wagi.json`). Przy `learned` wersja to `fs-6`: typy twarde liczą `log2(m/f)` z uczonym `m` i `f0=u`, nadal z rzadkością po źródłach, typy miękkie dostają uczony limit zamiast `cap`. Rodziny, rabat w rodzinie, grupy niezależności, reguły relacji i limit zostają. Brak pliku przy `learned` to błąd `WeightsError` z poleceniem, co uruchomić, a nie ciche wrócenie do wag eksperckich, bo wersja `fs-6` na krawędzi musi znaczyć to, co znaczy.
+- **Rozrzut.** Bootstrap po reklamach (nie po parach, bo pary jednej reklamy są zależne) daje odchylenie wagi każdego typu. Raport oznacza zestaw jako niestabilny, gdy ponad 25% typów ma odchylenie powyżej 3 bitów.
+- **Kalibracja.** Gdy w bazie jest co najmniej 20 decyzji analityka (potwierdzone i odrzucone, po 5 z klasy), regresja logistyczna z regularyzacją L2 na bitach i bitach rodzin (metoda Newtona, bez bibliotek) daje skalibrowaną pewność, a współczynniki trafiają do tego samego JSON. Bez decyzji raport mówi "brak kalibracji: 0 decyzji".
+- **`GET /api/weights`** zwraca wagę ekspercką i uczoną każdego typu.
+
+Wynik na danych organizatora i ocena stabilności: [dane-organizatora.md](dane-organizatora.md). Krótko: grupowanie takie samo, rdzeń operatora A zostaje, ale 28 reklam to za mało, żeby zmienić domyślne wagi.
+
 ## 6. Od pewności do relacji
 
 Sama wysoka suma nie wystarcza. Reguły:

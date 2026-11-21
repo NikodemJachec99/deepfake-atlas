@@ -136,6 +136,12 @@ CRAWLER_MAX_BYTES = int(env("CRAWLER_MAX_BYTES", str(3 * 1024 * 1024)))
 # Wyjście crawlera. Oszuści blokują adresy centrów danych, docelowo polski adres domowy lub mobilny.
 CRAWLER_PROXY = env("CRAWLER_PROXY")
 
+# --- Wagi modelu -----------------------------------------------------------
+# expert: m, f0 i limity z evidence/kinds.py. learned: m i u z pliku `manage.py estimate_weights` (model fs-6).
+# Brak pliku przy learned to błąd (similarity.fusion.WeightsError), nie ciche wrócenie do eksperckich.
+MODEL_WEIGHTS = env("MODEL_WEIGHTS", "expert")
+MODEL_WEIGHTS_PATH = Path(env("MODEL_WEIGHTS_PATH", str(BASE_DIR.parent / "data" / "models" / "wagi.json")))
+
 # --- Magazyn dowodów -------------------------------------------------------
 ARTIFACT_BACKEND = env("ARTIFACT_BACKEND", "local")  # local | s3
 ARTIFACT_DIR = Path(env("ARTIFACT_DIR", str(BASE_DIR.parent / "data" / "artifacts")))

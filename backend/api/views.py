@@ -522,6 +522,14 @@ def kinds(request):
 
 
 @api_view(["GET"])
+def weights(request):
+    """Wagi eksperckie i uczone (EM) dla każdego typu markera, żeby widok pokazał, co się zmienia."""
+    from similarity import learning
+
+    return Response(learning.weights_overview())
+
+
+@api_view(["GET"])
 def stats(request):
     """Liczby do paska stanu: wielkość korpusu i tego, co silnik w nim znalazł."""
     return Response(

@@ -480,6 +480,59 @@ export interface Kinds {
   verdict_reasons: { value: Exclude<VerdictReason, "unknown">; label: string }[];
 }
 
+// Wagi modelu: ekspercka i uczona (EM) każdego typu markera. `learned` jest null bez pliku z wagami.
+export interface KindWeights {
+  code: string;
+  label: string;
+  family: Family;
+  family_label: string;
+  soft: boolean;
+  decisive: boolean;
+  cap: number;
+  expert: { m: number | null; f0: number | null; bits: number };
+  learned: {
+    source: "em" | "expert";
+    m: number;
+    u: number;
+    u_basis: "population" | "candidates";
+    bits: number;
+    pairs_agree: number;
+    bits_std: number | null;
+  } | null;
+}
+
+export interface WeightsCalibration {
+  fitted: boolean;
+  decisions: number;
+  confirmed: number;
+  rejected: number;
+  note?: string;
+  coefficients?: { intercept: number; weights: number[]; features: string[]; scale: number };
+}
+
+export interface Weights {
+  active: "expert" | "learned";
+  model_version: string;
+  learned_available: boolean;
+  learned_error: string | null;
+  meta: {
+    model_version: string;
+    created: string;
+    source: string;
+    ads: number;
+    pairs: number;
+    iterations: number;
+    converged: boolean;
+    stable: boolean;
+    unstable_kinds: number;
+    learned_kinds: number;
+    kinds: number;
+    classes: Record<string, { iterations: number; converged: boolean; match_share: number; expected_matches: number }>;
+  } | null;
+  calibration: WeightsCalibration | null;
+  kinds: KindWeights[];
+}
+
 // Pamięć sprzeciwu: powód decyzji analityka. "unknown" mają decyzje bez podanego powodu i wszystkie sprzed tej funkcji.
 export type VerdictReason =
   | "shared_tool"
@@ -721,6 +774,7 @@ export const api = {
   // Filtry: ?campaign=ID, ?operator=ID, ?ad=ID, ?relation=same_campaign,same_operator, ?limit=
   graph: (query = "") => request<Graph>(`/api/graph${query}`),
   kinds: () => request<Kinds>("/api/kinds"),
+  weights: () => request<Weights>("/api/weights"),
   stats: () => request<Stats>("/api/stats"),
   // Alerty: nowy materiał w znanej kampanii albo u znanego operatora. unseenOnly zostawia nieprzejrzane.
   alerts: (unseenOnly = false) => request<Page<Alert>>(`/api/alerts${unseenOnly ? "?unseen=1" : ""}`),

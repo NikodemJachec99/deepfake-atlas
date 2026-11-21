@@ -1,3 +1,5 @@
+import { GroupCard } from "@/components/groups";
+
 export default function Page() {
-  return <main className="p-4"><h1 className="text-lg font-semibold">Karta operatora</h1><p>Widok w przygotowaniu.</p></main>;
+  return <GroupCard kind="operators" />;
 }

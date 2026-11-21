@@ -23,7 +23,7 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | GET | `/api/campaigns/{id}` | | reklamy, krawędzie, markery rdzeniowe |
 | GET | `/api/operators` | `?page=` | strona grup z `size` |
 | GET | `/api/operators/{id}` | | jak kampania, plus lista `campaigns` operatora |
-| GET | `/api/campaigns/{id}/timeline` | | `Timeline`: zdarzenia kampanii posortowane po dacie |
+| GET | `/api/campaigns/{id}/timeline` | | `Timeline`: oś obserwacji kampanii (opis niżej) |
 | GET | `/api/operators/{id}/timeline` | | `Timeline` operatora, ten sam kształt (opis niżej) |
 | GET | `/api/graph` | `?campaign=` \| `?operator=` \| `?ad=`, `?relation=a,b`, `?limit=` | `{nodes, edges}` dla Sigma.js |
 | GET | `/api/kinds` | | słownik 7 rodzin i typów markerów |
@@ -31,20 +31,36 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | GET | `/api/artifacts/{sha256}` | | surowy dowód jako załącznik (nigdy się nie renderuje) |
 | GET | `/api/artifacts/{sha256}/image` | | zrzut reklamy jako obraz (tylko artefakty obrazów) |
 
-## Oś czasu
+## Oś obserwacji
 
-`Timeline` to `{"group": "K-0001", "events": [TimelineEvent]}`. Zdarzenia są posortowane po `at`, a przy tej samej dacie najpierw zaplecze, potem reklama. Zdarzenie bez daty w bazie się nie pojawia.
+`Timeline` to `{"group": "K-0001", "events": [TimelineEvent], "undated": {...}}`. Zdarzenia są posortowane po `at`, a przy tej samej dacie w kolejności z tabeli niżej. Wynik jest deterministyczny.
 
-| `type` | Data z | `value` | `detail` |
+Każde zdarzenie ma rodzaj czasu i jego pochodzenie:
+
+- `time_kind`: `observed` to chwila, w której materiał zobaczyło narzędzie przechwytujące, analityk albo skan biblioteki. To moment obserwacji, a nie początek kampanii. `reported` to data podana przez źródło zewnętrzne o rzeczy, której nie obserwowaliśmy w tej chwili.
+- `source`: `capture`, `manual`, `meta` i inne źródła reklam albo `rdap`, `crt.sh`, `cert_pl`.
+- `precision`: `exact` albo `day` (start emisji z biblioteki Mety ma tylko dzień).
+
+| `type` | `time_kind`, źródło daty | `value` | `detail` |
 |---|---|---|---|
-| `domain_registered` | RDAP | domena | `registrar` |
-| `cert_issued` | crt.sh, `not_before` | numer seryjny | `issuer`, `domains` (inne domeny z certyfikatu) |
-| `ad_first_seen` | `Ad.first_seen` | | |
-| `snapshot` | migawka reklamy z biblioteki | | `active` |
-| `ad_last_seen` | `Ad.last_seen` reklamy z biblioteki | | |
-| `cert_pl_added`, `cert_pl_removed` | Lista Ostrzeżeń CERT Polska | domena | |
+| `domain_registered` | `reported`, RDAP | domena | `registrar` |
+| `cert_issued` | `reported`, `not_before` z crt.sh albo z certyfikatu w przechwyceniu (`dns_ssl.json`, źródło `capture`) | numer seryjny pierwszego certyfikatu | `issuer`, `count` (wystawienia w serii), `last_at` (ostatnie), `domains` (inne domeny z certyfikatu) |
+| `ad_first_seen` | `observed` z chwili przechwycenia albo zgłoszenia; `reported` dla startu emisji z biblioteki | | |
+| `trace_first_observed` | jak `ad_first_seen` najwcześniejszej reklamy grupy ze śladem | wartość śladu | `kind`, `kind_label`, `family`, `in_group` (reklamy grupy ze śladem), `undated_ads`, `tied` |
+| `link_observable` | jak `ad_first_seen` późniejszej z dwóch reklam | identyfikator krawędzi | `relation`, `probability` |
+| `snapshot` | `observed`, skan biblioteki | | `active` |
+| `ad_last_seen` | `observed`, skan biblioteki | | |
+| `cert_pl_added`, `cert_pl_removed` | `reported`, Lista Ostrzeżeń CERT Polska | domena | |
 
-`ads` to identyfikatory reklam grupy, których dotyczy zdarzenie (domena albo certyfikat może łączyć kilka). Ostatnie wystąpienie i migawki są tylko dla reklam z bibliotek, bo dla przechwyceń i zgłoszeń ręcznych to data importu. Z tego samego powodu pomijamy pierwsze wystąpienie przechwycenia, które w paczce nie miało daty.
+Zasady:
+
+- `ads` to reklamy grupy, których dotyczy zdarzenie. Domena, certyfikat albo ślad mogą łączyć kilka.
+- Odnowienia certyfikatu z tymi samymi reklamami i tymi samymi pozostałymi domenami to jedno zdarzenie `cert_issued` z `count`. Wspólny certyfikat kilku reklam to jedno zdarzenie z nimi wszystkimi.
+- `trace_first_observed` dotyczy domen, adresów IP, identyfikatorów analityki, pikseli i lejka, kreacji, kontaktów i kont reklamowych. Gdy kilka reklam ma tę samą najwcześniejszą datę, wszystkie są w `ads`, a `tied` jest `true`: nie rozstrzygamy, która była pierwsza.
+- `link_observable` to chwila, od której oba materiały były w ręku, a nie data, w której operator je połączył. Kampania pokazuje krawędzie `same_campaign`, operator także `same_operator`. Odrzucone przez analityka pomijamy.
+- Oś nie twierdzi, że jedna domena zastąpiła drugą ani że operator zmienił taktykę. Pokazuje kolejność obserwacji.
+- Ostatnie wystąpienie i migawki są tylko dla reklam z bibliotek, bo dla przechwyceń i zgłoszeń ręcznych to data importu. Z tego samego powodu pomijamy pierwsze wystąpienie przechwycenia, które w paczce nie miało daty.
+- `undated` liczy to, czego nie da się umieścić w czasie: `ads` (reklamy bez daty), `traces` (ślady tylko w takich reklamach), `links` (krawędzie z taką reklamą), `certificates` (numery certyfikatów bez daty wystawienia, np. z `dns_ssl.json`).
 
 ## Wejście plikami
 

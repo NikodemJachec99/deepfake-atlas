@@ -306,7 +306,7 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict }: { edgeId: number; onO
         <EvidenceLab open={section === "lab"} onToggle={() => toggle("lab")} key={data.id + ":" + data.updated_at} edge={data} refresh={edge.reload} />
         <div className="flex h-7 items-center justify-between border-b border-line px-2">
           <span className="cap">Dowody według wkładu</span>
-          <span className="text-[0.85rem] text-faint">model {data.model_version}</span>
+          <span className="text-[0.85rem] text-faint">wersja modelu oceny powiązań · {data.model_version}</span>
         </div>
         {evidence.length === 0 ? (
           <Empty title="Krawędź nie ma zapisanych dowodów">To nie powinno się zdarzyć: silnik nie tworzy krawędzi bez dowodów. Zgłoś identyfikator krawędzi.</Empty>

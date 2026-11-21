@@ -127,7 +127,7 @@ export function FamilyBar({ families, legend = false, height = 8 }: { families: 
     <div className="flex min-w-0 flex-col gap-1.5">
       <div className="flex w-full overflow-hidden rounded-[1px] bg-line" style={{ height }} role="img" aria-label="Udział rodzin markerów">
         {present.map((f) => (
-          <span key={f} title={`${FAMILY_LABELS[f]}: ${bits(families[f] ?? 0)} bit`} style={{ width: `${((families[f] ?? 0) / total) * 100}%`, background: famVar(f) }} />
+          <span key={f} title={`${FAMILY_LABELS[f]}: ${bits(families[f] ?? 0)} bita`} style={{ width: `${((families[f] ?? 0) / total) * 100}%`, background: famVar(f) }} />
         ))}
       </div>
       {legend && (

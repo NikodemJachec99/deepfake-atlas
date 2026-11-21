@@ -14,11 +14,12 @@ type GroupKind = "operators" | "campaigns";
 export function GroupList({ kind }: { kind: GroupKind }) {
   const [all, setAll] = useState(false);
   const source = all ? undefined : "capture";
+  const totals = useApi("group-totals", api.stats);
   const groups = useApi(kind + ":" + source, () => api[kind](source));
   return <main className="atlas-page">
     <h1 className="atlas-title">{kind === "operators" ? "Operatorzy" : "Kampanie"}</h1>
     <label className="flex items-center gap-2"><input type="checkbox" checked={all} onChange={e => setAll(e.target.checked)} />Wszystkie grupy</label>
-    <p className="text-muted">{all ? "Wszystkie źródła" : "Grupy zawierające materiały spraw"}</p>
+    <p className="text-muted">{groups.data && totals.data && `Pokazano ${groups.data.results.length} z ${totals.data[kind]} grup · `}{all ? "wszystkie źródła" : "tylko sprawy"}</p>
     {groups.loading ? <Loading /> : groups.error ? <ErrorBox message={groups.error} onRetry={groups.reload} /> : groups.data?.count ? <div className="atlas-table"><table className="dense"><thead><tr><th>Grupa</th><th>Nazwa</th><th>Reklamy</th><th>Źródła reklam</th><th>Sprawy</th><th>Reklamy z domeną na liście CERT</th></tr></thead>
       <tbody>{groups.data.results.map(group => <tr key={group.id}>
         <td><Link className="text-accent" href={`/${kind}/${group.id}`}>{group.key}</Link></td>

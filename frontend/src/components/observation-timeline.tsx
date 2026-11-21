@@ -3,14 +3,13 @@
 import Link from "next/link";
 import { useState } from "react";
 import { api, type TimelineEvent } from "@/lib/api";
-import { markerValue } from "@/lib/format";
+import { dateTime, markerValue } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 import { ErrorBox, Loading } from "./ui";
 
 function eventDate(event: TimelineEvent) {
   if (event.precision === "day") return event.at.slice(0, 10);
-  const date = new Date(event.at);
-  return Number.isFinite(date.getTime()) ? date.toLocaleString("pl-PL", { timeZoneName: "short" }) : "Data niedostępna";
+  return dateTime(event.at) || "Data niedostępna";
 }
 
 export function ObservationTimeline({ id, operator }: { id: number; operator: boolean }) {

@@ -5,7 +5,7 @@ import { ContentSimilarity } from "./content-similarity";
 import { WeakestLinkTest } from "./weakest-link-test";
 import { useState } from "react";
 import { api, artifactDownloadUrl, type EdgeDetail } from "@/lib/api";
-import { markerValue, utcEdgeVersion } from "@/lib/format";
+import { bits, markerValue, utcEdgeVersion } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 
 export function EvidenceLab({ edge, refresh, open, onToggle }: { edge: EdgeDetail; refresh: () => void; open: boolean; onToggle: () => void }) {
@@ -42,7 +42,7 @@ export function EvidenceLab({ edge, refresh, open, onToggle }: { edge: EdgeDetai
             result?.baseline && result.simulated && Array.isArray(result.simulated.reasons) ? <>
               <h3 className="font-semibold">Wpływ na parę</h3>
               {([["Przed", result.baseline], ["Po", result.simulated]] as const).map(([label, value]) => {
-                return <p key={String(label)}>{String(label)} · {value.relation === null ? "Brak powiązania" : value.relation_label} · {value.bits?.toFixed(1) ?? "—"} bitów</p>;
+                return <p key={String(label)}>{String(label)} · {value.relation === null ? "Brak powiązania" : value.relation_label} · {value.bits == null ? "—" : `${bits(value.bits)} bita`}</p>;
               })}
               <ul>{result.simulated.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>
               <h3 className="mt-2 font-semibold">Wpływ na grupy</h3>

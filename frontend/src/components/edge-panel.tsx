@@ -1,5 +1,7 @@
 "use client";
 
+import { ContentSimilarity } from "./content-similarity";
+
 // Panel dowodów krawędzi: z czego wynika połączenie dwóch reklam. Najważniejszy ekran aplikacji.
 // Wszystko pochodzi z GET /api/edges/{id}; zrzuty reklam z GET /api/ads/{id}.
 
@@ -106,6 +108,8 @@ function EvidenceCard({ item, max, ads }: { item: Evidence; max: number; ads: [A
           <span className="text-[0.85rem] text-muted">{soft ? "marker miękki" : `w ${item.df} z ${item.corpus_n} źródeł`}</span>
         </span>
       </button>
+      <ContentSimilarity kind={item.kind} similarity={item.similarity} />
+
       <AnimatePresence initial={false}>
         {open && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.15 }} className="overflow-hidden bg-bg">

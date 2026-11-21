@@ -1,5 +1,7 @@
 "use client";
 
+import { ContentSimilarity } from "./content-similarity";
+
 import { WeakestLinkTest } from "./weakest-link-test";
 import { useState } from "react";
 import { api, artifactDownloadUrl, type EdgeDetail } from "@/lib/api";
@@ -19,11 +21,13 @@ export function EvidenceLab({ edge, refresh }: { edge: EdgeDetail; refresh: () =
       <p>Symulacja bez zapisu. Wyłącz dowody, aby sprawdzić ich wpływ.</p>
       {!ready ? <p>Brak danych wymaganych do symulacji.</p> : <>
         <WeakestLinkTest edge={edge} apply={setExcluded} refresh={refresh} />
-        <fieldset className="max-h-48 overflow-auto"><legend>Wyłączone dowody</legend>
+        <fieldset className="max-h-48 overflow-auto"><legend>Wybierz dowody do wyłączenia · zaznaczono {excluded.length} z {edge.evidence.length}</legend>
           {edge.evidence.map(item => <div key={item.id} className="border-b border-line py-1">
             <label className="break-all"><input type="checkbox" checked={excluded.includes(item.id)}
               onChange={event => setExcluded(event.target.checked ? [...excluded, item.id] : excluded.filter(id => id !== item.id))} />
               {" "}{item.label} · {markerValue(item.value_a, item.display_value)}{item.value_a !== item.value_b && " / " + markerValue(item.value_b)}</label>
+
+      <ContentSimilarity kind={item.kind} similarity={item.similarity} />
             <div className="flex gap-2 text-muted">{item.family_label}
               {([["A", item.artifact_a], ["B", item.artifact_b]] as const).map(([side, sha]) => sha &&
                 <a key={side} href={artifactDownloadUrl(sha)} className="text-accent underline">Źródło {side}</a>)}

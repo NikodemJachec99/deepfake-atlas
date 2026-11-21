@@ -31,6 +31,7 @@ urlpatterns = [
     path("kinds", views.kinds),
     path("stats", views.stats),
     path("export", views.export_corpus),
+    path("export/stix", views.export_stix),
     path("artifacts/<str:sha256>", views.artifact),
     path("artifacts/<str:sha256>/image", views.artifact_image),
     path("artifacts/<str:sha256>/video", views.artifact_video),

@@ -141,12 +141,12 @@ def review_state(edge: Edge) -> dict:
     backend = [g for g in independent if not _concept(g)]
     return {
         "relacja": edge.relation,
-        "bity": round(edge.bits, 1),
-        "pewnosc": round(edge.probability, 4),
+        "bity": round(float(edge.bits), 1),
+        "pewnosc": round(float(edge.probability), 4),
         "rozstrzygajacy_slad": edge.decisive,
         "duplikat": edge.duplicate,
         "grupy_sladow": [
-            {**v, "bity": round(v["bity"], 1)} for _, v in sorted(groups.items(), key=lambda kv: (-kv[1]["bity"], kv[0]))
+            {**v, "bity": round(float(v["bity"]), 1)} for _, v in sorted(groups.items(), key=lambda kv: (-kv[1]["bity"], kv[0]))
         ],
         "niezalezne_grupy": len(independent),
         "niezalezne_grupy_zaplecza": len(backend),

@@ -17,6 +17,7 @@ urlpatterns = [
     path("edges/<int:pk>/verdict", views.edge_verdict),
     path("edges/<int:pk>/decisions", views.edge_decisions),
     path("edges/<int:pk>/precedents", views.edge_precedents),
+    path("edges/<int:pk>/assist", views.edge_assist),
     path("edges/<int:pk>/simulate", views.edge_simulate),
     path("edges/<int:pk>/suggestions", views.edge_suggestions),
     path("edges/<int:pk>/weakest-link", views.edge_weakest_link),

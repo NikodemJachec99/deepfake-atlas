@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { adTitle } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
+import { ObservationTimeline } from "./observation-timeline";
 import { ErrorBox, FamilyDot, GroupLink, Loading } from "./ui";
 
 type GroupKind = "operators" | "campaigns";
@@ -36,6 +37,7 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
   return <main className="flex flex-col gap-4 p-4">
     <header><h1 className="text-lg">{group.key} {group.label}</h1>
       <Link className="text-accent" href={`/investigation?${operator ? "operator" : "campaign"}=${id}`}>Otwórz graf grupy</Link></header>
+    <ObservationTimeline key={kind + id} id={Number(id)} operator={operator} />
     {"campaigns" in group && Array.isArray(group.campaigns) && <section><h2>Kampanie operatora</h2>
       {group.campaigns.length ? <ul>{group.campaigns.map(key => <li key={key}><GroupLink group={key} /></li>)}</ul> : <p>Brak przypisanych kampanii.</p>}</section>}
     <section><h2>Reklamy ({group.size})</h2><ul>{group.ads.map(ad =>

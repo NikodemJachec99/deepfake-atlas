@@ -41,6 +41,7 @@ export function Discovery() {
   const [assessment, setAssessment] = useState("");
   const [batch, setBatch] = useState<Analysis[]>([]);
   const [activeId, setActiveId] = useState("");
+  const [retry, setRetry] = useState<Analysis | null>(null);
   const stop = useRef<(() => void) | null>(null);
 
   const generation = useRef(0);
@@ -56,6 +57,7 @@ export function Discovery() {
     stop.current?.();
     if (typeof start === "function") setBatch([]);
     setBusy(true);
+    setRetry(null);
     setError("");
     setEvents([]);
     setAd(null);
@@ -78,6 +80,14 @@ export function Discovery() {
           try {
             const finished = await api.analysis(analysis.id);
             if (generation.current !== current) return;
+            if (finished.status === "running" || finished.status === "queued") {
+              setRetry(analysis);
+              return;
+            }
+            if (finished.status === "failed") {
+              setError(finished.error || "Backend zgłosił błąd analizy.");
+              return;
+            }
             setAssessment((finished.result.cluster as ClusterResult | undefined)?.assessment_label ?? "");
             if (finished.ad) {
               const [detail, links] = await Promise.all([api.ad(finished.ad), api.adEdges(finished.ad)]);
@@ -85,10 +95,8 @@ export function Discovery() {
               setAd(detail);
               setEdges(links);
             }
-            if (finished.status === "failed") setError(finished.error || "Backend zgłosił błąd analizy.");
-            if (finished.status === "running" || finished.status === "queued") setError("Utracono połączenie ze strumieniem. Analiza pozostaje w kolejce backendu.");
-          } catch (reason) {
-            if (generation.current === current) setError(String(reason));
+          } catch {
+            if (generation.current === current) setRetry(analysis);
           } finally {
             if (generation.current === current) setBusy(false);
           }
@@ -160,6 +168,10 @@ export function Discovery() {
           </option>)}
         </select>
       </label>}
+      {retry && <div role="status" className="flex flex-wrap items-center gap-3 rounded border border-line p-3">
+        <span>Przerwano odbiór danych analizy.</span>
+        <button className="text-accent underline" onClick={() => void run(retry)}>Wznów podgląd</button>
+      </div>}
       {error && <p className="rounded border border-red-500 px-3 py-2 text-red-400">Analiza nie powiodła się: {error}</p>}
 
       <div className="grid gap-6 lg:grid-cols-2">

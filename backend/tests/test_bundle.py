@@ -271,3 +271,32 @@ def test_creative_image_is_served_only_when_it_is_an_image(tmp_path, monkeypatch
     assert image.status_code == 200 and image["Content-Type"] == "image/png"
     html_sha = next(m["artifact"] for f in ad["genome"] for m in f["markers"] if m["kind"] == "page_title")
     assert client.get(f"/api/artifacts/{html_sha}/image").status_code == 404
+
+
+def test_page_capture_with_other_url_on_same_domain_is_a_separate_page(tmp_path):
+    case = tmp_path / "70"
+    case.mkdir()
+    (case / "a.html").write_text(article_html("https://same.example/article-a", "Artykul A", ARTICLE_X), encoding="utf-8")
+    capture = case / "zapis-b"
+    capture.mkdir()
+    (capture / "manifest.json").write_text(json.dumps({"tool": "page-capture 0.1.0", "page_url": "https://same.example/article-b", "captured_at": "2026-10-12T09:48:17+00:00"}))
+    (capture / "page.har").write_text(json.dumps(funnel_har("same.example", "198.51.100.9")), encoding="utf-8")
+    (capture / "dom.html").write_text(article_html("https://same.example/article-b", "Artykul B", ARTICLE_Y), encoding="utf-8")
+    found = bundle.discover(case)
+    assert sorted(p.url for p in found.pages) == ["https://same.example/article-a", "https://same.example/article-b"]
+    page_b = next(p for p in found.pages if p.url.endswith("article-b"))
+    page_a = next(p for p in found.pages if p.url.endswith("article-a"))
+    assert page_b.captured_at.startswith("2026-10-12") and b"Artykul B" in page_b.html
+    assert not page_a.captured_at and page_a.har is None
+
+
+def test_page_capture_with_same_url_but_other_query_still_completes_the_page(tmp_path):
+    case = tmp_path / "71"
+    case.mkdir()
+    (case / "a.html").write_text(article_html("https://same.example/article-a?x=1", "Artykul A", ARTICLE_X), encoding="utf-8")
+    capture = case / "zapis"
+    capture.mkdir()
+    (capture / "manifest.json").write_text(json.dumps({"tool": "page-capture 0.1.0", "page_url": "https://same.example/article-a?y=2#top", "captured_at": "2026-10-12T09:48:17+00:00"}))
+    (capture / "page.har").write_text(json.dumps(funnel_har("same.example")), encoding="utf-8")
+    found = bundle.discover(case)
+    assert len(found.pages) == 1 and found.pages[0].har is not None

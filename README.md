@@ -42,6 +42,8 @@ Wymagania: Docker z Compose, ok. 6 GB RAM na wszystkie usługi, ok. 8 GB miejsca
 
 Porty zmienisz w `.env`: `BACKEND_PORT`, `FRONTEND_PORT`, a jeśli masz zajęte porty usług pomocniczych (np. własny Postgres na 5432), także `DB_PORT`, `TEMPORAL_PORT`, `S3_PORT`, `NEO4J_HTTP_PORT`, `OPENSEARCH_PORT` i pozostałe z `.env.example`. Po zmianie `FRONTEND_PORT` dopisz nowy adres interfejsu do `CORS_ALLOWED_ORIGINS`, a po zmianie `BACKEND_PORT` przebuduj interfejs (`docker compose up -d --build frontend`), bo adres API jest wkompilowany w czasie budowania.
 
+Usługi słuchają tylko na `127.0.0.1`, więc inne komputery w sieci ich nie widzą. Żeby drugi komputer (np. koder na MacBooku) połączył się z backendem, ustaw w `.env` `BACKEND_BIND=0.0.0.0` (analogicznie `FRONTEND_BIND` dla interfejsu) i uruchom `docker compose up -d`; rób to tylko w zaufanej sieci.
+
 Windows z Git Bash: przed poleceniami z `/data/...` ustaw `export MSYS_NO_PATHCONV=1`, inaczej Git Bash zamieni ścieżkę kontenera na ścieżkę Windows i `import_bundle` nie znajdzie katalogu. W PowerShellu i cmd ten problem nie występuje. Praca nad interfejsem bez kontenera:
 
 ```bash

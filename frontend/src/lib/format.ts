@@ -106,3 +106,8 @@ export function utcEdgeVersion(version: string): string {
   const fraction = (parts[2] ?? "").padEnd(6, "0");
   return instant.toISOString().slice(0, 19) + (fraction === "000000" ? "" : "." + fraction) + "+00:00";
 }
+
+export function markerValue(value: string, display?: string): string {
+  const label = display || value;
+  return /^person:\d+$/.test(label) ? "Osoba bez dostępnej etykiety" : label;
+}

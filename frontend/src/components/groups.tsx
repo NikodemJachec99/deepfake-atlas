@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
-import { adTitle } from "@/lib/format";
+import { markerValue, adTitle } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 import { ObservationTimeline } from "./observation-timeline";
 import { ErrorBox, FamilyDot, GroupLink, Loading } from "./ui";
@@ -45,7 +45,7 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
     <section><h2>Markery rdzeniowe</h2>
       {group.core_markers.length ? <table className="dense"><thead><tr><th>Marker</th><th>Wartość</th><th>Reklamy w grupie</th><th>W korpusie</th></tr></thead>
         <tbody>{group.core_markers.map(marker => <tr key={JSON.stringify([marker.kind, marker.value])}>
-          <td><FamilyDot family={marker.family} /> {marker.label}</td><td className="break-all font-mono">{marker.value}</td>
+          <td><FamilyDot family={marker.family} /> {marker.label}</td><td className="break-all font-mono">{markerValue(marker.value, marker.display_value)}</td>
           <td>{marker.in_group}</td><td>{marker.ad_count}</td></tr>)}</tbody></table> : <p>Brak markerów rdzeniowych.</p>}</section>
   </main>;
 }

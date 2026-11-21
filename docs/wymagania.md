@@ -100,7 +100,7 @@ Do pilnowania:
 | 5.6 | etap I: ocena zgłoszeń na platformie HackTribe, 5 najlepszych zespołów do etapu II; etap II: 5 minut prezentacji i 5 minut pytań | prezentacja do przygotowania |
 | 5.9 | po terminie zakaz zmian w rozwiązaniu | po 22.11 11:00 nie ruszamy repo |
 | 6.1, 6.2 | uczestnik oświadcza, że jest twórcą swojego wkładu i że rozwiązanie nie narusza praw osób trzecich | biblioteki na licencjach otwartych, lista w [licencje.md](licencje.md); użycie asystenta AI ujawnione tamże |
-| 6.3 | regulamin konkursu może przewidywać przeniesienie praw do rozwiązania | opis wyzwania NASK tego nie określa: **do wyjaśnienia z organizatorem** |
+| 6.3 | regulamin konkursu może przewidywać przeniesienie praw do rozwiązania | regulamin zadania NASK §4 ust. 3 wymaga od zwycięzców zawarcia umowy przeniesienia praw do utworów wytworzonych w ramach zadania; §3 ust. 6–7 wiąże jej podpisanie z nagrodą. Sprawdzić wzór umowy z organizatorem ([regulamin zadania](https://mudnibfuppwadjkynscc.supabase.co/storage/v1/object/public/task-files/057d36b5-cb92-4062-9393-983cb8a96088/files/af08d8e1-d1ca-4f6a-96c6-9e1e99a26547.pdf)) |
 
 Z przewodnika uczestnika i FAQ (strona hacknation.pl, odczyt 21.11):
 
@@ -113,5 +113,5 @@ Z przewodnika uczestnika i FAQ (strona hacknation.pl, odczyt 21.11):
 
 1. Założyć szkic na HackTribe przed 20:00 i podpiąć repozytorium.
 2. Nadać organizatorowi dostęp do prywatnego repo albo ustalić inną formę przekazania kodu.
-3. Zapytać mentorów NASK o dwie rzeczy: zasady użycia asystenta AI do pisania kodu oraz prawa do rozwiązania po konkursie.
+3. Zapytać mentorów NASK o dwie rzeczy: zasady użycia asystenta AI do pisania kodu, warunki przeniesienia praw oraz dopuszczalność przekazania materiałów organizatora dostawcy API.
 4. Przygotować prezentację na 5 minut i demo do 2 minut.

@@ -340,6 +340,27 @@ def local_checks(files: list[str]) -> None:
                 fail("backend nie przechodzi:\n" + (result.stdout + result.stderr)[-2500:])
 
 
+def ci_disabled() -> bool:
+    """Czy wszystkie workflow w repo są wyłączone (wtedy żadne checki nie przyjdą)."""
+    states = run("gh", "workflow", "list", "--all", "--json", "state", "--jq", ".[].state", check=False, quiet=True).split()
+    return bool(states) and all(state.startswith("disabled") for state in states)
+
+
+def wait_for_ci(branch: str) -> None:
+    print("Czekam na CI...")
+    deadline = time.time() + 900
+    while time.time() < deadline:
+        checks = subprocess.run(["gh", "pr", "checks", branch, "--watch", "--interval", "10"], capture_output=True, text=True, cwd=ROOT)
+        output = checks.stdout + checks.stderr
+        if "no checks reported" in output:
+            time.sleep(8)
+            continue
+        if checks.returncode != 0:
+            fail("CI nie przeszło. Popraw i uruchom oddaj jeszcze raz.\n" + output[-1500:])
+        return
+    fail("CI nie skończyło się w 15 minut")
+
+
 def cmd_oddaj(args) -> None:
     me = role()
     branch = current_branch()
@@ -370,19 +391,11 @@ def cmd_oddaj(args) -> None:
     if args.bez_czekania:
         print("PR wystawiony, bez czekania na CI. Merge zrób ręcznie.")
         return
-    print("Czekam na CI...")
-    deadline = time.time() + 900
-    while time.time() < deadline:
-        checks = subprocess.run(["gh", "pr", "checks", branch, "--watch", "--interval", "10"], capture_output=True, text=True, cwd=ROOT)
-        output = checks.stdout + checks.stderr
-        if "no checks reported" in output:
-            time.sleep(8)
-            continue
-        if checks.returncode != 0:
-            fail("CI nie przeszło. Popraw i uruchom oddaj jeszcze raz.\n" + output[-1500:])
-        break
+    if ci_disabled():
+        # Decyzja użytkownika z 21.11: Actions wyłączone (billing). Wystarczą testy lokalne z local_checks.
+        print("CI na GitHubie wyłączone, merguję po testach lokalnych.")
     else:
-        fail("CI nie skończyło się w 15 minut")
+        wait_for_ci(branch)
     # Bez --delete-branch: gh próbuje wtedy przełączyć się lokalnie na main, a w worktree main bywa
     # wyciągnięty gdzie indziej. Gałęzie kasujemy sami, a w worktree wracamy na origin/main bez gałęzi.
     run("gh", "pr", "merge", branch, "--merge")

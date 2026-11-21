@@ -49,6 +49,8 @@ Gdy do zadania potrzebna jest zmiana po drugiej stronie, załóż dla niej zadan
 
 Decyzja użytkownika z 21.11.2026: w tym repo sesja sama pushuje gałąź zadania i merguje PR po zielonym CI, przez `scripts/praca.py oddaj`. Nie dotyczy to innych repozytoriów. Nie pushuj prosto na `main` i nie omijaj CI.
 
+Zmiana z 21.11.2026 wieczorem, decyzja użytkownika: GitHub Actions jest wyłączone (billing), działamy bez CI. `oddaj` widzi wyłączony workflow i merguje od razu po testach lokalnych (ruff i pytest w `backend/`, lint i build w `frontend/`). Testów lokalnych nie pomijaj. Dalej nie pushuj prosto na `main`.
+
 Commit i opis PR pisz krótko i rzeczowo: po co zmiana, co sprawdzono, czego nie. Bez dopisków o autorstwie.
 
 ## Czego nie wolno

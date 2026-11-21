@@ -38,7 +38,7 @@ Przed prezentacją sprawdź je jeszcze raz: `curl localhost:8000/api/stats`. Je�
 - 28 stron z 25 spraw z dwóch paczek. Silnik nie dostał informacji, które sprawy pasują do siebie.
 - **Operator A**: 8 stron na 7 domenach w 2 kampaniach. Łączą je identyfikatory strony w panelu lejka i wspólny piksel Meta, mimo różnych domen, adresów IP i treści.
 - **Operator B**: 3 strony na 2 domenach, spięte własnym hostem zasobów operatora.
-- **Sprawa 61**: jedna kampania z cloakingiem. Ta sama domena pokazuje moderacji "portal analiz", a ofierze ofertę.
+- **Sprawa 61**: jedna kampania. Ten sam pełny adres dał w odstępie 3 minut dwie różne strony: ofertę z pikselem Google Ads i neutralny "portal analiz". Mówimy "cloaking albo jednorazowy token wizyty", bo nie wiemy, kto przechwytywał.
 - 6 stron jest na Liście Ostrzeżeń CERT Polska. Pozostałe domeny tych samych operatorów na liście nie ma. Jedna znana domena wskazuje resztę.
 - Duplikat (to samo przechwycenie w dwóch sprawach) oznaczony osobno.
 

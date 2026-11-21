@@ -41,14 +41,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: cp .env.example .env
-      # Rejestry obrazów (Docker Hub, public.ecr.aws) potrafią chwilowo odpowiadać 429. Pobranie i budowanie
-      # ponawiamy z rosnącym odstępem, warstwy z udanych prób zostają w cache. Start stosu idzie osobno.
-      - name: obrazy (z ponawianiem)
+      # Rejestry obrazów (Docker Hub, public.ecr.aws) potrafią odpowiadać 429, a ECR także po wyczerpaniu
+      # limitu danych, którego ponawianie nie naprawi. Dwie próby z lustrem ECR, potem obraz Node z Docker Huba.
+      # Warstwy z udanych prób zostają w cache. Start stosu idzie osobno.
+      - name: obrazy (z ponawianiem i zapasowym źródłem Node)
         run: |
           for i in 1 2 3 4; do
-            docker compose pull --ignore-buildable --quiet && docker compose build && exit 0
-            echo "próba $i nieudana, czekam $((i * 30)) s"
-            sleep $((i * 30))
+            if [ "$i" -ge 3 ]; then export NODE_IMAGE=docker.io/library/node:24-alpine; fi
+            echo "próba $i, obraz Node: ${NODE_IMAGE:-public.ecr.aws/docker/library/node:24-alpine}"
+            docker compose pull --ignore-buildable --quiet && docker compose build && {
+              [ -n "${NODE_IMAGE:-}" ] && echo "NODE_IMAGE=$NODE_IMAGE" >> "$GITHUB_ENV"
+              exit 0
+            }
+            echo "próba $i nieudana, czekam $((i * 20)) s"
+            sleep $((i * 20))
           done
           exit 1
       - run: docker compose up -d

@@ -179,3 +179,15 @@ def test_old_signature_without_size_still_compares():
     assert minhash.similarity(a[: minhash.NUM_PERM], a) == 1.0
     assert minhash.text_similarity(a[: minhash.NUM_PERM], a) == 1.0
     assert len(minhash.bands(a[: minhash.NUM_PERM])) == minhash.BANDS
+
+
+def test_meta_token_under_any_param_name_is_redacted():
+    from extractors.url import redact_url, url_observations
+
+    url = "https://oferta.example/?fbpx=1500000000000003&token=EAATESTfake0000000000000000000000tokenC&key=abc123&api_key=sekret-123"
+    clean = redact_url(url)
+    assert "EAATESTfake" not in clean and "sekret-123" not in clean
+    assert "token=sha256-" in clean and "key=abc123" in clean
+    kinds = {o.kind: o.value for o in url_observations(clean)}
+    assert kinds["capi_token"].startswith("sha256-")
+    assert redact_url("https://zwykla.example/?utm_source=fb") == "https://zwykla.example/?utm_source=fb"

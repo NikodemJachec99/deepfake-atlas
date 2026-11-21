@@ -71,7 +71,7 @@ Nie mamy zbioru z oznaczonymi kampaniami, więc **nie podajemy liczbowej skutecz
 
 | Oczekiwanie | Stan | Gdzie |
 |---|---|---|
-| Wzbogacony i uporządkowany zbiór danych | częściowo | korpus z markerami, krawędziami i dowodami w Postgresie, dostępny przez API, Neo4j i OpenSearch; brak eksportu do pliku |
+| Wzbogacony i uporządkowany zbiór danych | jest | `manage.py export_corpus <katalog>`: reklamy z markerami (JSONL), krawędzie z dowodami (JSONL), przypisanie do kampanii i operatorów (CSV), tokeny tylko jako skróty; także przez API, Neo4j i OpenSearch |
 | Opis zidentyfikowanych wzorców kampanii | jest | [dane-organizatora.md](dane-organizatora.md): silnik lejka z nagrywaniem sesji, cloaking, ślad językowy, pokrycie listą CERT |
 | Metodyka łączenia cech | jest | [metodyka.md](metodyka.md) |
 | Wskazanie użytecznych źródeł metadanych | jest | [metodyka.md](metodyka.md) pkt 10; które ślady rozstrzygały na danych organizatora: [dane-organizatora.md](dane-organizatora.md) |

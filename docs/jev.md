@@ -40,7 +40,20 @@ Po zmianie `.env`: `docker compose up -d --force-recreate backend worker`. Potem
 
 ## Koszt i limity
 
-Według [cennika modeli](https://docs.typesafe.ai/models) Jev 1.14 kosztuje 42 USD za miliard tokenów wejściowych, czyli 0,042 USD za milion. Tokeny wyjściowe są bezpłatne. Odpowiedź podaje `usage.input_tokens`, a adapter zapisuje je przy każdej sugestii. `jev_review` sumuje tokeny i przerywa przed zapytaniem, które przekroczyłoby `JEV_BUDGET_USD`. Nasz stan ma kilkaset tokenów, więc jedno zapytanie kosztuje rzędu ułamka setnej centa. Rzeczywistej liczby tokenów nie mierzyłem, bo nie wysłałem żadnego zapytania.
+Według [cennika modeli](https://docs.typesafe.ai/models) Jev 1.14 kosztuje 42 USD za miliard tokenów wejściowych, czyli 0,042 USD za milion. Tokeny wyjściowe są bezpłatne. Odpowiedź podaje `usage.input_tokens`, a adapter zapisuje je przy każdej sugestii. `jev_review` sumuje tokeny i przerywa przed zapytaniem, które przekroczyłoby `JEV_BUDGET_USD`. Jedno nasze zapytanie ma ok. 540–640 tokenów, czyli ok. 0,000025 USD. Domyślny budżet 0,10 USD to ok. 4 tysiące zapytań.
+
+### Próba na żywo, 21.11.2026
+
+Cztery syntetyczne stany, `jev-1.14.0`, bez danych spraw. Odpowiedź pasuje do schematu adaptera, w tym pole `confidence` i `usage.input_tokens`.
+
+| Stan | Odpowiedź | P(`przeglad`) | `confidence` | Tokeny | Czas |
+|---|---|---|---|---|---|
+| tylko silnik lejka i motywy | `przeglad` | 0,99 | 0,98 | 613 | 282 ms |
+| konto, identyfikator i infrastruktura | `spojne` | 0,10 | 0,80 | 637 | 156 ms |
+| sprzeczne: wspólna kampania na samym silniku i motywach | `przeglad` | 0,99 | 0,98 | 618 | 171 ms |
+| brak danych | `przeglad` | 1,0 | 1,0 | 536 | 156 ms |
+
+Razem 2404 tokeny, ok. 0,0001 USD. To cztery przypadki ułożone ręcznie, a nie ewaluacja. Pokazują tylko, że kontrakt działa i model rozróżnia te przypadki.
 
 Statusy w `AssistSuggestion.status`:
 

@@ -1,0 +1,123 @@
+from rest_framework import serializers
+
+from ads.models import Ad, Analysis, AnalysisEvent
+from evidence.kinds import BAND_KINDS, FAMILIES, KINDS
+from similarity.models import Campaign, Edge, EdgeEvidence
+
+
+class AnalysisCreateSerializer(serializers.Serializer):
+    kind = serializers.ChoiceField(choices=[Analysis.Kind.URL, Analysis.Kind.TEXT])
+    value = serializers.CharField(max_length=20000, trim_whitespace=True)
+
+    def validate(self, attrs):
+        if attrs["kind"] == Analysis.Kind.URL and not attrs["value"].lower().startswith(("http://", "https://")):
+            raise serializers.ValidationError({"value": "Adres musi zaczynać się od http:// albo https://"})
+        return attrs
+
+
+class AnalysisEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AnalysisEvent
+        fields = ["seq", "stage", "status", "message", "payload", "created_at"]
+
+
+class AnalysisSerializer(serializers.ModelSerializer):
+    events_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Analysis
+        fields = ["id", "ad", "input_kind", "input_value", "status", "result", "error", "created_at", "finished_at", "events_url"]
+
+    def get_events_url(self, obj) -> str:
+        return f"/api/analyses/{obj.pk}/events"
+
+
+class AdListSerializer(serializers.ModelSerializer):
+    campaign = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Ad
+        fields = ["id", "source", "external_id", "title", "landing_url", "first_seen", "last_seen", "labels", "campaign"]
+
+    def get_campaign(self, obj) -> str | None:
+        membership = getattr(obj, "membership", None)
+        return membership.campaign.key if membership else None
+
+
+class AdDetailSerializer(AdListSerializer):
+    advertiser = serializers.SerializerMethodField()
+    genome = serializers.SerializerMethodField()
+
+    class Meta(AdListSerializer.Meta):
+        fields = [*AdListSerializer.Meta.fields, "text", "display_url", "creative_url", "advertiser", "genome"]
+
+    def get_advertiser(self, obj) -> dict | None:
+        a = obj.advertiser
+        return {"id": a.pk, "external_id": a.external_id, "name": a.name, "payer": a.payer} if a else None
+
+    def get_genome(self, obj) -> list[dict]:
+        """Markery reklamy pogrupowane w siedem rodzin. Pasma LSH są techniczne, więc ich nie pokazujemy."""
+        by_family: dict[str, list[dict]] = {code: [] for code in FAMILIES}
+        for am in obj.ad_markers.select_related("marker").all():
+            marker = am.marker
+            if marker.kind in BAND_KINDS:
+                continue
+            by_family[marker.family].append(
+                {
+                    "kind": marker.kind,
+                    "label": KINDS[marker.kind].label,
+                    "value": marker.value,
+                    "ad_count": marker.ad_count,
+                    "artifact": am.artifact_id,
+                }
+            )
+        return [{"family": code, "label": FAMILIES[code], "markers": items} for code, items in by_family.items()]
+
+
+class EdgeEvidenceSerializer(serializers.ModelSerializer):
+    label = serializers.SerializerMethodField()
+    family_label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = EdgeEvidence
+        fields = [
+            "family", "family_label", "kind", "label", "value_a", "value_b", "similarity", "df", "corpus_n",
+            "raw_bits", "weight_bits", "decisive", "artifact_a", "artifact_b",
+        ]
+
+    def get_label(self, obj) -> str:
+        return KINDS[obj.kind].label
+
+    def get_family_label(self, obj) -> str:
+        return FAMILIES[obj.family]
+
+
+class EdgeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Edge
+        fields = ["id", "ad_a", "ad_b", "relation", "bits", "probability", "decisive", "families", "model_version", "verdict", "updated_at"]
+
+
+class EdgeDetailSerializer(EdgeSerializer):
+    evidence = EdgeEvidenceSerializer(many=True, read_only=True)
+    ads = serializers.SerializerMethodField()
+
+    class Meta(EdgeSerializer.Meta):
+        fields = [*EdgeSerializer.Meta.fields, "verdict_note", "verdict_at", "ads", "evidence"]
+
+    def get_ads(self, obj) -> list[dict]:
+        return AdListSerializer([obj.ad_a, obj.ad_b], many=True).data
+
+
+class VerdictSerializer(serializers.Serializer):
+    verdict = serializers.ChoiceField(choices=[Edge.Verdict.CONFIRMED, Edge.Verdict.REJECTED, Edge.Verdict.UNSURE])
+    note = serializers.CharField(required=False, allow_blank=True, max_length=4000)
+
+
+class CampaignSerializer(serializers.ModelSerializer):
+    key = serializers.CharField(read_only=True)
+    size = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Campaign
+        fields = ["id", "key", "label", "size", "created_at"]

@@ -1,0 +1,309 @@
+"""Potok analizy jednej reklamy.
+
+Każdy etap czyta stan z bazy i zapisuje wynik do bazy, więc Temporal może ponowić dowolny
+z nich osobno. Ten sam kod wykonuje runner lokalny (wątek) i testy (synchronicznie).
+Etapy zapisują zdarzenia postępu, które interfejs odtwarza przez SSE.
+"""
+
+import base64
+from collections.abc import Callable
+
+import mmh3
+from django.conf import settings
+from django.db import transaction
+from django.db.models import Max
+from django.utils import timezone
+from django.utils.module_loading import import_string
+
+from ads.models import Ad, Analysis, AnalysisEvent, Source
+from enrichment.models import DomainRecord, WarningDomain
+from evidence import services as markers
+from evidence import store
+from evidence.kinds import FAMILIES, KINDS
+from extractors import Observation
+from extractors.html import extract_page
+from extractors.text import extract_text
+from extractors.url import host_of, registered_domain, url_observations
+from people.models import Person
+from similarity import service as linking
+from similarity.models import Edge
+
+STAGES = ["ingest", "crawl", "extract", "enrich", "fuse", "cluster"]
+STAGE_LABELS = {
+    "ingest": "Przyjęcie materiału",
+    "crawl": "Pobranie strony i łańcucha przekierowań",
+    "extract": "Ekstrakcja markerów",
+    "enrich": "Wzbogacanie infrastruktury",
+    "fuse": "Szukanie powiązań",
+    "cluster": "Przypisanie do kampanii",
+}
+
+
+def fetcher():
+    return import_string(settings.CRAWLER_FETCHER)()
+
+
+def enricher():
+    return import_string(settings.ENRICHER)()
+
+
+def emit(analysis: Analysis, stage: str, status: str, message: str = "", payload: dict | None = None) -> AnalysisEvent:
+    with transaction.atomic():
+        Analysis.objects.select_for_update().get(pk=analysis.pk)
+        last = analysis.events.aggregate(m=Max("seq"))["m"] or 0
+        return AnalysisEvent.objects.create(
+            analysis=analysis, seq=last + 1, stage=stage, status=status, message=message, payload=payload or {}
+        )
+
+
+# --- etapy -----------------------------------------------------------------
+
+
+def stage_ingest(analysis: Analysis) -> dict:
+    if analysis.ad_id:
+        return {"ad": analysis.ad_id, "created": False}
+    value = analysis.input_value.strip()
+    if analysis.input_kind == Analysis.Kind.URL:
+        ad = Ad.objects.create(source=Source.MANUAL, landing_url=value, first_seen=timezone.now(), last_seen=timezone.now())
+    else:
+        ad = Ad.objects.create(source=Source.MANUAL, text=value, first_seen=timezone.now(), last_seen=timezone.now())
+    analysis.ad = ad
+    analysis.save(update_fields=["ad"])
+    return {"ad": ad.pk, "created": True}
+
+
+def stage_crawl(analysis: Analysis) -> dict:
+    ad = analysis.ad
+    if not ad.landing_url:
+        # Lead Ads i zgłoszenia samym tekstem: nie ma strony, łączymy po pozostałych rodzinach.
+        emit(analysis, "crawl", "info", "Brak adresu docelowego, pomijam pobieranie strony")
+        return {"pages": 0}
+    client = fetcher()
+    pages = {}
+    for profile in ("victim", "bot"):
+        result = client.fetch(ad.landing_url, profile)
+        page = {
+            "final_url": result.final_url,
+            "status": result.status,
+            "error": result.error,
+            "chain": [{"url": h.url, "status": h.status, "via": h.via} for h in result.chain],
+            "html_sha": None,
+        }
+        if result.body:
+            artifact = store.put(result.body, kind=f"html_{profile}", content_type=result.content_type, source_url=result.final_url)
+            page["html_sha"] = artifact.sha256
+        pages[profile] = page
+        emit(
+            analysis, "crawl", "info",
+            f"Profil {profile}: {len(result.chain)} skoków, status {result.status or 'brak'}"
+            + (f", błąd: {result.error}" if result.error else ""),
+            {"profile": profile, "chain": page["chain"], "final_url": result.final_url},
+        )
+    analysis.state["pages"] = pages
+    analysis.save(update_fields=["state"])
+    return {"pages": sum(1 for p in pages.values() if p["html_sha"])}
+
+
+def stage_extract(analysis: Analysis) -> dict:
+    ad = analysis.ad
+    pages = analysis.state.get("pages", {})
+    victim = pages.get("victim") or {}
+    counts: dict[str, int] = {}
+
+    def add(observations: list[Observation], artifact=None) -> None:
+        markers.attach(ad, observations, artifact)
+        for obs in observations:
+            family = KINDS[obs.kind].family
+            counts[family] = counts.get(family, 0) + 1
+
+    final_url = victim.get("final_url") or ad.landing_url
+    if final_url:
+        add(url_observations(final_url))
+        final_domain = registered_domain(host_of(final_url))
+        hop_domains = {registered_domain(host_of(h["url"])) for h in victim.get("chain", [])} - {final_domain, ""}
+        add([Observation("redirect_domain", d) for d in sorted(hop_domains)])
+
+    page_text = ""
+    if victim.get("html_sha"):
+        artifact = store.Artifact.objects.get(pk=victim["html_sha"])
+        page = extract_page(store.get(artifact.sha256).decode("utf-8", errors="replace"), final_url)
+        add(page.observations, artifact)
+        if page.dom_hash:
+            add([Observation("dom_hash", page.dom_hash)], artifact)
+            markers.set_signature(ad, "dom_minhash", page.dom_signature)
+        page_text = f"{page.title} {page.visible_text}"
+        analysis.state["favicon_url"] = page.favicon_url
+        if not ad.title and page.title:
+            ad.title = page.title[:500]
+            ad.save(update_fields=["title"])
+
+        bot = pages.get("bot") or {}
+        if bot.get("html_sha") and bot["html_sha"] != victim["html_sha"]:
+            bot_page = extract_page(store.get(bot["html_sha"]).decode("utf-8", errors="replace"), bot.get("final_url") or final_url)
+            if bot_page.dom_hash and bot_page.dom_hash != page.dom_hash:
+                # Automat dostał inną stronę niż ofiara. Ta "biała strona" sama jest odciskiem operatora.
+                add([Observation("white_dom_hash", bot_page.dom_hash)], store.Artifact.objects.get(pk=bot["html_sha"]))
+                analysis.state["cloaking"] = True
+
+    ad_text = f"{ad.title}\n{ad.text}".strip()
+    if ad.text:
+        features = extract_text(ad_text)
+        add(features.observations)
+        markers.set_signature(ad, "text_minhash", features.signature)
+
+    if ad.advertiser_id:
+        add([Observation("advertiser_id", f"{ad.advertiser.source}:{ad.advertiser.external_id}")])
+        if ad.advertiser.payer:
+            add([Observation("payer", ad.advertiser.payer.strip().lower())])
+
+    haystack = f"{ad_text} {page_text}".lower()
+    mentions = [Observation("person_mention", p.marker_value, {"name": p.name}) for p in Person.objects.all() if any(n in haystack for n in p.needles())]
+    add(mentions)
+
+    analysis.save(update_fields=["state"])
+    for family, count in sorted(counts.items()):
+        emit(analysis, "extract", "info", f"{FAMILIES[family]}: {count}", {"family": family, "count": count})
+    return {"markers": counts, "cloaking": bool(analysis.state.get("cloaking"))}
+
+
+def stage_enrich(analysis: Analysis) -> dict:
+    ad = analysis.ad
+    victim = (analysis.state.get("pages") or {}).get("victim") or {}
+    final_url = victim.get("final_url") or ad.landing_url
+    host = host_of(final_url) if final_url else ""
+    if not host:
+        emit(analysis, "enrich", "info", "Brak domeny do wzbogacenia")
+        return {}
+    domain = registered_domain(host)
+    source = enricher()
+    observations: list[Observation] = []
+    summary: dict = {"domain": domain}
+
+    ips = source.resolve(host)
+    observations += [Observation("ip", ip) for ip in ips]
+    asns = sorted({a for a in (source.asn(ip) for ip in ips[:4]) if a})
+    observations += [Observation("asn", a) for a in asns]
+    nameservers = source.nameservers(domain)
+    observations += [Observation("nameserver", ns) for ns in nameservers]
+    summary.update(ips=ips, asn=asns, nameservers=nameservers)
+
+    if final_url.startswith("https://"):
+        fingerprint = source.tls_fingerprint(host)
+        if fingerprint:
+            observations.append(Observation("tls_fp", fingerprint))
+            summary["tls_fp"] = fingerprint
+
+    rdap = source.rdap(domain)
+    if rdap:
+        DomainRecord.objects.update_or_create(
+            domain=domain,
+            defaults={"registered_at": rdap.registered_at, "registrar": rdap.registrar, "nameservers": rdap.nameservers, "raw": rdap.raw},
+        )
+        if rdap.registrar:
+            observations.append(Observation("registrar", rdap.registrar))
+        if rdap.registered_at:
+            observations.append(Observation("reg_day", rdap.registered_at.date().isoformat()))
+        summary.update(registrar=rdap.registrar, registered_at=rdap.registered_at.isoformat() if rdap.registered_at else None)
+
+    favicon_url = analysis.state.get("favicon_url") or f"{final_url.split('/')[0]}//{host}/favicon.ico"
+    icon = fetcher().fetch_bytes(favicon_url)
+    if icon:
+        artifact = store.put(icon, kind="favicon", source_url=favicon_url)
+        # Ten sam sposób liczenia co w Shodanie, żeby wartość dało się wkleić do wyszukiwarki hostów.
+        value = str(mmh3.hash(base64.encodebytes(icon)))
+        markers.attach(ad, [Observation("favicon_hash", value)], artifact)
+        summary["favicon_hash"] = value
+
+    markers.attach(ad, observations)
+
+    listed = WarningDomain.objects.filter(domain__in={domain, host}).first()
+    if listed:
+        ad.labels["cert_pl"] = {
+            "domain": listed.domain,
+            "added_at": listed.added_at.isoformat() if listed.added_at else None,
+            "removed_at": listed.removed_at.isoformat() if listed.removed_at else None,
+        }
+        ad.save(update_fields=["labels"])
+        emit(analysis, "enrich", "info", f"Domena {listed.domain} jest na Liście Ostrzeżeń CERT Polska", ad.labels["cert_pl"])
+    summary["cert_pl_listed"] = bool(listed)
+    return summary
+
+
+def edge_payload(edge: Edge, ad_id: int) -> dict:
+    return {
+        "edge": edge.pk,
+        "other_ad": edge.other(ad_id),
+        "relation": edge.relation,
+        "probability": round(edge.probability, 4),
+        "bits": round(edge.bits, 2),
+        "families": {f: round(b, 2) for f, b in edge.families.items()},
+        "top_evidence": [
+            {"family": e.family, "kind": e.kind, "label": KINDS[e.kind].label, "value": e.value_a[:120], "bits": round(e.weight_bits, 2)}
+            for e in edge.evidence.all()[:3]
+        ],
+    }
+
+
+def stage_fuse(analysis: Analysis) -> dict:
+    ad = analysis.ad
+    edges = linking.link_ad(ad)
+    for edge in sorted(edges, key=lambda e: e.probability, reverse=True):
+        emit(analysis, "fuse", "info", f"Powiązanie z reklamą #{edge.other(ad.pk)}: {edge.get_relation_display()}", edge_payload(edge, ad.pk))
+    return {
+        "edges": len(edges),
+        "same_campaign": sum(1 for e in edges if e.relation == Edge.Relation.SAME_CAMPAIGN),
+        "similar": sum(1 for e in edges if e.relation == Edge.Relation.SIMILAR),
+    }
+
+
+def stage_cluster(analysis: Analysis) -> dict:
+    return linking.assign_campaign(analysis.ad)
+
+
+HANDLERS: dict[str, Callable[[Analysis], dict]] = {
+    "ingest": stage_ingest,
+    "crawl": stage_crawl,
+    "extract": stage_extract,
+    "enrich": stage_enrich,
+    "fuse": stage_fuse,
+    "cluster": stage_cluster,
+}
+
+
+# --- sterowanie ------------------------------------------------------------
+
+
+def run_stage(analysis_id: str, stage: str) -> dict:
+    analysis = Analysis.objects.select_related("ad", "ad__advertiser").get(pk=analysis_id)
+    if analysis.status == Analysis.Status.QUEUED:
+        analysis.status = Analysis.Status.RUNNING
+        analysis.save(update_fields=["status"])
+    emit(analysis, stage, "started", STAGE_LABELS[stage])
+    try:
+        summary = HANDLERS[stage](analysis)
+    except Exception as exc:
+        emit(analysis, stage, "error", f"{type(exc).__name__}: {exc}")
+        raise
+    analysis.result[stage] = summary
+    analysis.save(update_fields=["result"])
+    emit(analysis, stage, "done", STAGE_LABELS[stage], summary)
+    return summary
+
+
+def finish(analysis_id: str, error: str = "") -> None:
+    analysis = Analysis.objects.get(pk=analysis_id)
+    analysis.status = Analysis.Status.FAILED if error else Analysis.Status.DONE
+    analysis.error = error
+    analysis.finished_at = timezone.now()
+    analysis.save(update_fields=["status", "error", "finished_at"])
+    emit(analysis, "end", "error" if error else "done", error or "Analiza zakończona", {"status": analysis.status})
+
+
+def run_all(analysis_id: str) -> None:
+    try:
+        for stage in STAGES:
+            run_stage(analysis_id, stage)
+    except Exception as exc:
+        finish(analysis_id, error=f"{type(exc).__name__}: {exc}")
+        return
+    finish(analysis_id)

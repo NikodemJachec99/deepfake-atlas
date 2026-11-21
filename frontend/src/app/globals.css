@@ -186,3 +186,14 @@ select {
 [data-relation="same_campaign"] { stroke-width: 3; }
 [data-relation="same_operator"] { stroke-width: 1.5; }
 [data-relation="similar"] { stroke-width: 1.5; stroke-dasharray: 4 3; }
+
+.table-action {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+
+.table-action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

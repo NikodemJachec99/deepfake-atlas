@@ -253,7 +253,9 @@ export function Investigation() {
               {visible.map((edge) => (
                 <tr key={edge.id} data-selected={edge.id === edgeId} onClick={() => set({ edge: edge.id })} className="cursor-pointer">
                   <td className="max-w-56">
-                    <Mono className="text-muted">#{edge.source}</Mono> {nodeById.get(edge.source)?.case && <span className="text-muted">spr. {nodeById.get(edge.source)?.case}</span>}
+                    <button type="button" className="table-action" aria-label={`Dowody powiązania reklam #${edge.source} i #${edge.target}`}>
+                      #{edge.source}
+                    </button> {nodeById.get(edge.source)?.case && <span className="text-muted">spr. {nodeById.get(edge.source)?.case}</span>}
                   </td>
                   <td className="max-w-56">
                     <Mono className="text-muted">#{edge.target}</Mono> {nodeById.get(edge.target)?.case && <span className="text-muted">spr. {nodeById.get(edge.target)?.case}</span>}
@@ -289,8 +291,10 @@ export function Investigation() {
             </thead>
             <tbody>
               {nodes.map((node) => (
-                <tr key={node.id} data-selected={node.id === nodeId} onClick={() => set({ node: node.id, edge: null })} className="cursor-pointer">
-                  <td className="font-mono text-[0.92rem]">#{node.id}</td>
+                <tr key={node.id} data-selected={node.id === nodeId} onClick={event => {
+                  if (!(event.target instanceof Element && event.target.closest("a"))) set({ node: node.id, edge: null });
+                }} className="cursor-pointer">
+                  <td><button type="button" className="table-action" aria-label={`Otwórz reklamę #${node.id}`}>#{node.id}</button></td>
                   <td className="font-mono text-[0.92rem]">{node.case ?? ""}</td>
                   <td className="max-w-0 w-full">{node.label}</td>
                   <td>

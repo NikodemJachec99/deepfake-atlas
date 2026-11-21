@@ -100,7 +100,9 @@ export function EdgeRows({ edges, adId, onEdge, selected }: { edges: Edge[]; adI
       <tbody>
         {edges.map((edge) => (
           <tr key={edge.id} data-selected={selected === edge.id} onClick={() => onEdge(edge)} className="cursor-pointer">
-            <td className="font-mono text-[0.92rem]">#{edge.ad_a === adId ? edge.ad_b : edge.ad_a}</td>
+            <td><button type="button" className="table-action" aria-label={`Dowody powiązania reklam #${edge.ad_a} i #${edge.ad_b}`}>
+              #{edge.ad_a === adId ? edge.ad_b : edge.ad_a}
+            </button></td>
             <td>
               <RelationTag relation={edge.relation} duplicate={edge.duplicate} />
             </td>

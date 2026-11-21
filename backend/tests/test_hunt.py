@@ -207,6 +207,16 @@ def test_query_limit_is_respected_and_cached_between_runs():
     assert fakes.CT_CALLS == ["wiosenna"]  # odpowiedź z pamięci, drugiego zapytania nie ma
 
 
+def test_empty_crtsh_answer_is_not_cached():
+    operator = make_operator()
+    run_hunt(operator, max_queries=1, crawl=False)
+    assert fakes.CT_CALLS == ["wiosenna"] and not CertLookup.objects.exists()
+    fakes.CT["wiosenna"] = [cert("wiosenna-kuracja5.example")]
+    run_hunt(operator, max_queries=1, crawl=False)
+    assert fakes.CT_CALLS == ["wiosenna", "wiosenna"]  # pusta odpowiedź nie zasłoniła certyfikatu
+    assert HuntCandidate.objects.get().domain == "wiosenna-kuracja5.example"
+
+
 def test_no_crawl_leaves_candidates_without_touching_pages():
     operator = make_operator()
     fakes.CT["wiosenna"] = [cert("wiosenna-kuracja6.example")]

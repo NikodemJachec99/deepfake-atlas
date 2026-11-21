@@ -26,9 +26,9 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | POST | `/api/edges/{id}/simulate` | `{"exclude":[<id dowodu>],"edge_version":"<Edge.updated_at>"}` | `Simulation`: krawędź przed i po wyłączeniu dowodów, nic nie zapisuje |
 | GET | `/api/edges/{id}/suggestions` | | `Suggestions`: co sprawdzić dalej, z brakujących dowodów tej pary |
 | POST | `/api/edges/{id}/weakest-link` | `{"max_group_size":2,"max_scenarios":500,"time_limit_ms":3000,"edge_version":"..."}` | `WeakestLink`: najmniejsze zestawy grup śladów, których utrata zmienia relację |
-| GET | `/api/campaigns` | `?page=` | strona grup z `size` |
+| GET | `/api/campaigns` | `?page=`, `?source=capture` (po przecinku kilka) | strona `GroupListItem`: grupy z `size`, `sources`, `cases`, `cert_pl` |
 | GET | `/api/campaigns/{id}` | | reklamy, krawędzie, markery rdzeniowe |
-| GET | `/api/operators` | `?page=` | strona grup z `size` |
+| GET | `/api/operators` | `?page=`, `?source=capture` | strona `GroupListItem`, jak kampanie |
 | GET | `/api/operators/{id}` | | jak kampania, plus lista `campaigns` operatora |
 | GET | `/api/campaigns/{id}/timeline` | | `Timeline`: oś obserwacji kampanii (opis niżej) |
 | GET | `/api/operators/{id}/timeline` | | `Timeline` operatora, ten sam kształt (opis niżej) |
@@ -163,6 +163,8 @@ Zdarzenie `crawl/info` niesie łańcuch przekierowań (`payload.chain`), `extrac
 | `same_campaign` | to samo źródło i ta sama opowieść | pewność co najmniej 0,9, marker rozstrzygający albo dwa niezależne potwierdzenia, zgodna narracja |
 | `same_operator` | to samo zaplecze, inna opowieść | jak wyżej, bez zgodnej narracji |
 | `similar` | podobna koncepcja | zgodna narracja, kreacja albo osoby, albo ten sam silnik lejka bez śladu operatora; brak dowodu wspólnego zaplecza |
+
+Na listach grup `sources` to liczba reklam według źródła (`capture` to materiały spraw, `microsoft` i inne to biblioteki reklam), `cases` to liczba różnych spraw, a `cert_pl` to liczba reklam z domeną na Liście Ostrzeżeń CERT Polska. `?source=capture` zostawia grupy, w których jest choć jedna reklama z materiałów spraw. Rozmiar i skład grupy są zawsze pełne, a kolejność to dalej od największej.
 
 Kampania (`K-0033`) to reklamy spięte krawędziami `same_campaign`. Operator (`O-0001`) to reklamy spięte `same_campaign` albo `same_operator`, więc jeden operator ma zwykle kilka kampanii.
 

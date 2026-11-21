@@ -25,7 +25,7 @@ from extractors import video
 from extractors.url import redact_url
 from people.display import display_value, person_names
 from similarity import assist_view, decisions, observations, precedents, simulation, suggestions, timeline, weakest
-from similarity.models import Campaign, Edge, EdgeDecision, Operator
+from similarity.models import Campaign, CampaignMembership, Edge, EdgeDecision, Operator, OperatorMembership
 from similarity.service import assign_campaign, assign_operator
 from workflows import runner
 
@@ -321,11 +321,49 @@ def _group_detail(group, serializer, relations: list[str]) -> dict:
     }
 
 
-class CampaignList(generics.ListAPIView):
-    serializer_class = s.CampaignSerializer
+def _group_stats(membership_model, field: str, group_ids) -> dict[int, dict]:
+    """Skład grup: reklamy według źródła, liczba spraw i reklam z domeną na Liście Ostrzeżeń CERT Polska."""
+    stats: dict[int, dict] = {gid: {"sources": {}, "cases": 0, "cert_pl": 0} for gid in group_ids}
+    rows = membership_model.objects.filter(**{f"{field}_id__in": group_ids}).values(f"{field}_id", "ad__source").annotate(n=Count("id"))
+    for row in rows:
+        stats[row[f"{field}_id"]]["sources"][row["ad__source"]] = row["n"]
+    cases = (membership_model.objects.filter(**{f"{field}_id__in": group_ids}, ad__labels__has_key="case")
+             .values(f"{field}_id").annotate(n=Count("ad__labels__case", distinct=True)))
+    for row in cases:
+        stats[row[f"{field}_id"]]["cases"] = row["n"]
+    listed = (membership_model.objects.filter(**{f"{field}_id__in": group_ids}, ad__labels__has_key="cert_pl")
+              .values(f"{field}_id").annotate(n=Count("id")))
+    for row in listed:
+        stats[row[f"{field}_id"]]["cert_pl"] = row["n"]
+    return stats
+
+
+class _GroupList(generics.ListAPIView):
+    """Lista grup od największej. `?source=capture` zostawia grupy, w których jest reklama z tego źródła."""
+
+    model = None
+    membership = None
+    field = ""
 
     def get_queryset(self):
-        return Campaign.objects.filter(merged_into__isnull=True).annotate(size=Count("memberships")).filter(size__gt=0).order_by("-size", "id")
+        queryset = self.model.objects.filter(merged_into__isnull=True)
+        if source := self.request.query_params.get("source"):
+            # Podzapytanie, a nie filtr po tym samym złączeniu: rozmiar grupy ma liczyć wszystkie reklamy.
+            with_source = self.membership.objects.filter(ad__source__in=source.split(",")).values(f"{self.field}_id")
+            queryset = queryset.filter(pk__in=with_source)
+        return queryset.annotate(size=Count("memberships")).filter(size__gt=0).order_by("-size", "id")
+
+    def list(self, request, *args, **kwargs):
+        page = self.paginate_queryset(self.filter_queryset(self.get_queryset()))
+        items = page if page is not None else list(self.get_queryset())
+        stats = _group_stats(self.membership, self.field, [g.pk for g in items])
+        data = [{**self.get_serializer(g).data, **stats[g.pk]} for g in items]
+        return self.get_paginated_response(data) if page is not None else Response(data)
+
+
+class CampaignList(_GroupList):
+    serializer_class = s.CampaignSerializer
+    model, membership, field = Campaign, CampaignMembership, "campaign"
 
 
 @api_view(["GET"])
@@ -335,11 +373,9 @@ def campaign_detail(request, pk):
     return Response(_group_detail(campaign, s.CampaignSerializer, [Edge.Relation.SAME_CAMPAIGN]))
 
 
-class OperatorList(generics.ListAPIView):
+class OperatorList(_GroupList):
     serializer_class = s.OperatorSerializer
-
-    def get_queryset(self):
-        return Operator.objects.filter(merged_into__isnull=True).annotate(size=Count("memberships")).filter(size__gt=0).order_by("-size", "id")
+    model, membership, field = Operator, OperatorMembership, "operator"
 
 
 @api_view(["GET"])

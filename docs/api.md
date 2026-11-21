@@ -19,6 +19,7 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | GET | `/api/edges/{id}` | | `EdgeDetail`: obie reklamy i lista dowodów |
 | POST | `/api/edges/{id}/verdict` | `{"verdict":"confirmed"\|"rejected"\|"unsure","note":""}` | `EdgeDetail`, wpis w dzienniku audytu |
 | POST | `/api/edges/{id}/simulate` | `{"exclude":[<id dowodu>],"edge_version":"<Edge.updated_at>"}` | `Simulation`: krawędź przed i po wyłączeniu dowodów, nic nie zapisuje |
+| GET | `/api/edges/{id}/suggestions` | | `Suggestions`: co sprawdzić dalej, z brakujących dowodów tej pary |
 | GET | `/api/campaigns` | `?page=` | strona grup z `size` |
 | GET | `/api/campaigns/{id}` | | reklamy, krawędzie, markery rdzeniowe |
 | GET | `/api/operators` | `?page=` | strona grup z `size` |
@@ -173,6 +174,40 @@ Odpowiedź:
 - `reasons`: zdania odpowiadające regułom z `similarity/fusion.py`, w kolejności sprawdzania.
 - `group_impact`: liczone tylko wtedy, gdy krawędź przestałaby spinać grupę. `pair_still_connected` mówi, czy obie reklamy łączy inna ścieżka z krawędzi tego samego rodzaju (bez odrzuconych). `false` oznacza, że grupa rozpadłaby się w tym miejscu na dwie, przy reszcie grafu bez zmian. Nie przeliczamy innych par.
 - Bity to wkład dowodów w skali logarytmicznej, nie procent i nie identyfikacja osoby.
+
+## Co sprawdzić dalej (`Suggestions`)
+
+`GET /api/edges/{id}/suggestions` zwraca kilka deterministycznych wskazówek dla analityka. Wynikają z reguł silnika i z materiałów przy obu reklamach. Nic nie pobiera z sieci, nie zgaduje, czy brakujący dowód istnieje, nie ocenia prawdopodobieństwa. Pusta lista to poprawny wynik: para ma pełny materiał i odporną hipotezę.
+
+```json
+{
+  "edge": 3082, "relation": "same_operator",
+  "materials": {"A": {"har": true, "page": false, "creative": true, "library_ids": []},
+                "B": {"har": true, "page": true, "creative": true, "library_ids": []}},
+  "suggestions": [{
+    "code": "single_support",
+    "missing": "niezależne potwierdzenie wspólnego źródła, które utrzyma się bez każdego pojedynczego śladu",
+    "why": "Wspólne źródło trzyma się na śladach, z których każdy jest konieczny: bez śladu \"host zasobów lub trackera\" (crimsonbase.pro) relacja to podobna koncepcja.",
+    "next_step": "Poszukać drugiego, niezależnego śladu konta lub infrastruktury: ...",
+    "limitation": "Jeden rzadki ślad bywa wystarczający. Wskazówka mówi o kruchości hipotezy, nie o tym, że jest błędna.",
+    "rule": "fusion: wspólne źródło wymaga markera rozstrzygającego albo dwóch niezależnych potwierdzeń",
+    "sides": []
+  }],
+  "note": "Wskazówki wynikają z reguł silnika i z dostępnych materiałów. Kolejność to kolejność reguł, nie ocena skuteczności.",
+  "warnings": []
+}
+```
+
+| `code` | Kiedy |
+|---|---|
+| `single_support` | wspólne źródło znika po wyłączeniu jednego rodzaju śladu (sprawdzane symulacją) |
+| `engine_without_account` | relacja `similar` na samych ścieżkach zaplecza, bez śladu konta operatora |
+| `copy_without_backend` | relacja `similar` na zgodnej treści lub obrazach, bez zaplecza |
+| `har_missing` | strona z przechwycenia bez pliku HAR (`sides` mówi, po której stronie) |
+| `screenshot_only` | przy reklamie jest tylko zrzut; gdy znamy numer z Biblioteki Reklam, wskazówka go podaje |
+| `story_unknown` | ten sam operator, ale po jednej stronie brak treści strony, więc nie da się sprawdzić, czy to ta sama kampania |
+
+`sides` to lista stron pary w formacie `A (reklama #id)`, których wskazówka dotyczy. Pusta, gdy dotyczy pary jako całości.
 
 ## Typy markerów
 

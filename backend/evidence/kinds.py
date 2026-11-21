@@ -113,6 +113,7 @@ _KINDS = [
     Kind("meta_ad_ref", "pers", "Identyfikator reklamy lub kampanii Meta", m=0.9, f0=1e-6, cap=18, decisive=True),
     Kind("page_name", "pers", "Nazwa strony lub reklamodawcy", m=0.5, f0=1e-4, cap=8),
     Kind("brand_impersonated", "pers", "Podszycie pod markę", m=0.7, f0=0.02, cap=3, candidate=False, motif=True),
+    Kind("face_match", "pers", "Twarz osoby z bazy referencyjnej", m=0.8, f0=0.01, cap=2.5, candidate=False, motif=True),
     # Zachowanie
     Kind("ad_naming", "beh", "Nazewnictwo reklam i zestawów", m=0.5, f0=1e-5, cap=8),
     Kind("lang_trace", "beh", "Ślad językowy operatora", m=0.5, f0=0.05, cap=1.5, candidate=False),

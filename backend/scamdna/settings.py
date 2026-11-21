@@ -110,6 +110,10 @@ CRAWLER_PROXY = env("CRAWLER_PROXY")
 # --- Magazyn dowodów -------------------------------------------------------
 ARTIFACT_BACKEND = env("ARTIFACT_BACKEND", "local")  # local | s3
 ARTIFACT_DIR = Path(env("ARTIFACT_DIR", str(BASE_DIR.parent / "data" / "artifacts")))
+
+# Modele pobierane przy pierwszym użyciu (twarze: YuNet i SFace). Katalog poza gitem.
+MODELS_DIR = Path(env("MODELS_DIR", str(BASE_DIR.parent / "data" / "models")))
+FACE_MODELS_DOWNLOAD = env("FACE_MODELS_DOWNLOAD", "1") == "1"
 S3_ENDPOINT_URL = env("S3_ENDPOINT_URL", "http://localhost:9000")
 S3_ACCESS_KEY = env("S3_ACCESS_KEY", "scamdna")
 S3_SECRET_KEY = env("S3_SECRET_KEY", "scamdna-secret")

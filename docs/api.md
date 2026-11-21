@@ -247,6 +247,7 @@ Porównanie dwóch przechwyconych stron, np. tego samego adresu widzianego dwa r
 | `thresholds` | progi oceny (opis skali, nie pewność) |
 
 - `context: null` i `captured_at: null` znaczą "nieznane". Reklamy zaimportowane przed tą funkcją nie mają zapisu obserwacji; ponowny import go uzupełnia.
+- `text_excerpt`: do 300 znaków widocznego tekstu z zapisanego HTML strony, jako zwykły tekst bez znaczników, z adresami po redakcji. Pola `chars` (długość całego tekstu), `source` i `artifact` (skrót zapisu HTML) mówią, skąd pochodzi. `null`, gdy przy reklamie nie ma zapisu strony.
 - `page_screenshot` jest zawsze `null`: zrzutów stron nie mamy, a zrzut reklamy (`ad_creatives`) to reklama, nie strona docelowa.
 - HAR i HTML są tylko do pobrania (`/api/artifacts/{sha256}`), nigdy do renderowania. Odpowiedź nie zawiera HTML ani skryptów, adresy mają zredagowane sekrety.
 - Błędy: brak albo zły parametr `400`, ta sama reklama dwa razy `400`, nieistniejąca reklama `404`.

@@ -210,6 +210,8 @@ export interface ObservationSide {
   ad: number;
   external_id: string;
   title: string;
+  // krótki fragment widocznego tekstu z zapisanego HTML (zwykły tekst, do 300 znaków); null: brak zapisu strony
+  text_excerpt: { text: string; chars: number; source: string; artifact: string } | null;
   exact_url: string;
   captured_at: string | null; // null: nieznane
   time_source: string | null; // har.entries | nask.archive_info | page-capture.manifest

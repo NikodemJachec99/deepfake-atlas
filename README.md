@@ -2,6 +2,8 @@
 
 Wykrywanie kampanii fałszywych reklam z wizerunkami znanych osób (NASK).
 
+**Wymagania zadania i checklista: [docs/wymagania.md](docs/wymagania.md)**
+
 ## Stack
 - **backend/** — Python 3.12, FastAPI, SQLAlchemy, Postgres (pgvector), Redis
 - **frontend/** — Next.js (wygeneruj: `npx create-next-app@latest frontend --ts --app --tailwind --eslint`)

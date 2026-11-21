@@ -64,6 +64,16 @@ Poprawne sformułowanie: "ten sam adres dał dwie różne strony; najprostsze wy
 4. Istniejące reklamy zostają. Nowe pola dochodzą przy ponownym imporcie, a kod porównania (#62, #63) zwraca "brak danych", gdy ich nie ma.
 5. Porównanie nie zmienia krawędzi ani grup. Różnica stron pod tym samym adresem to obserwacja, nie nowy dowód wspólnego operatora.
 
+## Co już działa (#62)
+
+- Importer czyta plik nazwany samym `.har`, pomija HAR nagrany z pliku lokalnego (`file:`) i nie skleja dwóch przechwyceń tej samej domeny z różnymi adresami albo dwóch HAR-ów w jednym katalogu. Archiwum NASK i `page-capture` dalej uzupełniają zapis tej samej domeny. Na danych organizatora liczba stron bez zmian (28).
+- Każda strona z przechwycenia ma `Ad.raw["observation"]`: adres dokładny po redakcji sekretów, adres znormalizowany, domenę, czas przechwycenia i jego źródło (`har.entries`, `nask.archive_info`, `page-capture.manifest`, puste = nieznane), kontekst przeglądarki z nagłówków żądania (rodzina, platforma, mobilna, język, czy były ciasteczka i referer, bez wartości ciasteczek) i listę hostów z ruchu.
+- `similarity/observations.py` porównuje dwie strony: typ zgodności adresu (`exact`, `normalized`, `domain`, `different`, `unknown`), odstęp czasu, podobieństwo treści, szablonu i obrazów z istniejących sygnatur, różnice trackerów, hostów i kontekstu, ocena oraz hipotezy i ograniczenia. Krawędzi nie zmienia.
+
+Progi oceny: treść i szablon co najmniej 0,9 to "identyczne albo prawie identyczne", treść co najmniej 0,5 albo szablon co najmniej 0,6 to "podobne", niżej "istotnie różne", bez sygnatur "za mało danych". To opis skali, nie wykalibrowana pewność. Hipotezy (cloaking, jednorazowy token, kontekst przeglądarki, zmiana w czasie) pojawiają się tylko przy zgodnym adresie i różnej treści.
+
+Starsze importy nie mają `observation`. Porównanie mówi wtedy wprost, czego brakuje. Pełne dane daje ponowny import.
+
 ## Materiał do pokazu
 
 Rzeczywisty przykład jest: strony 2 i 3 sprawy 61 spełniają warunek identycznego pełnego adresu. Syntetyczny materiał nie jest potrzebny. Do testów automatycznych używamy zmyślonych domen i tokenów.

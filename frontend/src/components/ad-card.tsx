@@ -6,7 +6,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { api, artifactImageUrl, type AdDetail, type Edge } from "@/lib/api";
+import { API_URL, api, artifactImageUrl, type AdDetail, type Edge } from "@/lib/api";
 import { SOURCE_LABELS, adTitle, dateTime, day, hostOf } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 
@@ -37,6 +37,25 @@ function AdText({ ad }: { ad: AdDetail }) {
   </figure>;
 }
 
+function Recordings({ videos = [] }: { videos?: AdDetail["videos"] }) {
+  if (!videos.length) return null;
+  return <section className="grid gap-3">
+    <h2 className="text-lg font-semibold">Nagrania</h2>
+    {videos.map(video => <figure key={video.sha256} className="min-w-0">
+      <figcaption className="break-words font-medium">{video.name}</figcaption>
+      <p className="text-muted">
+        {video.duration_s != null && <span>Czas trwania: {video.duration_s.toLocaleString("pl-PL")} s </span>}
+        {video.width != null && video.height != null && <span> · {video.width} × {video.height} px</span>}
+      </p>
+      {video.playable && video.url ? <>
+        <video controls preload="metadata" aria-label={video.name} src={API_URL + video.url}
+          poster={video.poster ? API_URL + video.poster.url : undefined} className="max-h-80 w-full bg-black" />
+        {video.poster && <p className="text-sm text-muted">Klatka poglądowa z nagrania · {video.poster.at_s.toLocaleString("pl-PL")} s</p>}
+      </> : <p>Brak możliwości odtworzenia. {video.missing.join(" · ")}</p>}
+    </figure>)}
+  </section>;
+}
+
 function MaterialWorkspace({ ad }: { ad: AdDetail }) {
   const [selected, setSelected] = useState(0);
   const image = ad.creatives[selected] ?? ad.creatives[0];
@@ -48,7 +67,7 @@ function MaterialWorkspace({ ad }: { ad: AdDetail }) {
     </header>
     <div className="grid xl:grid-cols-[minmax(0,1fr)_minmax(22rem,32%)]">
       <div className="min-w-0 space-y-4 p-5">
-        <h2 className="text-lg font-semibold">Zrzuty reklamy</h2>
+        {(ad.creatives.length > 0 || !ad.videos?.length) && <h2 className="text-lg font-semibold">Zrzuty reklamy</h2>}
         {ad.creatives.length ? <div className="flex flex-wrap gap-3">
           {ad.creatives.map((sha, i) => <button key={sha} type="button" onClick={() => setSelected(i)}
             aria-pressed={image === sha} className="max-w-full rounded-md border border-line bg-panel p-1 text-left aria-pressed:outline-2 aria-pressed:outline-accent">
@@ -56,7 +75,8 @@ function MaterialWorkspace({ ad }: { ad: AdDetail }) {
             <img className="h-36 max-w-full object-contain" alt="" src={artifactImageUrl(sha)} />
             <span className="block px-1 py-1">Zrzut {i + 1}</span>
           </button>)}
-        </div> : <p className="text-muted">Brak zrzutu reklamy w materiale.</p>}
+        </div> : !ad.videos?.length && <p className="text-muted">Brak zrzutu reklamy w materiale.</p>}
+        <Recordings videos={ad.videos} />
         <AdText ad={ad} />
         <ObservationPanel adId={ad.id} />
         <Link href={`/investigation?ad=${ad.id}`} className="inline-block text-accent underline">Pokaż na grafie powiązań</Link>
@@ -186,7 +206,8 @@ export function AdCard({ adId, onEdge, selectedEdge, full = false }: { adId: num
         </div>
         <h1 className="text-[1.08rem] font-medium">{adTitle(data)}</h1>
         <Labels ad={data} />
-        <Creatives shas={data.creatives} size="h-32" />
+        {(data.creatives.length > 0 || !data.videos?.length) && <Creatives shas={data.creatives} size="h-32" />}
+        <Recordings videos={data.videos} />
         <AdMeta ad={data} />
         {data.text && <div className="max-h-24 overflow-auto"><AdText ad={data} /></div>}
       </div>}

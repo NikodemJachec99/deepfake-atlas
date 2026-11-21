@@ -403,11 +403,13 @@ def cmd_oddaj(args) -> None:
     stray = outside_zone(me, files)
     if stray and not args.poza_strefa:
         fail("zmiany poza strefą tej maszyny:\n  " + "\n  ".join(stray[:15]) + "\nCofnij je albo, jeśli są konieczne, dodaj --poza-strefa")
-    if not args.bez_testow:
-        local_checks(files)
+    # Najpierw scalenie z main, potem testy: przy wyłączonym CI testujemy dokładnie to, co trafi do main.
     merge = subprocess.run(["git", "merge", "--no-edit", "origin/main"], capture_output=True, text=True, cwd=ROOT)
     if merge.returncode != 0:
         fail("konflikt z main. Rozwiąż go, zrób commit i uruchom oddaj jeszcze raz.\n" + merge.stdout[-800:])
+    if not args.bez_testow:
+        local_checks(files)
+    tested = run("git", "rev-parse", "HEAD")
     run("git", "push", "-u", "origin", branch)
     if not ok("gh", "pr", "view", branch):
         run("gh", "pr", "create", "--base", "main", "--head", branch, "--title", item["title"], "--body", f"{args.m or item['title']}\n\nCloses #{number}")
@@ -421,7 +423,8 @@ def cmd_oddaj(args) -> None:
         wait_for_ci(branch)
     # Bez --delete-branch: gh próbuje wtedy przełączyć się lokalnie na main, a w worktree main bywa
     # wyciągnięty gdzie indziej. Gałęzie kasujemy sami, a w worktree wracamy na origin/main bez gałęzi.
-    run("gh", "pr", "merge", branch, "--merge")
+    # --match-head-commit: gh odmówi, jeśli na gałęzi jest coś innego niż przetestowany commit.
+    run("gh", "pr", "merge", branch, "--merge", "--match-head-commit", tested)
     run("gh", "issue", "edit", str(number), "--remove-label", f"robi:{me}", check=False, quiet=True)
     run("git", "push", "origin", "--delete", branch, check=False, quiet=True)
     run("git", "fetch", "origin", "--prune", check=False, quiet=True)

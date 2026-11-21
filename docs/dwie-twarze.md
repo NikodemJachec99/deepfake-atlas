@@ -74,6 +74,28 @@ Progi oceny: treść i szablon co najmniej 0,9 to "identyczne albo prawie identy
 
 Starsze importy nie mają `observation`. Porównanie mówi wtedy wprost, czego brakuje. Pełne dane daje ponowny import.
 
+## Scenariusz pokazu (#65)
+
+**Dane i wersja.** Paczka `nask`, sprawa 61, strony 2 i 3 (`nask/61/strona-2-glowpixel.org`, `nask/61/strona-3-glowpixel.org`). Import 2026-11-21 16:26 UTC, kod `main` po #108. Identyfikatory reklam zależą od kolejności importu; po pełnym imporcie obu paczek od zera to #12 i #13.
+
+**Czas.** 25 sekund.
+
+| Krok | Co robimy | Co widać (sprawdzone 2026-11-21 na stosie 8010) |
+|---|---|---|
+| 1 | Archiwum albo graf, reklama sprawy 61 "Trwały Działunek", pełna karta | domena, pełny adres, kampania K-0003, operator O-0003 |
+| 2 | "Dwie twarze jednego linku" | lista do porównania: #13, "identyczny adres", tytuł strony 3 |
+| 3 | odczytać nagłówek i dwie kolumny | "identyczny adres · istotnie różne"; 14:03:42 i 14:06:23 CEST, źródło `har.entries`; Edge i Chrome, różny język; "brak zrzutu strony docelowej"; linki "Pobierz HAR", "Pobierz HTML" |
+| 4 | "Różnice między obserwacjami" i "Możliwe wyjaśnienia" | inny tytuł, 3 trackery tylko na stronie oferty, inne hosty, inny kontekst przeglądarki; cztery wyjaśnienia: cloaking, jednorazowy token, kontekst przeglądarki, zmiana w czasie |
+| 5 | "Dowody powiązania #…" | panel krawędzi "ta sama kampania" między stronami 2 i 3; porównanie niczego w nim nie zmieniło |
+
+**Co mówimy.** "Ten sam adres, co do znaku, otwarty dwa razy w odstępie niecałych trzech minut, dał dwie różne strony: ofertę z pikselem konwersji i neutralny portal. To obserwacja. Najprostsze wyjaśnienia to cloaking albo jednorazowy token wizyty, i system mówi to wprost, zamiast przesądzać." Nie mówimy "strona dla moderatora" ani "ten sam link" o adresach, które różnią się choć jednym parametrem.
+
+**Plan awaryjny.** `curl "localhost:8000/api/observations/compare?a=<id strony 2>&b=<id strony 3>"`; id z `GET /api/ads?case=61`. W odpowiedzi `url_match: "exact"`, `verdict: "different"`, `seconds_between: 161.2`.
+
+**Braki pokazane jawnie.** Zrzutów stron docelowych w materiale nie ma (panel to mówi). Fragment tekstu strony API już zwraca (#108), interfejs pokaże go po #110; do tego czasu panel mówi "fragment niedostępny".
+
+**Kolejność w prezentacji.** Główne demo (Discovery, sprawa p3), potem, gdy jest czas: laboratorium dowodów (40 s, [laboratorium.md](laboratorium.md#scenariusz-pokazu-laboratorium-52)), na końcu dwie twarze linku (25 s). Oba dodatki są tylko do odczytu, więc kolejność można zmienić bez przygotowania danych od nowa.
+
 ## Materiał do pokazu
 
 Rzeczywisty przykład jest: strony 2 i 3 sprawy 61 spełniają warunek identycznego pełnego adresu. Syntetyczny materiał nie jest potrzebny. Do testów automatycznych używamy zmyślonych domen i tokenów.

@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, Compass, FolderOpen, Network, UsersRound } from "lucide-react";
+import { Bell, Archive, Compass, FolderOpen, Network, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -8,13 +8,13 @@ import { api, RELATION_LABELS, type Stats } from "@/lib/api";
 
 const sections: Record<string, string> = {
   "/": "Discovery", "/investigation": "Investigation", "/archive": "Archiwum",
-  "/operators": "Operatorzy", "/campaigns": "Kampanie", "/ads": "Reklamy",
+  "/operators": "Operatorzy", "/campaigns": "Kampanie", "/ads": "Reklamy", "/alerts": "Alerty",
 };
 
 const navigation = [
   { href: "/", Icon: Compass }, { href: "/investigation", Icon: Network },
   { href: "/archive", Icon: Archive }, { href: "/operators", Icon: UsersRound },
-  { href: "/campaigns", Icon: FolderOpen },
+  { href: "/campaigns", Icon: FolderOpen }, { href: "/alerts", Icon: Bell },
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -23,6 +23,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const root = "/" + section;
   const [stats, setStats] = useState<Stats | null>(null);
   const [failed, setFailed] = useState(false);
+  const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    const refresh = () => setRevision(value => value + 1);
+    window.addEventListener("atlas-alerts-updated", refresh);
+    return () => window.removeEventListener("atlas-alerts-updated", refresh);
+  }, []);
   useEffect(() => {
     let active = true;
     let timer: ReturnType<typeof setTimeout>;
@@ -38,7 +44,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     }
     void refresh();
     return () => { active = false; clearTimeout(timer); };
-  }, []);
+  }, [revision]);
   return <div className="flex h-dvh flex-col bg-bg text-fg">
     <div className="flex min-h-0 flex-1">
       <nav aria-label="Nawigacja główna" className="flex shrink-0 flex-col gap-1 overflow-auto border-r border-line atlas-sidebar bg-panel p-1.5 md:p-3">
@@ -54,7 +60,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     </div>
     <footer aria-label="Stan korpusu" className="flex shrink-0 gap-5 overflow-x-auto whitespace-nowrap text-xs text-muted border-t border-line bg-panel px-3 py-1 font-mono">
       {failed ? "Statystyki korpusu niedostępne" : !stats ? "Pobieranie statystyk…" : <>
-        <span>Reklamy {stats.ads}</span><span>Kampanie {stats.campaigns}</span><span>Operatorzy {stats.operators}</span>
+        <Link href="/alerts" className="text-accent">Nieprzejrzane alerty {stats.alerts_unseen ?? "—"}</Link><span>Reklamy {stats.ads}</span><span>Kampanie {stats.campaigns}</span><span>Operatorzy {stats.operators}</span>
         {Object.entries(RELATION_LABELS).map(([key, label]) => <span key={key}>{label} {stats.edges[key as keyof Stats["edges"]] ?? 0}</span>)}
         <span>Lista CERT {stats.cert_pl_listed}</span><span>Ostatnia analiza {stats.last_analysis ? new Date(stats.last_analysis).toLocaleString("pl-PL") : "brak"}</span>
       </>}

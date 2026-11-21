@@ -61,7 +61,7 @@ Organizator przetestuje rozwiązanie na nieudostępnionym zbiorze z nowymi waria
 | Przypisywanie nowych materiałów do istniejących grup | sprawy z drugiej paczki dołączyły do kampanii i operatora z pierwszej |
 | Niełączenie tego, co nie powinno być połączone | 14 stron bez operatora; kopia treści na innym zapleczu i ten sam silnik lejka bez śladu operatora to tylko `similar`; każda krawędź między sprawami przejrzana ręcznie ([dane-organizatora.md](dane-organizatora.md)) |
 | Przydatność i różnorodność cech | 7 rodzin |
-| Odporność na duplikaty, niekompletne dane, różne formaty | duplikat oznaczony; obsługa zapisanych stron, HAR, `page-capture`, archiwum NASK, zrzutów, wideo |
+| Odporność na duplikaty, niekompletne dane, różne formaty | duplikat oznaczony; obsługa zapisanych stron, HAR, `page-capture`, archiwum NASK, zrzutów, wideo; pomiar: bez HAR zostaje 19 z 33 połączeń, bez zapisu strony 30, bez zrzutów 32, w żadnym wariancie zero fałszywych połączeń ([dane-organizatora.md](dane-organizatora.md)) |
 | Interpretowalność | dowody przy każdej krawędzi |
 | Kompletność od wczytania do wyniku | `import_bundle` albo upload w interfejsie |
 

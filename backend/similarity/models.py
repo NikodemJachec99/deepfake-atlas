@@ -180,3 +180,32 @@ class AssistSuggestion(models.Model):
     class Meta:
         ordering = ["-created_at", "-id"]
         indexes = [models.Index(fields=["edge", "task", "created_at"])]
+
+
+class Alert(models.Model):
+    """Nowy materiał dołączył do grupy, która już była w korpusie.
+
+    Powstaje w etapie cluster, raz na reklamę i rodzaj (ponowne uruchomienie etapów niczego nie dubluje).
+    Pierwsza reklama nowej kampanii alertu nie daje: nie było jeszcze z czym jej powiązać.
+    """
+
+    class Kind(models.TextChoices):
+        JOINED_CAMPAIGN = "joined_campaign", "Nowa odsłona znanej kampanii"
+        NEW_CAMPAIGN_KNOWN_OPERATOR = "new_campaign_known_operator", "Nowa kampania znanego operatora"
+        JOINED_OPERATOR = "joined_operator", "Reklama połączyła grupy znanego operatora"
+
+    ad = models.ForeignKey("ads.Ad", on_delete=models.CASCADE, related_name="alerts")
+    kind = models.CharField(max_length=32, choices=Kind.choices)
+    campaign = models.ForeignKey(Campaign, null=True, blank=True, on_delete=models.SET_NULL, related_name="alerts")
+    operator = models.ForeignKey(Operator, null=True, blank=True, on_delete=models.SET_NULL, related_name="alerts")
+    description = models.CharField(max_length=300, blank=True)
+    # Najmocniejsze dowody łączące reklamę z grupą: [{kind, label, family, bits, value}], najwyżej 3.
+    evidence = models.JSONField(default=list, blank=True)
+    seen = models.BooleanField(default=False)
+    seen_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        constraints = [models.UniqueConstraint(fields=["ad", "kind"], name="alert_ad_kind")]
+        indexes = [models.Index(fields=["seen", "-created_at"])]

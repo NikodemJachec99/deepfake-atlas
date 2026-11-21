@@ -135,6 +135,8 @@ Nowa reklama nie jest porównywana z całym korpusem. Kandydatów znajdujemy ind
 | `similar_only` | podobna koncepcja, brak dowodu wspólnego źródła |
 | `new_pattern` | brak powiązań, potencjalnie nowa kampania |
 
+Gdy reklama dołącza do kampanii albo operatora, które były w korpusie wcześniej, etap `cluster` zapisuje alert (`Alert`, `similarity/alerts.py`, `GET /api/alerts`) z trzema najmocniejszymi dowodami.
+
 ## 9. Interpretowalność
 
 Każda krawędź ma w bazie listę dowodów (`EdgeEvidence`): rodzina, typ, wartości po obu stronach, liczba źródeł z tą wartością, wkład w bitach, znacznik rozstrzygania i odnośniki do plików, z których cecha pochodzi. Krawędź bez dowodów nie powstaje. Decyzja analityka (potwierdź, odrzuć, niepewne) zapisuje się w dzienniku audytu.

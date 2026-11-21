@@ -29,7 +29,7 @@ from extractors import video
 from extractors.url import redact_url
 from people.display import display_value, person_names
 from similarity import assist_view, decisions, observations, precedents, simulation, stix, suggestions, timeline, weakest
-from similarity.models import Campaign, CampaignMembership, Edge, EdgeDecision, Operator, OperatorMembership
+from similarity.models import Alert, Campaign, CampaignMembership, Edge, EdgeDecision, Operator, OperatorMembership
 from similarity.service import assign_campaign, assign_operator
 from workflows import runner
 
@@ -531,6 +531,7 @@ def stats(request):
             "operators": Operator.objects.filter(merged_into__isnull=True, memberships__isnull=False).distinct().count(),
             "edges": dict(Edge.objects.values_list("relation").annotate(n=Count("id"))),
             "by_source": dict(Ad.objects.values_list("source").annotate(n=Count("id"))),
+            "alerts_unseen": Alert.objects.filter(seen=False).count(),
             "cert_pl_listed": Ad.objects.filter(labels__has_key="cert_pl").count(),
             "last_analysis": Analysis.objects.order_by("-created_at").values_list("created_at", flat=True).first(),
         }
@@ -604,3 +605,28 @@ def ad_recluster(request, pk):
     """Ponownie przypisuje reklamę do kampanii i operatora, np. po odrzuceniu krawędzi."""
     ad = get_object_or_404(Ad, pk=pk)
     return Response({**assign_campaign(ad), **assign_operator(ad)})
+
+
+class AlertList(generics.ListAPIView):
+    """Nowe materiały powiązane z wcześniej wykrytymi kampaniami i operatorami, najnowsze pierwsze.
+    `?unseen=1` zostawia nieprzejrzane."""
+
+    serializer_class = s.AlertSerializer
+
+    def get_queryset(self):
+        queryset = Alert.objects.select_related("ad", "campaign", "operator")
+        if self.request.query_params.get("unseen") in ("1", "true"):
+            queryset = queryset.filter(seen=False)
+        return queryset
+
+
+@api_view(["POST"])
+def alert_seen(request, pk):
+    """Oznacza alert jako przejrzany. Ciało `{"seen": false}` cofa oznaczenie."""
+    alert = get_object_or_404(Alert.objects.select_related("ad", "campaign", "operator"), pk=pk)
+    seen = request.data.get("seen", True) not in (False, "false", "0", 0)
+    if alert.seen != seen:
+        alert.seen = seen
+        alert.seen_at = timezone.now() if seen else None
+        alert.save(update_fields=["seen", "seen_at"])
+    return Response(s.AlertSerializer(alert).data)

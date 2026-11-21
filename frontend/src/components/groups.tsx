@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
-import { markerValue, adTitle } from "@/lib/format";
+import { markerValue, adTitle, SOURCE_LABELS } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 import { ObservationTimeline } from "./observation-timeline";
 import { ErrorBox, FamilyDot, GroupLink, Loading } from "./ui";
@@ -11,16 +12,19 @@ import { ErrorBox, FamilyDot, GroupLink, Loading } from "./ui";
 type GroupKind = "operators" | "campaigns";
 
 export function GroupList({ kind }: { kind: GroupKind }) {
-  const groups = useApi(kind, api[kind]);
-  if (groups.loading) return <Loading />;
-  if (groups.error) return <ErrorBox message={groups.error} onRetry={groups.reload} />;
+  const [all, setAll] = useState(false);
+  const source = all ? undefined : "capture";
+  const groups = useApi(kind + ":" + source, () => api[kind](source));
   return <main className="atlas-page">
     <h1 className="atlas-title">{kind === "operators" ? "Operatorzy" : "Kampanie"}</h1>
-    {groups.data?.count ? <div className="atlas-table"><table className="dense"><thead><tr><th>Grupa</th><th>Nazwa</th><th>Reklamy</th></tr></thead>
+    <label className="flex items-center gap-2"><input type="checkbox" checked={all} onChange={e => setAll(e.target.checked)} />Wszystkie grupy</label>
+    <p className="text-muted">{all ? "Wszystkie źródła" : "Grupy zawierające materiały spraw"}</p>
+    {groups.loading ? <Loading /> : groups.error ? <ErrorBox message={groups.error} onRetry={groups.reload} /> : groups.data?.count ? <div className="atlas-table"><table className="dense"><thead><tr><th>Grupa</th><th>Nazwa</th><th>Reklamy</th><th>Źródła reklam</th><th>Sprawy</th><th>Reklamy z domeną na liście CERT</th></tr></thead>
       <tbody>{groups.data.results.map(group => <tr key={group.id}>
         <td><Link className="text-accent" href={`/${kind}/${group.id}`}>{group.key}</Link></td>
         <td>{group.label}</td><td>{group.size}</td>
-      </tr>)}</tbody></table></div> : <p>Brak grup w korpusie.</p>}
+        <td>{Object.entries(group.sources ?? {}).map(([key, count]) => `${SOURCE_LABELS[key] ?? key}: ${count}`).join(" · ") || "Brak danych"}</td><td>{group.cases ?? "—"}</td><td>{group.cert_pl ?? "—"}</td>
+      </tr>)}</tbody></table></div> : <p>Brak grup w wybranym zakresie.</p>}
   </main>;
 }
 

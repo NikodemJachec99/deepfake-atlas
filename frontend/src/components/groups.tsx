@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { api, campaignPackageUrl, operatorPackageUrl } from "@/lib/api";
 import { markerValue, adTitle, hostOf, SOURCE_LABELS } from "@/lib/format";
+import { allGroups as loadGroups } from "@/lib/group-pages";
 import { useApi } from "@/lib/hooks";
 import { ObservationTimeline } from "./observation-timeline";
 import { ErrorBox, FamilyDot, GroupLink, Loading } from "./ui";
@@ -15,7 +16,7 @@ export function GroupList({ kind }: { kind: GroupKind }) {
   const [all, setAll] = useState(false);
   const source = all ? undefined : "capture";
   const totals = useApi("group-totals", api.stats);
-  const groups = useApi(kind + ":" + source, () => api[kind](source));
+  const groups = useApi(kind + ":" + source, () => loadGroups(kind, source));
   return <main className="atlas-page">
     <h1 className="atlas-title">{kind === "operators" ? "Operatorzy" : "Kampanie"}</h1>
     <label className="flex items-center gap-2"><input type="checkbox" checked={all} onChange={e => setAll(e.target.checked)} />Wszystkie grupy</label>

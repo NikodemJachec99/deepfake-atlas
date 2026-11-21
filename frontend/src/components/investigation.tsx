@@ -64,10 +64,10 @@ export function Investigation() {
   const nodeId = int("node");
 
   const overview = !all && [operatorId, campaignId, adId, edgeId, nodeId].every(id => id === null);
-  const operators = useApi(overview ? null : "operators", api.operators);
+  const operators = useApi(overview ? null : "operators", () => loadGroups("operators"));
   const [allGroups, setAllGroups] = useState(false);
   const captureOnly = overview && !allGroups;
-  const campaigns = useApi("campaigns:" + captureOnly, () => api.campaigns(captureOnly ? "capture" : undefined));
+  const campaigns = useApi("campaigns:" + captureOnly, () => loadGroups("campaigns", captureOnly ? "capture" : undefined));
   const stats = useApi(all ? "graph-stats" : null, api.stats);
   const totalEdges = stats.data ? Object.values(stats.data.edges).reduce((sum, n) => sum + n, 0) : null;
   const scopeOperator = operatorId;
@@ -90,6 +90,9 @@ export function Investigation() {
     [graph.data, relations, families, minP],
   );
   const visible = edges.filter((e) => !e.hidden);
+  const scoped = campaignId !== null || operatorId !== null;
+  const belongs = (n: (typeof nodes)[number]) => n.member ?? (campaignId !== null ? groupId(n.campaign) === campaignId : groupId(n.operator) === operatorId);
+  const sections: [string, typeof nodes][] = scoped ? [["Członkowie grupy", nodes.filter(belongs)], ["Sąsiedzi spoza grupy", nodes.filter(n => !belongs(n))]] : [["", nodes]];
   const nodeById = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
   const selectedNode = nodeId !== null ? nodeById.get(nodeId) : undefined;
 
@@ -304,7 +307,9 @@ export function Investigation() {
               </tr>
             </thead>
             <tbody>
-              {nodes.map((node) => (
+              {sections.flatMap(([heading, rows]) => [
+                ...(heading ? [<tr key={heading}><th scope="rowgroup" colSpan={6}>{heading} ({rows.length})</th></tr>] : []),
+                ...rows.map((node) => (
                 <tr key={node.id} data-selected={node.id === nodeId} onClick={event => {
                   if (!(event.target instanceof Element && event.target.closest("a"))) set({ node: node.id, edge: null });
                 }} className="cursor-pointer">
@@ -319,7 +324,7 @@ export function Investigation() {
                   </td>
                   <td>{node.listed && <Tag tone="rejected">Lista Ostrzeżeń</Tag>}</td>
                 </tr>
-              ))}
+               ))])}
             </tbody>
           </table>
         )}

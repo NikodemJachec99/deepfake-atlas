@@ -15,20 +15,24 @@ function CampaignBranch({ group }: { group: Group }) {
   if (result.error) return <ErrorBox message={result.error} onRetry={result.reload} />;
   if (!result.data) return <Loading label="Pobieranie reklam" />;
   const { nodes, edges } = result.data;
-  const current = nodes.find(node => node.id === chosen) ?? nodes[0];
+  const members = nodes.filter(n => n.member ?? n.campaign === group.key);
+  const neighbors = nodes.filter(n => !(n.member ?? n.campaign === group.key));
+  const current = nodes.find(node => node.id === chosen) ?? members[0] ?? neighbors[0];
   if (!current) return <p className="p-4">Brak reklam w tym zakresie.</p>;
   const titles = new Map(nodes.map(node => [node.id, node.label]));
   const connected = edges.filter(edge => edge.source === current.id || edge.target === current.id)
     .sort((a,b) => b.probability - a.probability || a.id - b.id);
   return <div className="ml-4 grid min-w-0 gap-4 border-l-2 border-accent-soft py-3 pl-4 lg:grid-cols-[minmax(14rem,2fr)_minmax(18rem,3fr)]">
     <section className="min-w-0">
-      <h3 className="mb-2 font-semibold">Reklamy ({nodes.length})</h3>
+      {[["Reklamy kampanii", members], ["Sąsiedzi spoza kampanii", neighbors]].map(([label, list]) => {
+        const rows = list as typeof nodes;
+        return <div key={String(label)}><h3 className="mb-2 font-semibold">{String(label)} ({rows.length})</h3>
       <div className="max-h-80 overflow-auto rounded-md border border-line">
-        {nodes.map(n => <button key={n.id} type="button" aria-pressed={n.id === current.id} onClick={() => setChosen(n.id)}
+        {rows.map(n => <button key={n.id} type="button" aria-pressed={n.id === current.id} onClick={() => setChosen(n.id)}
           className="flex w-full items-baseline gap-2 border-b border-line px-3 py-2 text-left last:border-0 hover:bg-panel aria-pressed:bg-accent-soft aria-pressed:text-accent">
           <span className="font-mono text-xs">#{n.id}</span><span className="break-words">{n.label || "Reklama"}</span>
         </button>)}
-      </div>
+      </div></div>; })}
     </section>
     <section className="min-w-0">
       <div className="mb-2 flex flex-wrap justify-between gap-2"><h3 className="font-semibold">Powiązania reklamy #{current.id} ({connected.length})</h3>

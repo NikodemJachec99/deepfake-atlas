@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type Group, type Graph } from "@/lib/api";
 import { groupColor } from "@/lib/format";
+import { allGroups as loadGroups } from "@/lib/group-pages";
 import { useApi } from "@/lib/hooks";
 
 function CampaignNode({ group, x, y, color, expanded, toggle }: {
@@ -12,20 +13,20 @@ function CampaignNode({ group, x, y, color, expanded, toggle }: {
   const result = useApi(expanded ? String(group.id) : null, () => api.graph(`?campaign=${group.id}`));
   const [all, setAll] = useState(false);
   const layout = useMemo(() => {
-    const nodes = result.data?.nodes ?? [];
+    const nodes = (result.data?.nodes ?? []).filter(n => n.member ?? n.campaign === group.key);
     const positions = new Map(nodes.map((n, i) => {
       const angle = i * 2.399963;
       const radius = 28 + 49 * Math.sqrt((i + 1) / nodes.length);
       return [n.id, { x: radius * Math.cos(angle), y: radius * Math.sin(angle) }];
     }));
-    const edges = result.data?.edges ?? [];
+    const edges = (result.data?.edges ?? []).filter(e => positions.has(e.source) && positions.has(e.target));
     const strongest = new Map<number, Graph["edges"][number]>();
     for (const e of edges) for (const id of [e.source, e.target]) {
       const old = strongest.get(id);
       if (!old || old.probability < e.probability) strongest.set(id, e);
     }
     return { nodes, positions, edges: all ? edges : [...new Set(strongest.values())], total: edges.length };
-  }, [result.data, all]);
+  }, [result.data, all, group.key]);
   return <g transform={`translate(${x} ${y})`}>
     {expanded && <>
       <circle r="84" fill="var(--accent-soft)" stroke="var(--line)" />
@@ -65,7 +66,7 @@ export function CampaignMap({ groups, expanded, onToggle }: {
   const surface = useRef<SVGSVGElement>(null);
   const drag = useRef<{x:number; y:number} | null>(null);
   const operators = useApi("map-operators", async () => {
-    const list = await api.operators();
+    const list = await loadGroups("operators");
     return Promise.all(list.results.map(item => api.operator(item.id)));
   });
   const locations = groups.map((group, index) => ({

@@ -10,7 +10,7 @@ from pgvector.django import CosineDistance
 
 from ads.models import Ad
 from evidence.kinds import BAND_KINDS, BAND_OF, KINDS
-from evidence.models import AdMarker, AdSignature
+from evidence.models import AdMarker, AdSignature, AuditLog
 from extractors import images, minhash
 
 from . import fusion
@@ -249,4 +249,64 @@ def assign_operator(ad: Ad) -> dict:
     out = {"operator": result["key"], "operator_action": result["action"]}
     if "id" in result:
         out.update(operator_id=result["id"], operator_size=result["size"])
+    return out
+
+
+RECLUSTER_KINDS = {
+    "campaign": ([Edge.Relation.SAME_CAMPAIGN], Campaign, CampaignMembership, "campaign"),
+    "operator": ([Edge.Relation.SAME_CAMPAIGN, Edge.Relation.SAME_OPERATOR], Operator, OperatorMembership, "operator"),
+}
+
+
+def _split_group(group, rels, membership_model, field: str) -> dict | None:
+    """Rozdziela jedną grupę na składowe spójne po nieodrzuconych krawędziach. None, gdy nic się nie zmienia."""
+    members = set(membership_model.objects.filter(**{f"{field}_id": group.pk}).values_list("ad_id", flat=True))
+    if not members:
+        return None
+    pairs = list(
+        Edge.objects.filter(ad_a_id__in=members, ad_b_id__in=members, relation__in=rels)
+        .exclude(verdict=Edge.Verdict.REJECTED)
+        .values_list("ad_a_id", "ad_b_id")
+    )
+    parts = [c for c in fusion.connected_components(pairs) if len(c) >= 2]
+    linked = set().union(*parts) if parts else set()
+    # Największa składowa zachowuje grupę, przy remisie ta z najmniejszym id reklamy.
+    parts.sort(key=lambda c: (-len(c), min(c)))
+    if len(parts) == 1 and parts[0] == members:
+        return None
+    released = sorted(members - linked)
+    keeper = parts[0] if parts else set()
+    after = []
+    if keeper:
+        after.append({"key": group.key, "ads": sorted(keeper)})
+    group_model = type(group)
+    for part in parts[1:]:
+        new = group_model.objects.create(label=group.label)
+        membership_model.objects.filter(ad_id__in=part).update(**{field: new})
+        after.append({"key": new.key, "ads": sorted(part)})
+    if released:
+        membership_model.objects.filter(ad_id__in=released).delete()
+    return {"group": group.key, "before": sorted(members), "after": after, "released": released}
+
+
+@transaction.atomic
+def recluster(ad_ids) -> dict:
+    """Przelicza grupy dotkniętych reklam od strony rozdzielania: `_assign` tylko tworzy i scala.
+
+    Dla kampanii i osobno operatorów bierze grupy, do których należą te reklamy, liczy składowe po
+    nieodrzuconych krawędziach właściwych relacji i rozdziela grupę. Nowych alertów nie tworzy.
+    Zwraca opis zmian per rodzaj grupy, pusty gdy nic się nie zmieniło.
+    """
+    ad_ids = list(ad_ids)
+    out: dict[str, list] = {}
+    for name, (rels, group_model, membership_model, field) in RECLUSTER_KINDS.items():
+        group_ids = set(membership_model.objects.filter(ad_id__in=ad_ids).values_list(f"{field}_id", flat=True))
+        changes = []
+        for group in group_model.objects.select_for_update().filter(pk__in=group_ids, merged_into__isnull=True).order_by("pk"):
+            change = _split_group(group, rels, membership_model, field)
+            if change:
+                changes.append(change)
+        out[name] = changes
+    if any(out.values()):
+        AuditLog.objects.create(action="groups.recluster", object_type="ad", object_id=",".join(map(str, ad_ids[:20])), payload=out)
     return out

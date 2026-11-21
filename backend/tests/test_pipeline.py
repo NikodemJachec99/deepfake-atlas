@@ -6,7 +6,8 @@ from ads.models import Ad, Analysis
 from enrichment.models import WarningDomain
 from evidence.models import Marker
 from people.models import Person
-from similarity.models import Campaign, Edge
+from similarity import decisions
+from similarity.models import Campaign, CampaignMembership, Edge, OperatorMembership
 from similarity.service import assign_campaign
 from tests import fakes
 from tests.test_extractors import LANDING_A, OTHER, _article
@@ -190,7 +191,11 @@ def test_rejected_edge_no_longer_holds_a_campaign_together():
     fakes.page("https://b.example/2", LANDING_A)
     analyze_url("https://a.example/1")
     analyze_url("https://b.example/2")
-    Edge.objects.update(verdict=Edge.Verdict.REJECTED)
+    edge = Edge.objects.get()
+    assert CampaignMembership.objects.count() == 2
+    decisions.decide(edge.pk, Edge.Verdict.REJECTED, "shared_tool")
+    # Odrzucenie jedynej krawędzi rozwiązuje grupę: obie reklamy tracą kampanię i operatora.
+    assert CampaignMembership.objects.count() == 0 and OperatorMembership.objects.count() == 0
     lonely = Ad.objects.get(landing_url="https://a.example/1")
     assert assign_campaign(lonely)["neighbours"] == 0
 

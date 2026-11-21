@@ -15,11 +15,11 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | GET | `/api/ads` | `?source=&campaign=&operator=&case=&q=&page=` | strona `AdSummary` |
 | GET | `/api/ads/{id}` | | `AdDetail`: genom, zrzuty reklamy, reklamodawca |
 | GET | `/api/ads/{id}/edges` | | lista `Edge` malejąco po pewności; nieznana reklama `404` |
-| POST | `/api/ads/{id}/recluster` | | ponowne przypisanie do kampanii i operatora |
+| POST | `/api/ads/{id}/recluster` | | ponowne przypisanie do kampanii i operatora, potem rozdzielenie grup; odpowiedź ma `regroup` |
 | GET | `/api/ads/{id}/observations` | | obserwacja strony reklamy i strony do porównania (ten sam adres albo domena w sprawie) |
 | GET | `/api/observations/compare` | `?a=ID&b=ID` | `ObservationComparison`: dwie strony obok siebie, tylko do odczytu |
 | GET | `/api/edges/{id}` | | `EdgeDetail`: obie reklamy i lista dowodów |
-| POST | `/api/edges/{id}/verdict` | `{"verdict":"confirmed"\|"rejected"\|"unsure","reason":"...","note":""}` | `EdgeDetail`; wpis w historii decyzji z migawką i w dzienniku audytu |
+| POST | `/api/edges/{id}/verdict` | `{"verdict":"confirmed"\|"rejected"\|"unsure","reason":"...","note":"","edge_version":"..."}` | `EdgeDetail` plus `regroup`; wpis w historii decyzji z migawką i w dzienniku audytu |
 | GET | `/api/edges/{id}/decisions` | | `EdgeDecisions`: historia decyzji od najnowszej (opis niżej) |
 | GET | `/api/edges/{id}/precedents` | `?limit=` (domyślnie 5, najwyżej 20) | `Precedents`: podobne wcześniejsze rozstrzygnięcia innych par (opis niżej) |
 | GET | `/api/edges/{id}/assist` | | `EdgeAssist`: stan adaptera Jev i ostatnia zapisana sugestia przeglądu (opis niżej); nie wywołuje Jev |
@@ -91,6 +91,8 @@ Zasady:
 ## Pamięć sprzeciwu
 
 Decyzja analityka (`POST /api/edges/{id}/verdict`) ma powód i notatkę. Zmienia tylko werdykt krawędzi: relacja, bity, dowody i grupy zostają takie, jakie policzył silnik. Każda decyzja to nowy, niezmienny wpis historii.
+
+`edge_version` (opcjonalne, `updated_at` krawędzi z chwili wczytania) chroni przed decyzją na nieaktualnych dowodach: gdy krawędź się zmieniła, odpowiedź to 409 z aktualną `edge_version`. Po każdej decyzji (też cofnięciu odrzucenia) grupy obu reklam są przeliczane, a odpowiedź ma pole `regroup`: `{"campaign": [Zmiana], "operator": [Zmiana]}`, gdzie `Zmiana` to `{group, before: [id reklam], after: [{key, ads}], released: [id reklam bez grupy]}`. Pusta lista oznacza, że grupa została spójna.
 
 Powody (`reason`, lista z etykietami w `GET /api/kinds` jako `verdict_reasons`): `shared_tool` (wspólne narzędzie albo silnik), `shared_infrastructure` (współdzielona infrastruktura), `extraction_error` (błędna ekstrakcja), `no_independent_confirmation` (brak niezależnego potwierdzenia), `confirmed_by_analyst`, `other` (powód w notatce). Bez `reason` decyzja zapisuje się z powodem `unknown`, więc stary klient działa. `unknown` mają też wszystkie decyzje sprzed pamięci sprzeciwu, przeniesione z dziennika audytu jako `legacy` bez migawki. Uzasadnień nie wyciągamy z notatek.
 

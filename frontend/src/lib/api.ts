@@ -169,6 +169,17 @@ export interface Evidence {
   artifact_b: string | null;
 }
 
+export interface GroupChange {
+  group: string;
+  before: number[];
+  after: { key: string; ads: number[] }[];
+  released: number[];
+}
+export interface Regroup {
+  campaign: GroupChange[];
+  operator: GroupChange[];
+}
+
 export interface EdgeDetail extends Edge {
   verdict_note: string;
   verdict_reason: VerdictReason | "";
@@ -858,8 +869,12 @@ export const api = {
   ad: (id: number) => request<AdDetail>(`/api/ads/${id}`),
   adEdges: (id: number) => request<Edge[]>(`/api/ads/${id}/edges`),
   edge: (id: number) => request<EdgeDetail>(`/api/edges/${id}`),
-  setVerdict: (id: number, verdict: Exclude<Verdict, "">, note = "", reason?: Exclude<VerdictReason, "unknown">) =>
-    request<EdgeDetail>(`/api/edges/${id}/verdict`, { method: "POST", body: JSON.stringify({ verdict, note, ...(reason ? { reason } : {}) }) }),
+  // edgeVersion (updated_at krawędzi z wczytania): przy zmienionej krawędzi 409. Odpowiedź ma regroup z rozdzieleniem grup.
+  setVerdict: (id: number, verdict: Exclude<Verdict, "">, note = "", reason?: Exclude<VerdictReason, "unknown">, edgeVersion?: string) =>
+    request<EdgeDetail & { regroup?: Regroup }>(`/api/edges/${id}/verdict`, {
+      method: "POST",
+      body: JSON.stringify({ verdict, note, ...(reason ? { reason } : {}), ...(edgeVersion ? { edge_version: edgeVersion } : {}) }),
+    }),
   edgeDecisions: (id: number) => request<EdgeDecisions>(`/api/edges/${id}/decisions`),
   edgePrecedents: (id: number, limit = 5) => request<Precedents>(`/api/edges/${id}/precedents?limit=${limit}`),
   edgeAssist: (id: number) => request<EdgeAssist>(`/api/edges/${id}/assist`),

@@ -240,7 +240,7 @@ export function Kbd({ children }: { children: React.ReactNode }) {
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex min-w-0 gap-2 py-0.5">
-      <dt className="w-24 shrink-0 text-muted">{label}</dt>
+      <dt className="w-28 max-w-[45%] shrink-0 [overflow-wrap:anywhere] text-muted">{label}</dt>
       <dd className="min-w-0 flex-1 break-words">{children}</dd>
     </div>
   );

@@ -112,7 +112,9 @@ export function Discovery() {
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
-    void run(() => api.createAnalysis(kind, value.trim()));
+    const material = value.trim();
+    if (!material || busy) return;
+    void run(() => api.createAnalysis(kind, material));
   }
 
   function upload(files: File[]) {
@@ -148,6 +150,7 @@ export function Discovery() {
       <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row">
         <select
           id="input-kind"
+          aria-label="Rodzaj materiału"
           value={kind}
           onChange={(e) => setKind(e.target.value as "url" | "text")}
           className="rounded border border-neutral-600 bg-transparent px-2 py-2"
@@ -157,13 +160,14 @@ export function Discovery() {
         </select>
         <input
           id="input-value"
+          aria-label={kind === "url" ? "Adres URL" : "Tekst lub nazwa produktu"}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder={kind === "url" ? "https://..." : "Treść reklamy"}
           required
           className="min-w-0 flex-1 rounded border border-neutral-600 bg-transparent px-3 py-2 font-mono"
         />
-        <button id="analyze" disabled={busy} className="rounded bg-sky-600 px-4 py-2 font-medium text-white disabled:opacity-50">
+        <button id="analyze" disabled={busy || !value.trim()} className="rounded bg-sky-600 px-4 py-2 font-medium text-white disabled:opacity-50">
           {busy ? "Analiza trwa" : "Analizuj"}
         </button>
       </form>

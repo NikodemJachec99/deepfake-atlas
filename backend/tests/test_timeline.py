@@ -87,7 +87,7 @@ def test_campaign_timeline_order_and_content(group):
         ("ad_first_seen", [b], ""),
         ("ad_first_seen", [c], ""),
         ("trace_first_observed", [b, c], "inwest-b.example"),
-        ("link_observable", [a, b], str(group["ab"])),
+        ("link_observable", [b], "1"),
         ("cert_pl_added", [b, c], "inwest-b.example"),
         ("ad_last_seen", [a], ""),
         ("cert_pl_removed", [b, c], "inwest-b.example"),
@@ -107,10 +107,10 @@ def test_every_event_says_what_kind_of_time_it_is(group):
     assert (meta_start["time_kind"], meta_start["source"], meta_start["precision"]) == ("reported", "meta", "day")
     captured = by[("ad_first_seen", "", (b,))]
     assert (captured["time_kind"], captured["source"]) == ("observed", "capture")
-    link = by[("link_observable", str(group["ab"]), (a, b))]
+    link = by[("link_observable", "1", (b,))]
     # powiązanie widać dopiero od obserwacji późniejszej z dwóch reklam
     assert link["at"] == _at(7).isoformat() and link["source"] == "capture"
-    assert link["detail"] == {"relation": "same_campaign", "probability": 0.99}
+    assert link["detail"] == {"count": 1, "relations": {"same_campaign": 1}, "partners": [a], "edges": [group["ab"]], "max_probability": 0.99}
     cert = by[("cert_issued", "065d31", (a, b))]
     assert (cert["time_kind"], cert["source"]) == ("reported", "crt.sh")
     captured_cert = by[("cert_issued", "bb22", (group["c"],))]
@@ -148,8 +148,10 @@ def test_missing_dates_are_counted_not_guessed(group):
 def test_operator_timeline_adds_operator_links(group):
     body = APIClient().get(f"/api/operators/{group['operator'].pk}/timeline").json()
     assert body["group"] == group["operator"].key
-    links = [(e["ads"], e["detail"]["relation"]) for e in body["events"] if e["type"] == "link_observable"]
-    assert links == [([group["a"], group["b"]], "same_campaign"), ([group["b"], group["c"]], "same_operator")]
+    links = [(e["ads"], e["detail"]["partners"], e["detail"]["relations"], e["detail"].get("tied", False))
+             for e in body["events"] if e["type"] == "link_observable"]
+    # b i c mają tę samą chwilę obserwacji: para trafia do reklamy o wyższym numerze, z oznaczonym remisem
+    assert links == [([group["b"]], [group["a"]], {"same_campaign": 1}, False), ([group["c"]], [group["b"]], {"same_operator": 1}, True)]
 
 
 def test_build_is_deterministic(group):
@@ -161,3 +163,17 @@ def test_empty_group_and_missing_group():
     assert timeline.build([], ["same_campaign"]) == {"events": [], "undated": {"ads": [], "traces": 0, "links": 0, "certificates": 0}}
     assert APIClient().get("/api/campaigns/999999/timeline").status_code == 404
     assert APIClient().get("/api/operators/999999/timeline").status_code == 404
+
+
+def test_links_are_grouped_per_joining_ad_with_limit(monkeypatch):
+    from similarity import timeline as tl
+
+    monkeypatch.setattr(tl, "LINK_LIST_LIMIT", 3)
+    ads = [Ad.objects.create(source="microsoft", external_id=f"m/{i}", first_seen=_at(1 + i)) for i in range(6)]
+    for i, x in enumerate(ads):
+        for y in ads[:i]:
+            Edge.objects.create(ad_a=y, ad_b=x, relation="same_campaign", probability=0.99, bits=20)
+    events = [e for e in tl.build([x.pk for x in ads], ["same_campaign"])["events"] if e["type"] == "link_observable"]
+    assert [(e["ads"], e["detail"]["count"]) for e in events] == [([ads[i].pk], i) for i in range(1, 6)]  # 5 zdarzeń zamiast 15
+    last = events[-1]["detail"]
+    assert last["truncated"] is True and len(last["partners"]) == 3 and len(last["edges"]) == 3

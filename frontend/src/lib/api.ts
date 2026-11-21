@@ -412,8 +412,12 @@ export interface TimelineEvent {
     in_group?: number;
     undated_ads?: number;
     tied?: boolean;
-    relation?: Relation;
-    probability?: number;
+    // link_observable: jedno zdarzenie na dołączającą reklamę
+    relations?: Partial<Record<Relation, number>>;
+    partners?: number[]; // wcześniej widziane reklamy, z którymi się wiąże (do 50)
+    edges?: number[]; // krawędzie (do 50)
+    max_probability?: number;
+    truncated?: boolean; // powiązań jest więcej niż na listach
   };
 }
 

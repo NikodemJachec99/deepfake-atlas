@@ -26,6 +26,37 @@ def operator_key(ad: Ad) -> str:
     return ad.operator_membership.operator.key if hasattr(ad, "operator_membership") else ""
 
 
+def edge_row(edge: Edge) -> dict:
+    return {
+        "id": edge.id,
+        "ad_a": edge.ad_a_id,
+        "ad_b": edge.ad_b_id,
+        "ad_a_external_id": edge.ad_a.external_id,
+        "ad_b_external_id": edge.ad_b.external_id,
+        "relation": edge.relation,
+        "duplicate": edge.duplicate,
+        "probability": round(edge.probability, 6),
+        "bits": round(edge.bits, 2),
+        "families": {k: round(v, 2) for k, v in edge.families.items()},
+        "model_version": edge.model_version,
+        "verdict": edge.verdict,
+        "evidence": [
+            {
+                "family": ev.family,
+                "kind": ev.kind,
+                "value_a": ev.value_a,
+                "value_b": ev.value_b,
+                "similarity": round(ev.similarity, 4),
+                "df": ev.df,
+                "corpus_n": ev.corpus_n,
+                "weight_bits": round(ev.weight_bits, 2),
+                "decisive": ev.decisive,
+            }
+            for ev in edge.evidence.all()
+        ],
+    }
+
+
 class Command(BaseCommand):
     help = "Zapisuje wzbogacony korpus do plików: reklamy z markerami, krawędzie z dowodami, kampanie i operatorów."
 
@@ -116,31 +147,4 @@ class Command(BaseCommand):
         }
 
     def edge_row(self, edge: Edge) -> dict:
-        return {
-            "id": edge.id,
-            "ad_a": edge.ad_a_id,
-            "ad_b": edge.ad_b_id,
-            "ad_a_external_id": edge.ad_a.external_id,
-            "ad_b_external_id": edge.ad_b.external_id,
-            "relation": edge.relation,
-            "duplicate": edge.duplicate,
-            "probability": round(edge.probability, 6),
-            "bits": round(edge.bits, 2),
-            "families": {k: round(v, 2) for k, v in edge.families.items()},
-            "model_version": edge.model_version,
-            "verdict": edge.verdict,
-            "evidence": [
-                {
-                    "family": ev.family,
-                    "kind": ev.kind,
-                    "value_a": ev.value_a,
-                    "value_b": ev.value_b,
-                    "similarity": round(ev.similarity, 4),
-                    "df": ev.df,
-                    "corpus_n": ev.corpus_n,
-                    "weight_bits": round(ev.weight_bits, 2),
-                    "decisive": ev.decisive,
-                }
-                for ev in edge.evidence.all()
-            ],
-        }
+        return edge_row(edge)

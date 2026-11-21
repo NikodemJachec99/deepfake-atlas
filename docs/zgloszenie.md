@@ -2,7 +2,7 @@
 
 Szkic projektu trzeba założyć **21.11 przed 20:00** (później nie da się utworzyć projektu ani zmienić zadania). Zgłoszenie końcowe do **22.11 godz. 11:00**. Po tym terminie repozytorium zostaje bez zmian.
 
-Zespół: jedna osoba (Nikodem). Repozytorium jest prywatne, bo `docs/dane-organizatora.md` opisuje sprawy z paczki organizatora. Organizatorowi trzeba nadać dostęp do odczytu albo przekazać kod w inny sposób ([wymagania.md](wymagania.md)).
+Zespół: dwie osoby, Nikodem i Sokół. Repozytorium jest prywatne, bo `docs/dane-organizatora.md` opisuje sprawy z paczki organizatora. Organizatorowi trzeba nadać dostęp do odczytu albo przekazać kod w inny sposób ([wymagania.md](wymagania.md)).
 
 ## Nazwa
 

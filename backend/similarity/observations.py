@@ -17,12 +17,16 @@ from datetime import datetime
 from django.db.models import Q
 
 from ads.models import Ad, Analysis
+from evidence import store
 from evidence.kinds import KINDS
 from evidence.models import AdMarker, AdSignature
 from extractors import images, minhash
+from extractors.html import extract_page
+from extractors.url import redact_url
 from similarity.models import Edge
 
 SAME_TEXT, SAME_DOM = 0.9, 0.9
+EXCERPT_CHARS = 300
 SIMILAR_TEXT, SIMILAR_DOM = 0.5, 0.6
 TRACKER_KINDS = {code for code, k in KINDS.items() if k.family == "track" and code not in ("asset_host", "script_host")}
 SIMILARITY = {"page_text_minhash": minhash.text_similarity, "dom_minhash": minhash.similarity, "image_set": images.set_similarity}
@@ -65,11 +69,38 @@ def _parse(value: str) -> datetime | None:
         return None
 
 
+def _html_sha(ad: Ad) -> str | None:
+    analysis = Analysis.objects.filter(ad=ad).order_by("-created_at").first()
+    state = analysis.state if analysis else {}
+    return ((state.get("pages") or {}).get("victim") or {}).get("html_sha")
+
+
+def text_excerpt(ad: Ad) -> dict | None:
+    """Krótki fragment widocznego tekstu z zapisanego HTML strony, jako zwykły tekst. Bez pobierania strony,
+    bez znaczników. Adresy w tekście mają zredagowane sekrety. Brak zapisu strony daje null."""
+    sha = _html_sha(ad)
+    if not sha:
+        return None
+    try:
+        html = store.get(sha).decode("utf-8", errors="replace")
+    except Exception:  # noqa: BLE001
+        return None
+    text = " ".join(extract_page(html, ad.landing_url or "").visible_text.split())
+    if not text:
+        return None
+    text = " ".join(redact_url(word) if word.startswith(("http://", "https://")) else word for word in text.split())
+    cut = text[:EXCERPT_CHARS]
+    if len(text) > EXCERPT_CHARS:
+        cut = cut.rsplit(" ", 1)[0] + " …"
+    return {"text": cut, "chars": len(text), "source": "zapis HTML strony z przechwycenia", "artifact": sha}
+
+
 def side(ad: Ad, obs: dict) -> dict:
     return {
         "ad": ad.pk,
         "external_id": ad.external_id,
         "title": ad.title[:200],
+        "text_excerpt": text_excerpt(ad),
         "exact_url": obs.get("exact_url", ""),
         "captured_at": obs.get("captured_at") or None,
         "time_source": obs.get("time_source") or None,

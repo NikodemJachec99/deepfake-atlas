@@ -191,3 +191,18 @@ def test_meta_token_under_any_param_name_is_redacted():
     kinds = {o.kind: o.value for o in url_observations(clean)}
     assert kinds["capi_token"].startswith("sha256-")
     assert redact_url("https://zwykla.example/?utm_source=fb") == "https://zwykla.example/?utm_source=fb"
+
+
+def test_choice_lists_are_not_page_text():
+    """Lista krajów w polu telefonu (ARIA i natywny select) to nie treść strony."""
+    html = """<html><head><title>Inwestycja w akcje</title></head><body>
+    <p>Sara pomoże Ci zacząć inwestować w akcje polskich spółek.</p>
+    <ul role="listbox"><li role="option"><span>American Samoa</span><span>+1</span></li>
+      <li role="option"><span>British Virgin Islands</span></li></ul>
+    <select name="kraj"><option>Papua New Guinea<option>Solomon Islands</select>
+    <datalist id="waluty"><option value="PLN">złoty polski</option></datalist>
+    <p>Zostaw numer, oddzwonimy dziś.</p></body></html>"""
+    page = extract_page(html, "https://x.example/")
+    assert "Sara pomoże" in page.visible_text and "oddzwonimy" in page.visible_text
+    for word in ("Samoa", "Virgin", "Guinea", "Solomon", "złoty"):
+        assert word not in page.visible_text

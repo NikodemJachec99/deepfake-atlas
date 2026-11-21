@@ -5,6 +5,7 @@
 
 import { LiveGraph } from "./live-graph";
 import { EdgePanel } from "./edge-panel";
+import Link from "next/link";
 import { useRef, useState } from "react";
 
 import {
@@ -172,6 +173,10 @@ export function Discovery() {
               {"cert_pl" in ad.labels && <> Domena jest na Liście Ostrzeżeń CERT Polska.</>}
             </p>
           )}
+          {ad && <nav aria-label="Szczegóły wyniku" className="flex flex-wrap gap-4 text-accent">
+            <Link href={`/ads/${ad.id}`}>Karta reklamy #{ad.id}</Link>
+            <Link href={`/investigation?ad=${ad.id}`}>Otwórz w Investigation</Link>
+          </nav>}
           {ad && edges.length === 0 && <p className="opacity-60">Brak powiązań powyżej progu.</p>}
           <ul className="flex flex-col gap-1">
             {edges.map((edge) => (

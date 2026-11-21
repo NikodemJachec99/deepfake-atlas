@@ -5,13 +5,14 @@ from similarity.fusion import Shared, Soft, connected_components, score_pair
 N = 100_000
 
 
-def test_rare_tracker_plus_template_is_same_campaign():
+def test_rare_tracker_plus_template_is_same_operator():
     result = score_pair(
         shared=[Shared("ga4", "G-7K2QX9LM4T", df=2), Shared("asn", "AS13335", df=31_000)],
         soft=[Soft("dom_minhash", 0.93)],
         corpus_n=N,
     )
-    assert result.relation == "same_campaign"
+    # Wspólny identyfikator i szablon dowodzą wspólnego zaplecza. Kampanię potwierdza dopiero zgodna opowieść.
+    assert result.relation == "same_operator"
     assert result.decisive is True
     assert result.probability > 0.99
     top = result.evidence[0]
@@ -50,13 +51,26 @@ def test_two_independent_families_without_decisive_marker():
         corpus_n=N,
     )
     assert result.decisive is False
-    assert result.relation == "same_campaign"
+    assert result.relation == "same_operator"
     assert set(result.families) == {"tmpl", "infra"}
 
 
 def test_single_non_decisive_family_is_not_enough():
     result = score_pair(shared=[Shared("dom_hash", "9f3a", df=3)], soft=[Soft("dom_minhash", 1.0)], corpus_n=N)
-    assert result.relation != "same_campaign"
+    assert result.relation is None
+
+
+def test_same_source_with_the_same_story_is_same_campaign():
+    shared = [
+        Shared("kit_path", "POST /api/v1/trigger/field/{id}/", df=2),
+        Shared("kit_path", "GET /aio-static/sdk/main.js", df=2),
+        Shared("kit_path", "POST /api/v1/agent/persist-session-record/{id}/{id}", df=2),
+        Shared("url_param_keys", "utm_id,utm_visit", df=2),
+    ]
+    same_story = score_pair(shared=shared, soft=[Soft("page_text_minhash", 1.0)], corpus_n=N)
+    assert same_story.relation == "same_campaign"
+    other_story = score_pair(shared=shared, soft=[Soft("page_text_minhash", 0.2)], corpus_n=N)
+    assert other_story.relation == "same_operator"
 
 
 def test_correlated_markers_in_one_family_are_discounted():
@@ -111,3 +125,45 @@ def test_unknown_kind_is_rejected():
 def test_connected_components():
     groups = connected_components([(1, 2), (2, 3), (7, 8)])
     assert sorted(sorted(g) for g in groups) == [[1, 2, 3], [7, 8]]
+
+
+def test_shared_theme_does_not_turn_an_operator_link_into_a_campaign():
+    # Ten sam silnik lejka, ta sama osoba, marka i tematyka, ale inny artykuł: operator, nie kampania.
+    shared = [
+        Shared("kit_path", "POST /api/v1/trigger/field/{id}/", df=2),
+        Shared("kit_path", "GET /aio-static/sdk/main.js", df=2),
+        Shared("kit_path", "POST /api/v1/agent/persist-session-record/{id}/{id}", df=2),
+        Shared("url_param_keys", "utm_id,utm_visit", df=2),
+        Shared("person_mention", "Q1", df=2),
+        Shared("brand_impersonated", "Gazeta.pl", df=2),
+        Shared("topic", "sensacja", df=2),
+    ]
+    result = score_pair(shared=shared, soft=[Soft("page_text_minhash", 0.2)], corpus_n=N)
+    assert result.relation == "same_operator"
+
+
+def test_single_shared_theme_is_not_a_link_but_several_are_similar():
+    one = score_pair(shared=[Shared("brand_impersonated", "Gazeta.pl", df=2), Shared("topic", "sensacja", df=2)], soft=[], corpus_n=N)
+    assert one.relation is None
+    several = score_pair(
+        shared=[Shared("brand_impersonated", "Gazeta.pl", df=2), Shared("person_mention", "Q1", df=2), Shared("topic", "sensacja", df=2)],
+        soft=[],
+        corpus_n=N,
+    )
+    assert several.relation == "similar"
+
+
+def test_copied_content_alone_is_similar_not_the_same_source():
+    # Ten sam tytuł, tekst i zdjęcia na stronie o innym zapleczu: ktoś skopiował materiał.
+    result = score_pair(
+        shared=[Shared("page_title", "trudna odpowiedź", df=2)],
+        soft=[Soft("page_text_minhash", 0.95), Soft("image_set", 0.9)],
+        corpus_n=N,
+    )
+    assert result.probability > 0.9
+    assert result.relation == "similar"
+
+
+def test_the_same_ad_creative_is_the_same_campaign():
+    result = score_pair(shared=[Shared("creative_phash", "c41e0f0f3c3c7e7e", df=2)], soft=[Soft("text_minhash", 1.0)], corpus_n=N)
+    assert result.decisive is True and result.relation == "same_campaign"

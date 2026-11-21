@@ -1,7 +1,8 @@
 x-backend: &backend
   build: ./backend
+  image: deepfake-atlas-backend  # backend i worker dzielą jeden obraz
   env_file: .env
-  volumes: ["./backend:/app"]
+  volumes: ["./backend:/app", "./data:/data"]
   depends_on:
     db: {condition: service_healthy}
 
@@ -63,10 +64,20 @@ services:
 
   worker:
     <<: *backend
-    command: ["python", "-m", "workflows.worker"]
+    # watchfiles restartuje worker po zmianie kodu. Bez tego worker trzyma w pamięci starą wersję potoku.
+    command: ["watchfiles", "--filter", "python", "python -m workflows.worker", "/app"]
     depends_on:
       db: {condition: service_healthy}
       temporal: {condition: service_started}
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Adres API widziany z przeglądarki, wkompilowany w czasie budowania.
+        NEXT_PUBLIC_API_URL: http://localhost:${BACKEND_PORT:-8000}
+    ports: ["${FRONTEND_PORT:-3000}:3000"]
+    depends_on: [backend]
 
 volumes:
   dbdata:

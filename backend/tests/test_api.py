@@ -56,7 +56,7 @@ def test_discovery_flow_from_submission_to_evidence(client):
     assert campaigns[0]["size"] == 2
     campaign = client.get(f"/api/campaigns/{campaigns[0]['id']}").json()
     assert len(campaign["ads"]) == 2 and len(campaign["edges"]) == 1
-    assert any(m["kind"] == "ga4" and m["in_campaign"] == 2 for m in campaign["core_markers"])
+    assert any(m["kind"] == "ga4" and m["in_group"] == 2 for m in campaign["core_markers"])
 
     graph = client.get(f"/api/graph?campaign={campaigns[0]['id']}").json()
     assert len(graph["nodes"]) == 2 and len(graph["edges"]) == 1

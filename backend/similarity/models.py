@@ -5,6 +5,7 @@ from django.db import models
 class Edge(models.Model):
     class Relation(models.TextChoices):
         SAME_CAMPAIGN = "same_campaign", "Ta sama kampania"
+        SAME_OPERATOR = "same_operator", "Ten sam operator"
         SIMILAR = "similar", "Podobna koncepcja"
 
     class Verdict(models.TextChoices):
@@ -20,6 +21,8 @@ class Edge(models.Model):
     bits = models.FloatField()
     probability = models.FloatField()
     decisive = models.BooleanField(default=False)
+    # Ta sama strona przechwycona ponownie. Podzbiór relacji same_campaign.
+    duplicate = models.BooleanField(default=False)
     families = models.JSONField(default=dict)
     model_version = models.CharField(max_length=16)
     verdict = models.CharField(max_length=10, choices=Verdict.choices, blank=True, default="")
@@ -76,4 +79,25 @@ class Campaign(models.Model):
 class CampaignMembership(models.Model):
     ad = models.OneToOneField("ads.Ad", on_delete=models.CASCADE, related_name="membership")
     campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name="memberships")
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+
+class Operator(models.Model):
+    """Wspólne zaplecze kilku kampanii: ten sam silnik lejka, te same identyfikatory, ta sama infrastruktura."""
+
+    label = models.CharField(max_length=256, blank=True)
+    merged_into = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="merged_from")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def key(self) -> str:
+        return f"O-{self.pk:04d}"
+
+    def __str__(self) -> str:
+        return f"{self.key} {self.label}".strip()
+
+
+class OperatorMembership(models.Model):
+    ad = models.OneToOneField("ads.Ad", on_delete=models.CASCADE, related_name="operator_membership")
+    operator = models.ForeignKey(Operator, on_delete=models.CASCADE, related_name="memberships")
     joined_at = models.DateTimeField(auto_now_add=True)

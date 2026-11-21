@@ -12,6 +12,7 @@ class Source(models.TextChoices):
     TIKTOK = "tiktok", "TikTok Commercial Content"
     MICROSOFT = "microsoft", "Microsoft Ad Library"
     NATIVE = "native", "Sieć natywna (crawl wydawcy)"
+    CAPTURE = "capture", "Przechwycenie (HAR, zapisana strona, zrzut)"
 
 
 class Advertiser(models.Model):

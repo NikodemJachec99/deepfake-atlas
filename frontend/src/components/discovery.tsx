@@ -7,6 +7,8 @@ import { useRef, useState } from "react";
 
 import {
   api,
+  type Analysis,
+  type ClusterResult,
   FAMILY_LABELS,
   RELATION_LABELS,
   streamAnalysis,
@@ -40,10 +42,10 @@ export function Discovery() {
   const [ad, setAd] = useState<AdDetail | null>(null);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [selected, setSelected] = useState<EdgeDetail | null>(null);
+  const [assessment, setAssessment] = useState("");
   const stop = useRef<(() => void) | null>(null);
 
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
+  async function run(start: () => Promise<Analysis>) {
     stop.current?.();
     setBusy(true);
     setError("");
@@ -51,14 +53,16 @@ export function Discovery() {
     setAd(null);
     setEdges([]);
     setSelected(null);
+    setAssessment("");
     try {
-      const analysis = await api.createAnalysis(kind, value.trim());
+      const analysis = await start();
       stop.current = streamAnalysis(
         analysis,
         (item) => setEvents((previous) => [...previous, item]),
         async () => {
           try {
             const finished = await api.analysis(analysis.id);
+            setAssessment((finished.result.cluster as ClusterResult | undefined)?.assessment_label ?? "");
             if (finished.ad) {
               setAd(await api.ad(finished.ad));
               setEdges(await api.adEdges(finished.ad));
@@ -75,6 +79,18 @@ export function Discovery() {
       setError(String(reason));
       setBusy(false);
     }
+  }
+
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+    void run(() => api.createAnalysis(kind, value.trim()));
+  }
+
+  function upload(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    // Paczka może zawierać kilka stron. Na tym ekranie śledzimy pierwszą, reszta jest w archiwum.
+    if (files.length > 0) void run(async () => (await api.uploadCase(files))[0]);
   }
 
   async function openEdge(id: number) {
@@ -115,6 +131,11 @@ export function Discovery() {
         </button>
       </form>
 
+      <label className="flex flex-wrap items-center gap-3 rounded border border-dashed border-neutral-600 px-3 py-3">
+        <span className="opacity-70">Albo pliki: zrzut ekranu reklamy, zapisana strona, HAR, ZIP ze sprawą.</span>
+        <input id="input-files" type="file" multiple disabled={busy} onChange={upload} className="text-xs" />
+      </label>
+
       {error && <p className="rounded border border-red-500 px-3 py-2 text-red-400">Analiza nie powiodła się: {error}</p>}
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -136,6 +157,12 @@ export function Discovery() {
             <p>
               Reklama #{ad.id}
               {ad.campaign ? <> należy do kampanii <b>{ad.campaign}</b>.</> : <> nie należy do żadnej kampanii.</>}
+              {ad.operator && <> Operator: <b>{ad.operator}</b>.</>}
+              {assessment && <span className="mt-1 block font-medium">{assessment}</span>}
+              {ad.labels.topics && ad.labels.topics.length > 0 && <span className="block opacity-70">Tematyka: {ad.labels.topics.join(", ")}</span>}
+              {ad.labels.keywords && ad.labels.keywords.length > 0 && (
+                <span className="block opacity-70">Słowa kluczowe: {ad.labels.keywords.slice(0, 8).join(", ")}</span>
+              )}
               {"cert_pl" in ad.labels && <> Domena jest na Liście Ostrzeżeń CERT Polska.</>}
             </p>
           )}
@@ -149,6 +176,7 @@ export function Discovery() {
                 >
                   <span>
                     #{edge.ad_a} ↔ #{edge.ad_b} · {RELATION_LABELS[edge.relation]}
+                    {edge.duplicate && " · duplikat"}
                   </span>
                   <span className="font-mono">{edge.probability.toFixed(2)}</span>
                 </button>

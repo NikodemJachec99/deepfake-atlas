@@ -1,11 +1,13 @@
 # SCAM DNA (Deepfake Atlas): Kolekcjoner Fejków, HackNation 2026
 
-System łączy pozornie niezależne fałszywe reklamy w kampanie na podstawie wspólnych śladów cyfrowych i do każdego połączenia podaje dowody. Zadanie NASK "Follow the Fake".
+System łączy pozornie niezależne fałszywe reklamy w kampanie i operatorów na podstawie wspólnych śladów cyfrowych. Do każdego połączenia podaje dowody. Zadanie NASK "Follow the Fake".
 
-- Wymagania zadania: [docs/wymagania.md](docs/wymagania.md)
+- **Metodyka** (cechy, podobieństwo, grupowanie): [docs/metodyka.md](docs/metodyka.md)
+- Wymagania zadania i zgodność z regulaminem: [docs/wymagania.md](docs/wymagania.md)
+- Wyniki na danych organizatora: [docs/dane-organizatora.md](docs/dane-organizatora.md)
 - Kontrakt API: [docs/api.md](docs/api.md)
 - Prompt do designu interfejsu: [docs/design-prompt.md](docs/design-prompt.md)
-- Zależności i licencje: [docs/licencje.md](docs/licencje.md)
+- Biblioteki, modele, usługi, dane i ich licencje: [docs/licencje.md](docs/licencje.md)
 - Plan roczny, pełny inwentarz danych i modeli: https://claude.ai/artifact/LJNbSpF3byJLrYPdA8haFt
 
 ## Start
@@ -13,28 +15,57 @@ System łączy pozornie niezależne fałszywe reklamy w kampanie na podstawie ws
 ```bash
 cp .env.example .env
 docker compose up -d --build
-curl localhost:8000/health                                   # {"status":"ok"}
-docker compose exec backend python manage.py collect cert_pl # Lista Ostrzeżeń CERT Polska, ok. 127 tys. domen
-docker compose exec backend python manage.py collect microsoft --query inwestycje --limit 20
+curl localhost:8000/health                                           # {"status":"ok"}
 
-cd frontend && cp .env.local.example .env.local && npm install && npm run dev   # http://localhost:3000
+docker compose exec backend python manage.py seed_people            # baza referencyjna osób
+docker compose exec backend python manage.py collect cert_pl        # Lista Ostrzeżeń CERT Polska, ok. 127 tys. domen
+docker compose exec backend python manage.py import_bundle /data/raw/nask --name nask   # paczka organizatora
+
 ```
+
+Interfejs: http://localhost:3000 (kontener `frontend`). Wymagania: Docker z Compose, ok. 6 GB RAM na wszystkie usługi, dostęp do internetu przy pierwszym budowaniu obrazów i pierwszym użyciu OCR (pobranie modelu).
+
+Porty zmienisz w `.env`: `BACKEND_PORT`, `FRONTEND_PORT`. Praca nad interfejsem bez kontenera:
+
+```bash
+cd frontend && cp .env.local.example .env.local && npm install && npm run dev
+```
+
+Paczkę organizatora rozpakuj do `data/raw/nask/` (katalog jest poza gitem). Polecenie `import_bundle` importuje sprawy, analizuje je i wypisuje raport powiązań.
 
 Analiza z konsoli:
 
 ```bash
 curl -X POST localhost:8000/api/analyses -H "Content-Type: application/json" -d '{"kind":"url","value":"https://przyklad.example/"}'
+curl -X POST localhost:8000/api/analyses/upload -F "files=@sprawa.zip"
 curl -N localhost:8000/api/analyses/<id>/events
 ```
 
 ## Jak to działa
 
-1. **Kolekcja.** Konektory bibliotek reklam (`collectors/`) i zgłoszenia ręczne. Każdy skan zostawia migawkę reklamy.
-2. **Potok analizy** (`workflows/pipeline.py`), sześć etapów: przyjęcie, pobranie strony w dwóch profilach (bot i ofiara), ekstrakcja markerów, wzbogacanie infrastruktury, szukanie powiązań, przypisanie do kampanii. Każdy etap zapisuje wynik do bazy, więc Temporal może go ponowić osobno.
+1. **Wejście.** Adres URL, tekst, zrzut ekranu reklamy, zapisana strona, plik HAR albo ZIP z całą sprawą. Do tego konektory bibliotek reklam (`collectors/`).
+2. **Potok analizy** (`workflows/pipeline.py`), sześć etapów: przyjęcie, strona i łańcuch przekierowań, ekstrakcja markerów, wzbogacanie infrastruktury, szukanie powiązań, przypisanie do kampanii i operatora. Każdy etap zapisuje wynik do bazy, więc Temporal może go ponowić osobno. Materiał z przechwycenia analizujemy bez sieci.
 3. **Genom reklamy.** Markery w 7 rodzinach: infrastruktura, tracking i lejek, szablon strony, kreacja, narracja, osoby i marki, zachowanie. Rejestr typów z siłą dowodową: `evidence/kinds.py`.
-4. **Evidence Fusion** (`similarity/fusion.py`). Model Fellegi-Sunter z ważeniem rzadkością. Wspólny ASN dużego dostawcy jest wart prawie zero, wspólny identyfikator analityki rozstrzyga. Rzadkość liczona po niezależnych źródłach, nie po reklamach.
+4. **Evidence Fusion** (`similarity/fusion.py`). Model Fellegi-Sunter z ważeniem rzadkością. Wspólny adres z puli Cloudflare jest wart prawie zero, wspólny identyfikator strony w panelu lejka rozstrzyga. Rzadkość liczona po niezależnych źródłach, nie po reklamach.
 5. **Krawędź z dowodami.** Tabele `Edge` i `EdgeEvidence` w Postgresie. Krawędź bez dowodów nie powstaje.
-6. **Kampanie.** Składowe spójne po krawędziach `same_campaign`, których analityk nie odrzucił. Nowa reklama dołącza do istniejącej kampanii.
+6. **Trzy relacje.** `same_campaign` (to samo źródło i ta sama opowieść), `same_operator` (to samo zaplecze, inna opowieść), `similar` (podobna koncepcja bez dowodu wspólnego zaplecza). Duplikaty są oznaczane osobno.
+7. **Ocena nowego materiału.** Duplikat, nowa odsłona znanej kampanii, nowa kampania znanego operatora, tylko podobna koncepcja albo nowy wzorzec.
+8. **Kampanie i operatorzy.** Nowa reklama dołącza do istniejącej kampanii i operatora. Analityk może odrzucić krawędź i wtedy przestaje ona cokolwiek spinać.
+
+## Skąd biorą się ślady
+
+| Materiał | Co z niego wyciągamy |
+|---|---|
+| Adres URL | domena, szablon ścieżki, zestaw parametrów, piksele i klucze afiliacyjne przemycane w parametrach, identyfikatory reklam Meta, nazewnictwo zestawów reklam, cyrylica w wartościach |
+| HAR | łańcuch przekierowań, ścieżki zaplecza strony (odcisk silnika lejka), hosty zasobów i trackerów, identyfikatory z żądań POST, adres IP z chwili przechwycenia, sygnatura serwera |
+| HTML | identyfikatory śledzące, kontakty, formularze, tytuł, treść (MinHash), struktura DOM, podszycie pod markę, wzmianki o osobach, słowa kluczowe, tematyka |
+| Zrzut ekranu reklamy | OCR: nazwa reklamodawcy, tekst reklamy, numer z Biblioteki Reklam Mety; hash percepcyjny kreacji |
+| Obrazy strony (z HAR i z katalogu `_files`) | zbiór haszy percepcyjnych: te same zdjęcia na różnych domenach |
+| Archiwum NASK | adres IP i numer seryjny certyfikatu z `dns_ssl.json` |
+| Strona na żywo | DNS, ASN, certyfikat TLS, favicon, RDAP, różnica między stroną dla bota i dla ofiary |
+| Lista Ostrzeżeń CERT Polska | etykieta: czy domena jest na liście i od kiedy |
+
+Tokeny dostępu znalezione w adresach (np. `access_token`) zapisujemy wyłącznie jako skrót.
 
 ## Stack
 
@@ -45,6 +76,7 @@ curl -N localhost:8000/api/analyses/<id>/events
 | Źródło prawdy | PostgreSQL 16 + pgvector |
 | Dowody | magazyn S3 (RustFS), obiekty adresowane hashem treści |
 | Projekcje | Neo4j (`manage.py project_graph`), OpenSearch (`manage.py index_ads`) |
+| OCR i obrazy | RapidOCR z modelami PP-OCRv5 (lokalnie, ONNX), hash percepcyjny dHash (Pillow) |
 | Frontend | Next.js 16 + React 19 + TypeScript + Tailwind 4 |
 
 Usługi w compose: `db` 5432, `redis` 6380, `temporal` 7233 (UI 8233), `s3` 9000 (konsola 9001), `neo4j` 7474/7687, `opensearch` 9200, `backend` 8000, `worker`.
@@ -52,13 +84,16 @@ Usługi w compose: `db` 5432, `redis` 6380, `temporal` 7233 (UI 8233), `s3` 9000
 ## Polecenia
 
 ```bash
-python manage.py collect cert_pl                      # bieżąca lista ostrzeżeń
-python manage.py collect cert_pl_history --year 2025  # historia z actions_YYYY.log
-python manage.py collect microsoft --query <fraza>    # Microsoft Ad Library, bez klucza
-python manage.py collect meta --query <fraza>         # wymaga META_AD_LIBRARY_TOKEN
-python manage.py ensure_schedules                     # harmonogramy skanów w Temporalu
-python manage.py project_graph                        # odbudowa grafu w Neo4j
-python manage.py index_ads                            # odbudowa indeksu w OpenSearch
+python manage.py import_bundle <katalog> --name <nazwa>  # paczka przechwyceń: import, analiza, raport
+python manage.py seed_people                            # baza referencyjna osób
+python manage.py collect cert_pl                        # bieżąca lista ostrzeżeń
+python manage.py collect cert_pl_history --year 2025    # historia z actions_YYYY.log
+python manage.py collect microsoft --query <fraza>      # Microsoft Ad Library, bez klucza
+python manage.py collect meta --query <fraza>           # wymaga META_AD_LIBRARY_TOKEN
+python manage.py ensure_schedules                       # harmonogramy skanów w Temporalu
+python manage.py project_graph                          # odbudowa grafu w Neo4j
+python manage.py index_ads                              # odbudowa indeksu w OpenSearch
+python manage.py reset_corpus --yes                     # czyści korpus, zostawia listę CERT i osoby
 ```
 
 ## Testy
@@ -71,27 +106,29 @@ docker compose up -d db
 .venv/Scripts/ruff check .
 ```
 
-Testy potoku i API działają na prawdziwym Postgresie z pgvector. Sieć zastępują podstawki z `tests/fakes.py`.
+Testy potoku i API działają na prawdziwym Postgresie z pgvector. Sieć zastępują podstawki z `tests/fakes.py`. Dane w testach są zmyślone, formaty pochodzą z prawdziwych przechwyceń.
 
 ## Stan
 
-Sprawdzone na żywo 2026-11-21:
+Sprawdzone 2026-11-21:
+- Paczka organizatora (10 spraw, 13 stron) i paczka z zagadki (15 spraw): wyniki w [docs/dane-organizatora.md](docs/dane-organizatora.md).
 - Lista CERT Polska: 126 642 domeny wczytane w 13 s.
-- Microsoft Ad Library: 20 reklam z Polski, pobrane strony docelowe, 713 markerów, 7 krawędzi, 3 kampanie.
+- Microsoft Ad Library: 20 reklam z Polski przeszło cały potok na żywo.
 - Analiza zlecona przez API wykonana przez Temporal, postęp odebrany przez SSE, dowody w S3.
 - Projekcja do Neo4j, indeks w OpenSearch, skan z harmonogramu Temporala.
 
 Jeszcze nie ma:
-- Crawler to klient HTTP. Widzi przekierowania 3xx i meta refresh, nie wykonuje JavaScriptu. Playwright w piaskownicy wchodzi pod ten sam interfejs.
+- Twarzy, głosu i analizy treści wideo. Obrazy porównujemy hashem percepcyjnym, osoby rozpoznajemy po wzmiance w tekście, reklamodawcę i tekst ze zrzutu czyta OCR.
+- Crawler na żywo to klient HTTP. Widzi przekierowania 3xx i meta refresh, nie wykonuje JavaScriptu. Playwright w piaskownicy wchodzi pod ten sam interfejs.
 - Konektor Mety jest napisany według dokumentacji, nie był uruchomiony na żywym tokenie.
-- Obraz, wideo, twarz i głos: brak ekstrakcji. Osoby rozpoznawane tylko po wzmiance w tekście.
 - Embeddingi tekstu: kolumna i indeks HNSW są, model nie jest podpięty. Podobieństwo tekstu liczy MinHash.
 - Wagi modelu par są eksperckie, nie uczone.
-- Ochrona przed SSRF sprawdza adres przed połączeniem, ale nie przypina wyniku DNS. Właściwą barierą będzie piaskownica z regułami sieciowymi.
+- Ochrona przed SSRF sprawdza adres przed połączeniem, ale nie przypina wyniku DNS.
+- API nie ma uwierzytelniania. Do pracy lokalnej i demo, nie do wystawienia w sieci.
 
 ## Zasady pracy
 
 1. `main` zawsze działa. Zmiany przez PR.
 2. Gałęzie `feat/<co>`, `fix/<co>`. Małe PR-y.
 3. Zmiana API zaczyna się od `docs/api.md` i `frontend/src/lib/api.ts`.
-4. Sekrety tylko w `.env`.
+4. Sekrety tylko w `.env`. Dane organizatora tylko w `data/raw/`, nigdy w gicie.

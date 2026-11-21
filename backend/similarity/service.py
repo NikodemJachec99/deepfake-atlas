@@ -9,12 +9,14 @@ from django.db.models.functions import Coalesce
 from ads.models import Ad
 from evidence.kinds import BAND_KINDS, BAND_OF, KINDS
 from evidence.models import AdMarker, AdSignature
-from extractors import minhash
+from extractors import images, minhash
 
 from . import fusion
-from .models import Campaign, CampaignMembership, Edge, EdgeEvidence
+from .models import Campaign, CampaignMembership, Edge, EdgeEvidence, Operator, OperatorMembership
 
 MAX_CANDIDATES = 500
+# Zbiory obrazów porównujemy po odległości Hamminga, pozostałe sygnatury to MinHash.
+SOFT_SIMILARITY = {"image_set": images.set_similarity}
 
 
 def hub_limit(corpus_n: int) -> int:
@@ -92,7 +94,7 @@ def link_ad(ad: Ad) -> list[Edge]:
             if am.marker.kind not in BAND_KINDS
         ]
         soft = [
-            fusion.Soft(kind, minhash.similarity(values, other_signatures[other_id][kind]))
+            fusion.Soft(kind, SOFT_SIMILARITY.get(kind, minhash.similarity)(values, other_signatures[other_id][kind]))
             for kind, values in own_signatures.items()
             if kind in BAND_OF and kind in other_signatures.get(other_id, {})
         ]
@@ -119,6 +121,7 @@ def _store_edge(ad_id: int, other_id: int, result: fusion.PairResult, artifacts:
     edge.bits = result.bits
     edge.probability = result.probability
     edge.decisive = result.decisive
+    edge.duplicate = result.duplicate
     edge.families = result.families
     edge.model_version = fusion.MODEL_VERSION
     edge.save()
@@ -140,37 +143,47 @@ def _store_edge(ad_id: int, other_id: int, result: fusion.PairResult, artifacts:
     return edge
 
 
-@transaction.atomic
-def assign_campaign(ad: Ad) -> dict:
-    """Dołącza reklamę do kampanii na podstawie krawędzi `same_campaign`, których analityk nie odrzucił."""
-    edges = Edge.objects.filter(Q(ad_a=ad) | Q(ad_b=ad), relation=Edge.Relation.SAME_CAMPAIGN).exclude(
-        verdict=Edge.Verdict.REJECTED
-    )
+def _assign(ad: Ad, relations: list[str], group_model, membership_model, field: str) -> dict:
+    edges = Edge.objects.filter(Q(ad_a=ad) | Q(ad_b=ad), relation__in=relations).exclude(verdict=Edge.Verdict.REJECTED)
     neighbours = {edge.other(ad.pk) for edge in edges}
-    current = CampaignMembership.objects.filter(ad=ad).first()
+    current = membership_model.objects.filter(ad=ad).first()
     if not neighbours:
-        return {"campaign": current.campaign.key if current else None, "action": "none", "neighbours": 0}
+        return {"key": getattr(current, field).key if current else None, "action": "none", "neighbours": 0}
 
-    member_of = dict(CampaignMembership.objects.filter(ad_id__in=neighbours).values_list("ad_id", "campaign_id"))
-    campaign_ids = set(member_of.values()) | ({current.campaign_id} if current else set())
+    member_of = dict(membership_model.objects.filter(ad_id__in=neighbours).values_list("ad_id", f"{field}_id"))
+    group_ids = set(member_of.values()) | ({getattr(current, f"{field}_id")} if current else set())
 
-    if not campaign_ids:
-        campaign = Campaign.objects.create()
+    if not group_ids:
+        group = group_model.objects.create()
         action = "created"
     else:
-        campaign = Campaign.objects.get(pk=min(campaign_ids))
-        action = "joined" if len(campaign_ids) == 1 else "merged"
-        # Reklama okazała się mostem między kampaniami: scalamy je w najstarszą.
-        for other_id in campaign_ids - {campaign.pk}:
-            CampaignMembership.objects.filter(campaign_id=other_id).update(campaign=campaign)
-            Campaign.objects.filter(pk=other_id).update(merged_into=campaign)
+        group = group_model.objects.get(pk=min(group_ids))
+        action = "joined" if len(group_ids) == 1 else "merged"
+        # Reklama okazała się mostem między grupami: scalamy je w najstarszą.
+        for other_id in group_ids - {group.pk}:
+            membership_model.objects.filter(**{f"{field}_id": other_id}).update(**{field: group})
+            group_model.objects.filter(pk=other_id).update(merged_into=group)
 
     for ad_id in neighbours | {ad.pk}:
-        CampaignMembership.objects.update_or_create(ad_id=ad_id, defaults={"campaign": campaign})
-    return {
-        "campaign": campaign.key,
-        "campaign_id": campaign.pk,
-        "action": action,
-        "neighbours": len(neighbours),
-        "size": campaign.memberships.count(),
-    }
+        membership_model.objects.update_or_create(ad_id=ad_id, defaults={field: group})
+    return {"key": group.key, "id": group.pk, "action": action, "neighbours": len(neighbours), "size": group.memberships.count()}
+
+
+@transaction.atomic
+def assign_campaign(ad: Ad) -> dict:
+    """Kampania: reklamy połączone krawędziami `same_campaign`, których analityk nie odrzucił."""
+    result = _assign(ad, [Edge.Relation.SAME_CAMPAIGN], Campaign, CampaignMembership, "campaign")
+    out = {"campaign": result["key"], "action": result["action"], "neighbours": result["neighbours"]}
+    if "id" in result:
+        out.update(campaign_id=result["id"], size=result["size"])
+    return out
+
+
+@transaction.atomic
+def assign_operator(ad: Ad) -> dict:
+    """Operator: reklamy o wspólnym zapleczu, także gdy prowadzą różne kampanie."""
+    result = _assign(ad, [Edge.Relation.SAME_CAMPAIGN, Edge.Relation.SAME_OPERATOR], Operator, OperatorMembership, "operator")
+    out = {"operator": result["key"], "operator_action": result["action"]}
+    if "id" in result:
+        out.update(operator_id=result["id"], operator_size=result["size"])
+    return out

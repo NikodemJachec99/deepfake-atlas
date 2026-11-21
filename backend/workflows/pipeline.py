@@ -3,6 +3,10 @@
 Każdy etap czyta stan z bazy i zapisuje wynik do bazy, więc Temporal może ponowić dowolny
 z nich osobno. Ten sam kod wykonuje runner lokalny (wątek) i testy (synchronicznie).
 Etapy zapisują zdarzenia postępu, które interfejs odtwarza przez SSE.
+
+Dwa tryby wejścia:
+- na żywo: adres albo tekst, stronę pobiera crawler,
+- z przechwycenia (`state["offline"]`): HTML i HAR są już w magazynie dowodów, niczego nie pobieramy.
 """
 
 import base64
@@ -20,10 +24,13 @@ from enrichment.models import DomainRecord, WarningDomain
 from evidence import services as markers
 from evidence import store
 from evidence.kinds import FAMILIES, KINDS
+from evidence.models import Artifact
 from extractors import Observation
 from extractors.html import extract_page
+from extractors.keywords import keywords, topics
 from extractors.text import extract_text
-from extractors.url import host_of, registered_domain, url_observations
+from extractors.url import host_of, redact_url, registered_domain, url_observations
+from people.matching import find_people
 from people.models import Person
 from similarity import service as linking
 from similarity.models import Edge
@@ -35,7 +42,7 @@ STAGE_LABELS = {
     "extract": "Ekstrakcja markerów",
     "enrich": "Wzbogacanie infrastruktury",
     "fuse": "Szukanie powiązań",
-    "cluster": "Przypisanie do kampanii",
+    "cluster": "Przypisanie do kampanii i operatora",
 }
 
 
@@ -61,19 +68,27 @@ def emit(analysis: Analysis, stage: str, status: str, message: str = "", payload
 
 def stage_ingest(analysis: Analysis) -> dict:
     if analysis.ad_id:
-        return {"ad": analysis.ad_id, "created": False}
+        return {"ad": analysis.ad_id, "created": False, "source": analysis.ad.source}
     value = analysis.input_value.strip()
+    now = timezone.now()
     if analysis.input_kind == Analysis.Kind.URL:
-        ad = Ad.objects.create(source=Source.MANUAL, landing_url=value, first_seen=timezone.now(), last_seen=timezone.now())
+        ad = Ad.objects.create(source=Source.MANUAL, landing_url=redact_url(value), first_seen=now, last_seen=now)
     else:
-        ad = Ad.objects.create(source=Source.MANUAL, text=value, first_seen=timezone.now(), last_seen=timezone.now())
+        ad = Ad.objects.create(source=Source.MANUAL, text=value, first_seen=now, last_seen=now)
     analysis.ad = ad
     analysis.save(update_fields=["ad"])
-    return {"ad": ad.pk, "created": True}
+    return {"ad": ad.pk, "created": True, "source": ad.source}
 
 
 def stage_crawl(analysis: Analysis) -> dict:
     ad = analysis.ad
+    if analysis.state.get("offline"):
+        page = (analysis.state.get("pages") or {}).get("victim") or {}
+        emit(
+            analysis, "crawl", "info", "Materiał z przechwycenia: strona i ruch sieciowy są już w dowodach",
+            {"profile": "capture", "chain": page.get("chain", []), "final_url": page.get("final_url", "")},
+        )
+        return {"pages": 1 if page.get("html_sha") else 0, "offline": True}
     if not ad.landing_url:
         # Lead Ads i zgłoszenia samym tekstem: nie ma strony, łączymy po pozostałych rodzinach.
         emit(analysis, "crawl", "info", "Brak adresu docelowego, pomijam pobieranie strony")
@@ -83,21 +98,21 @@ def stage_crawl(analysis: Analysis) -> dict:
     for profile in ("victim", "bot"):
         result = client.fetch(ad.landing_url, profile)
         page = {
-            "final_url": result.final_url,
+            "final_url": redact_url(result.final_url),
             "status": result.status,
             "error": result.error,
-            "chain": [{"url": h.url, "status": h.status, "via": h.via} for h in result.chain],
+            "chain": [{"url": redact_url(h.url), "status": h.status, "via": h.via} for h in result.chain],
             "html_sha": None,
         }
         if result.body:
-            artifact = store.put(result.body, kind=f"html_{profile}", content_type=result.content_type, source_url=result.final_url)
+            artifact = store.put(result.body, kind=f"html_{profile}", content_type=result.content_type, source_url=page["final_url"])
             page["html_sha"] = artifact.sha256
         pages[profile] = page
         emit(
             analysis, "crawl", "info",
             f"Profil {profile}: {len(result.chain)} skoków, status {result.status or 'brak'}"
             + (f", błąd: {result.error}" if result.error else ""),
-            {"profile": profile, "chain": page["chain"], "final_url": result.final_url},
+            {"profile": profile, "chain": page["chain"], "final_url": page["final_url"]},
         )
     analysis.state["pages"] = pages
     analysis.save(update_fields=["state"])
@@ -108,11 +123,12 @@ def stage_extract(analysis: Analysis) -> dict:
     ad = analysis.ad
     pages = analysis.state.get("pages", {})
     victim = pages.get("victim") or {}
+    capture = analysis.state.get("capture") or {}
     counts: dict[str, int] = {}
 
     def add(observations: list[Observation], artifact=None) -> None:
         markers.attach(ad, observations, artifact)
-        for obs in observations:
+        for obs in dict.fromkeys(observations):
             family = KINDS[obs.kind].family
             counts[family] = counts.get(family, 0) + 1
 
@@ -124,13 +140,15 @@ def stage_extract(analysis: Analysis) -> dict:
         add([Observation("redirect_domain", d) for d in sorted(hop_domains)])
 
     page_text = ""
+    html_artifact = None
     if victim.get("html_sha"):
-        artifact = store.Artifact.objects.get(pk=victim["html_sha"])
-        page = extract_page(store.get(artifact.sha256).decode("utf-8", errors="replace"), final_url)
-        add(page.observations, artifact)
+        html_artifact = Artifact.objects.get(pk=victim["html_sha"])
+        page = extract_page(store.get(html_artifact.sha256).decode("utf-8", errors="replace"), final_url or "https://nieznana.invalid/")
+        add([o for o in page.observations if final_url or o.kind != "page_name"], html_artifact)
         if page.dom_hash:
-            add([Observation("dom_hash", page.dom_hash)], artifact)
+            add([Observation("dom_hash", page.dom_hash)], html_artifact)
             markers.set_signature(ad, "dom_minhash", page.dom_signature)
+        markers.set_signature(ad, "page_text_minhash", page.text_signature)
         page_text = f"{page.title} {page.visible_text}"
         analysis.state["favicon_url"] = page.favicon_url
         if not ad.title and page.title:
@@ -142,8 +160,13 @@ def stage_extract(analysis: Analysis) -> dict:
             bot_page = extract_page(store.get(bot["html_sha"]).decode("utf-8", errors="replace"), bot.get("final_url") or final_url)
             if bot_page.dom_hash and bot_page.dom_hash != page.dom_hash:
                 # Automat dostał inną stronę niż ofiara. Ta "biała strona" sama jest odciskiem operatora.
-                add([Observation("white_dom_hash", bot_page.dom_hash)], store.Artifact.objects.get(pk=bot["html_sha"]))
+                add([Observation("white_dom_hash", bot_page.dom_hash)], Artifact.objects.get(pk=bot["html_sha"]))
                 analysis.state["cloaking"] = True
+
+    # Ślady z przechwycenia: ruch sieciowy z HAR, zrzuty reklamy, metadane wideo.
+    captured = [Observation(kind, value, detail or {}) for kind, value, detail in capture.get("observations", []) if kind in KINDS]
+    har_artifact = Artifact.objects.filter(pk=capture.get("har")).first() if capture.get("har") else None
+    add(captured, har_artifact or html_artifact)
 
     ad_text = f"{ad.title}\n{ad.text}".strip()
     if ad.text:
@@ -156,18 +179,35 @@ def stage_extract(analysis: Analysis) -> dict:
         if ad.advertiser.payer:
             add([Observation("payer", ad.advertiser.payer.strip().lower())])
 
-    haystack = f"{ad_text} {page_text}".lower()
-    mentions = [Observation("person_mention", p.marker_value, {"name": p.name}) for p in Person.objects.all() if any(n in haystack for n in p.needles())]
-    add(mentions)
+    markers.set_signature(ad, "image_set", [int(v) for v in capture.get("image_hashes", [])])
+    if capture.get("image_hashes"):
+        counts["crea"] = counts.get("crea", 0) + len(capture["image_hashes"])
+
+    full_text = f"{ad_text} {page_text}"
+    ad.labels["keywords"] = keywords(full_text)
+    ad.labels["topics"] = topics(full_text)
+    ad.save(update_fields=["labels"])
+    add([Observation("topic", topic) for topic in ad.labels["topics"]])
+
+    people = {p.pk: p for p in Person.objects.all()}
+    found = find_people(f"{ad_text} {page_text}", [(p.pk, p.name, p.aliases) for p in people.values()])
+    add([Observation("person_mention", people[pk].marker_value, {"name": people[pk].name}) for pk in found])
 
     analysis.save(update_fields=["state"])
     for family, count in sorted(counts.items()):
         emit(analysis, "extract", "info", f"{FAMILIES[family]}: {count}", {"family": family, "count": count})
-    return {"markers": counts, "cloaking": bool(analysis.state.get("cloaking"))}
+    return {
+        "markers": counts,
+        "cloaking": bool(analysis.state.get("cloaking")),
+        "people": [people[pk].name for pk in found],
+        "topics": ad.labels["topics"],
+        "keywords": ad.labels["keywords"],
+    }
 
 
 def stage_enrich(analysis: Analysis) -> dict:
     ad = analysis.ad
+    offline = bool(analysis.state.get("offline"))
     victim = (analysis.state.get("pages") or {}).get("victim") or {}
     final_url = victim.get("final_url") or ad.landing_url
     host = host_of(final_url) if final_url else ""
@@ -177,21 +217,32 @@ def stage_enrich(analysis: Analysis) -> dict:
     domain = registered_domain(host)
     source = enricher()
     observations: list[Observation] = []
-    summary: dict = {"domain": domain}
+    summary: dict = {"domain": domain, "offline": offline}
 
-    ips = source.resolve(host)
-    observations += [Observation("ip", ip) for ip in ips]
-    asns = sorted({a for a in (source.asn(ip) for ip in ips[:4]) if a})
-    observations += [Observation("asn", a) for a in asns]
-    nameservers = source.nameservers(domain)
-    observations += [Observation("nameserver", ns) for ns in nameservers]
-    summary.update(ips=ips, asn=asns, nameservers=nameservers)
+    if not offline:
+        # Stan DNS i certyfikatu z dziś ma sens tylko dla strony badanej na żywo. Przechwycenie ma własne adresy z HAR.
+        ips = source.resolve(host)
+        observations += [Observation("ip", ip) for ip in ips]
+        asns = sorted({a for a in (source.asn(ip) for ip in ips[:4]) if a})
+        observations += [Observation("asn", a) for a in asns]
+        nameservers = source.nameservers(domain)
+        observations += [Observation("nameserver", ns) for ns in nameservers]
+        summary.update(ips=ips, asn=asns, nameservers=nameservers)
 
-    if final_url.startswith("https://"):
-        fingerprint = source.tls_fingerprint(host)
-        if fingerprint:
-            observations.append(Observation("tls_fp", fingerprint))
-            summary["tls_fp"] = fingerprint
+        if final_url.startswith("https://"):
+            fingerprint = source.tls_fingerprint(host)
+            if fingerprint:
+                observations.append(Observation("tls_fp", fingerprint))
+                summary["tls_fp"] = fingerprint
+
+        favicon_url = analysis.state.get("favicon_url") or f"{final_url.split('/')[0]}//{host}/favicon.ico"
+        icon = fetcher().fetch_bytes(favicon_url)
+        if icon:
+            artifact = store.put(icon, kind="favicon", source_url=favicon_url)
+            # Ten sam sposób liczenia co w Shodanie, żeby wartość dało się wkleić do wyszukiwarki hostów.
+            value = str(mmh3.hash(base64.encodebytes(icon)))
+            markers.attach(ad, [Observation("favicon_hash", value)], artifact)
+            summary["favicon_hash"] = value
 
     rdap = source.rdap(domain)
     if rdap:
@@ -203,16 +254,9 @@ def stage_enrich(analysis: Analysis) -> dict:
             observations.append(Observation("registrar", rdap.registrar))
         if rdap.registered_at:
             observations.append(Observation("reg_day", rdap.registered_at.date().isoformat()))
+        if offline:
+            observations += [Observation("nameserver", ns) for ns in rdap.nameservers]
         summary.update(registrar=rdap.registrar, registered_at=rdap.registered_at.isoformat() if rdap.registered_at else None)
-
-    favicon_url = analysis.state.get("favicon_url") or f"{final_url.split('/')[0]}//{host}/favicon.ico"
-    icon = fetcher().fetch_bytes(favicon_url)
-    if icon:
-        artifact = store.put(icon, kind="favicon", source_url=favicon_url)
-        # Ten sam sposób liczenia co w Shodanie, żeby wartość dało się wkleić do wyszukiwarki hostów.
-        value = str(mmh3.hash(base64.encodebytes(icon)))
-        markers.attach(ad, [Observation("favicon_hash", value)], artifact)
-        summary["favicon_hash"] = value
 
     markers.attach(ad, observations)
 
@@ -248,16 +292,41 @@ def stage_fuse(analysis: Analysis) -> dict:
     ad = analysis.ad
     edges = linking.link_ad(ad)
     for edge in sorted(edges, key=lambda e: e.probability, reverse=True):
-        emit(analysis, "fuse", "info", f"Powiązanie z reklamą #{edge.other(ad.pk)}: {edge.get_relation_display()}", edge_payload(edge, ad.pk))
+        emit(
+            analysis, "fuse", "info", f"Powiązanie z reklamą #{edge.other(ad.pk)}: {edge.get_relation_display()}", edge_payload(edge, ad.pk)
+        )
     return {
         "edges": len(edges),
+        "duplicates": sum(1 for e in edges if e.duplicate),
         "same_campaign": sum(1 for e in edges if e.relation == Edge.Relation.SAME_CAMPAIGN),
+        "same_operator": sum(1 for e in edges if e.relation == Edge.Relation.SAME_OPERATOR),
         "similar": sum(1 for e in edges if e.relation == Edge.Relation.SIMILAR),
     }
 
 
+ASSESSMENTS = {
+    "duplicate": "Duplikat materiału, który już jest w korpusie",
+    "known_campaign": "Nowa odsłona znanej kampanii",
+    "known_operator": "Nowa kampania znanego operatora",
+    "similar_only": "Podobna koncepcja, brak dowodu wspólnego źródła",
+    "new_pattern": "Nowy wzorzec, brak powiązań z korpusem",
+}
+
+
 def stage_cluster(analysis: Analysis) -> dict:
-    return linking.assign_campaign(analysis.ad)
+    result = {**linking.assign_campaign(analysis.ad), **linking.assign_operator(analysis.ad)}
+    fused = analysis.result.get("fuse", {})
+    if fused.get("duplicates"):
+        assessment = "duplicate"
+    elif result.get("campaign"):
+        assessment = "known_campaign"
+    elif result.get("operator"):
+        assessment = "known_operator"
+    elif fused.get("similar"):
+        assessment = "similar_only"
+    else:
+        assessment = "new_pattern"
+    return {**result, "assessment": assessment, "assessment_label": ASSESSMENTS[assessment]}
 
 
 HANDLERS: dict[str, Callable[[Analysis], dict]] = {
@@ -303,7 +372,7 @@ def run_all(analysis_id: str) -> None:
     try:
         for stage in STAGES:
             run_stage(analysis_id, stage)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         finish(analysis_id, error=f"{type(exc).__name__}: {exc}")
         return
     finish(analysis_id)

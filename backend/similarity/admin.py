@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Campaign, CampaignMembership, Edge, EdgeEvidence
+from .models import Campaign, CampaignMembership, Edge, EdgeEvidence, Operator
 
 
 class EdgeEvidenceInline(admin.TabularInline):
@@ -31,3 +31,8 @@ class MembershipInline(admin.TabularInline):
 class CampaignAdmin(admin.ModelAdmin):
     list_display = ["id", "key", "label", "created_at"]
     inlines = [MembershipInline]
+
+
+@admin.register(Operator)
+class OperatorAdmin(admin.ModelAdmin):
+    list_display = ["id", "key", "label", "created_at"]

@@ -120,7 +120,12 @@ class HttpFetcher:
         current, via = url, "http"
         try:
             with self._client(profile) as client:
+                host = None
                 for _ in range(self.max_hops + 1):
+                    hop_host = urlsplit(current).hostname
+                    if host is not None and hop_host != host:
+                        client.cookies.clear()  # ciasteczka jednej domeny nie jadą do następnej w łańcuchu
+                    host = hop_host
                     ip = resolve_public(current)
                     if self.proxy:
                         # Przez proxy nazwę rozwiązuje proxy; sprawdzenie zostaje, przypięcia nie da się zrobić.

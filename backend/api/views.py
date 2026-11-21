@@ -63,12 +63,25 @@ def analysis_create(request):
     return Response(s.AnalysisSerializer(analysis).data, status=status.HTTP_201_CREATED)
 
 
-def _safe_extract(upload, target: Path) -> None:
-    """Rozpakowuje archiwum tylko do katalogu docelowego i z limitem rozmiaru."""
+class _Budget:
+    """Wspólny limit bajtów i plików rozpakowania na całe żądanie, żeby wiele archiwów nie omijało limitu jednego."""
+
+    def __init__(self) -> None:
+        self.bytes, self.files = MAX_ZIP_BYTES, MAX_ZIP_FILES
+
+    def take(self, files: int, size: int) -> None:
+        if files > self.files or size > self.bytes:
+            raise ValueError("Archiwum jest za duże")
+        self.files -= files
+        self.bytes -= size
+
+
+def _safe_extract(upload, target: Path, budget: _Budget | None = None) -> None:
+    """Rozpakowuje archiwum tylko do katalogu docelowego i z limitem rozmiaru (wspólnym dla żądania)."""
+    budget = budget or _Budget()
     with zipfile.ZipFile(upload) as archive:
         members = archive.infolist()
-        if len(members) > MAX_ZIP_FILES or sum(m.file_size for m in members) > MAX_ZIP_BYTES:
-            raise ValueError("Archiwum jest za duże")
+        budget.take(len(members), sum(m.file_size for m in members))
         root = target.resolve()
         for member in members:
             destination = (target / member.filename).resolve()
@@ -97,14 +110,17 @@ def analysis_upload(request):
         case_root = Path(tmp) / "sprawa"
         case_root.mkdir()
         try:
+            budget = _Budget()
             for upload in files:
                 filename = Path(upload.name or "").name
                 if filename in ("", ".", "..") or filename.startswith("."):
                     raise ValueError("Niedozwolona nazwa pliku")
                 if filename.lower().endswith(".zip"):
-                    _safe_extract(upload, case_root)
+                    _safe_extract(upload, case_root, budget)
                 else:
-                    (case_root / filename).write_bytes(upload.read())
+                    data = upload.read()
+                    budget.take(1, len(data))
+                    (case_root / filename).write_bytes(data)
         except (ValueError, zipfile.BadZipFile) as exc:
             return Response({"files": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         directories = bundle.case_dirs(case_root)

@@ -31,6 +31,7 @@ log = logging.getLogger(__name__)
 DEFAULTS = {"days": 30, "max_queries": 12, "max_crawl": 20, "crawl": True, "threshold": DEFAULT_THRESHOLD}
 RETRY_AFTER = timedelta(hours=12)  # niedostępną stronę próbujemy ponownie najwcześniej po tylu godzinach
 MAX_ATTEMPTS = 3
+RECHECK_AFTER = timedelta(days=7)  # słabego kandydata i odrzuconego sprawdzamy ponownie po tylu dniach (strona mogła się zmienić)
 MAX_FAILED_QUERIES = 2  # tyle zapytań pod rząd bez odpowiedzi crt.sh kończy zbieranie kandydatów
 
 
@@ -123,6 +124,7 @@ def crawl_candidates(profiles: list[Profile], *, threshold: float, max_crawl: in
         .filter(
             Q(status=HuntCandidate.Status.CANDIDATE, checked_at__isnull=True)
             | Q(status=HuntCandidate.Status.UNAVAILABLE, attempts__lt=MAX_ATTEMPTS, checked_at__lt=now - RETRY_AFTER)
+            | Q(status__in=[HuntCandidate.Status.CANDIDATE, HuntCandidate.Status.REJECTED], checked_at__lt=now - RECHECK_AFTER)
         )
         .select_related("operator")
         .order_by("-prelim_score", "-created_at")[:max_crawl]

@@ -56,7 +56,7 @@ Przed prezentacją sprawdź je jeszcze raz: `curl localhost:8000/api/stats`. Je�
 ### 7. Ograniczenia i dalej (30 s)
 
 - Wagi są eksperckie. Bez oznaczonego zbioru nie podajemy precyzji ani czułości. Następny krok: model uczony na decyzjach analityków, które już zapisujemy w dzienniku audytu.
-- Twarze rozpoznajemy tylko dla osób z małej bazy referencyjnej. Z nagrań bierzemy klatki, dźwięku nie analizujemy.
+- Twarze rozpoznajemy tylko dla osób z małej bazy referencyjnej. Z nagrań bierzemy klatki i mowę zamienioną na tekst (Whisper lokalnie), głosu mówcy nie porównujemy.
 - Strony na żywo pobieramy bez JavaScriptu. Pełny zestaw cech dają przechwycenia z HAR.
 - Działa jako `docker compose up`, z Temporalem, Postgresem i projekcją do Neo4j, sprawdzone na Windowsie i Linuksie, CI stawia cały stos przy każdym PR. Harmonogram skanuje bibliotekę reklam Microsoft. Wzbogacony korpus do pobrania jednym kliknięciem (`GET /api/export`).
 

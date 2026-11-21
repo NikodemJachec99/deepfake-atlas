@@ -86,12 +86,13 @@ Powody (`reason`, lista z etykietami w `GET /api/kinds` jako `verdict_reasons`):
 
 #### Nagrania w karcie reklamy
 
-`AdDetail.videos` to lista `VideoMaterial`: `sha256`, `name`, `size`, `playable`, `url` (`/api/artifacts/{sha}/video`, gdy plik jest w magazynie), `duration_s`, `fps`, `frames`, `width`, `height`, `poster`, `original`, `missing`.
+`AdDetail.videos` to lista `VideoMaterial`: `sha256`, `name`, `size`, `playable`, `url` (`/api/artifacts/{sha}/video`, gdy plik jest w magazynie), `duration_s`, `fps`, `frames`, `width`, `height`, `poster`, `original`, `speech`, `missing`.
 
 - `poster`: klatka poglądowa z pierwszej sekundy (dla krótszych nagrań 10% długości). `at_s` to sekunda według dekodera, bo przewijanie trafia w najbliższą klatkę kluczową. `position` to `at_s / duration_s`, `url` prowadzi do obrazu.
 - `original`: `duration_s` to długość oryginału z metadanych pobrania (`.info.json` z yt-dlp), jeśli tam jest. `clip` mówi, czy plik jest krótszym wycinkiem oryginału. `null` oznacza, że nie wiadomo.
 - `missing`: powody braków po polsku, np. plik ponad limit 60 MB magazynu (`playable: false`), brak długości oryginału w metadanych albo nagranie zaimportowane przed odczytem metadanych.
-- Nagrań nie analizujemy treściowo. Odczytujemy tylko metadane kontenera i jedną klatkę. Uzupełnienie dla zaimportowanych spraw: `python manage.py probe_videos --root /data/raw`.
+- `speech`: mowa z nagrania zamieniona na tekst albo `null` (nagranie bez dźwięku, cisza, kanał wyłączony przez `TRANSCRIBE=off`, brak modelu, nagranie jeszcze nie przetworzone). Pola: `source` (zawsze "mowa z nagrania"), `text` (adresy po redakcji, ten sam tekst trafia do tekstu reklamy), `language`, `model`, `audio_s` (ile sekund dźwięku rozpoznano), `truncated` (nagranie dłuższe niż limit 120 s albo przerwane limitem czasu). To tekst z modelu rozpoznającego mowę: może zawierać pomyłki.
+- Z nagrania odczytujemy metadane kontenera, jedną klatkę poglądową, 8 klatek do analizy i mowę. Uzupełnienie metadanych dla zaimportowanych spraw: `python manage.py probe_videos --root /data/raw`. Uzupełnienie mowy: `python manage.py transcribe_videos [--root /data/raw] [--all] [--ad ID] [--reanalyze]`.
 
 ## Sugestia Jev
 

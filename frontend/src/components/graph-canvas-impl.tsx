@@ -6,7 +6,7 @@
 import { layerBorder } from "@sigma/node-border";
 import Graph from "graphology";
 import forceAtlas2 from "graphology-layout-forceatlas2";
-import { Maximize2, Minus, Plus } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Maximize2, Minus, Plus } from "lucide-react";
 import { animate } from "motion";
 import { useEffect, useRef, useState } from "react";
 import Sigma from "sigma";
@@ -335,6 +335,22 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
     s.scheduleRefresh();
   }, [nodes, edges, colorBy, layout, selectedEdge, selectedNode, reduced]);
 
+  const directions = [
+    { key: "ArrowLeft", label: "w lewo", dx: -1, dy: 0, Icon: ArrowLeft },
+    { key: "ArrowUp", label: "w górę", dx: 0, dy: -1, Icon: ArrowUp },
+    { key: "ArrowDown", label: "w dół", dx: 0, dy: 1, Icon: ArrowDown },
+    { key: "ArrowRight", label: "w prawo", dx: 1, dy: 0, Icon: ArrowRight },
+  ];
+  function pan(dx: number, dy: number) {
+    const renderer = sigma.current;
+    if (!renderer) return;
+    const camera = renderer.getCamera();
+    const state = camera.getState();
+    const origin = renderer.viewportToFramedGraph({ x: 0, y: 0 });
+    const target = renderer.viewportToFramedGraph({ x: dx * 70, y: dy * 70 });
+    camera.setState({ x: state.x + target.x - origin.x, y: state.y + target.y - origin.y });
+  }
+
   const zoom = (factor: number) => {
     const camera = sigma.current?.getCamera();
     if (!camera) return;
@@ -348,7 +364,13 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
 
   return (
     <div className="relative h-full min-h-0 w-full min-w-0 overflow-hidden bg-bg">
-      <div ref={container} className="absolute inset-0" />
+      <div ref={container} tabIndex={0} role="region" aria-label="Graf powiązań. Przeciągnij tło lub użyj strzałek." className="absolute inset-0 cursor-grab active:cursor-grabbing" onKeyDown={event => {
+        const direction = directions.find(item => item.key === event.key);
+        if (direction) { event.preventDefault(); pan(direction.dx, direction.dy); }
+      }} />
+      <div className="absolute top-2 left-2 flex rounded-md border border-line bg-panel">
+        {directions.map(({ key, label, dx, dy, Icon }) => <button key={key} type="button" aria-label={`Przesuń widok ${label}`} title={`Przesuń widok ${label}`} onClick={() => pan(dx, dy)} className="grid size-8 place-items-center hover:bg-hover"><Icon size={15} /></button>)}
+      </div>
       {failed && <p className="absolute inset-x-0 top-10 px-4 text-rejected">Płótno grafu nie wystartowało (WebGL): {failed}</p>}
 
       <div className="no-print absolute top-2 right-2 flex flex-col overflow-hidden rounded-sm border border-line bg-panel">

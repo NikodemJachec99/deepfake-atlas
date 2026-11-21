@@ -107,6 +107,7 @@ JEV_MODE = env("JEV_MODE", "off")
 JEV_MODEL = env("JEV_MODEL", "")  # dokładna wersja, np. jev-1.14.0
 TYPESAFE_API_KEY = env("TYPESAFE_API_KEY", "")
 JEV_TIMEOUT = float(env("JEV_TIMEOUT", "20"))
+JEV_QUESTION = env("JEV_QUESTION", "")  # wersja pytania z similarity/assist.py, pusta: domyślna
 # Limity jednego uruchomienia jev_review: liczba zapytań i budżet w USD (cena za milion tokenów wejściowych).
 JEV_MAX_REQUESTS = int(env("JEV_MAX_REQUESTS", "100"))
 JEV_BUDGET_USD = float(env("JEV_BUDGET_USD", "0.10"))

@@ -82,8 +82,12 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
       {group.campaigns.length ? <ul>{group.campaigns.map(key => <li key={key}><GroupLink group={key} /></li>)}</ul> : <p>Brak przypisanych kampanii.</p>}</section>}
     <section className="grid justify-items-start gap-2">
       <h2>Pakiet dowodowy</h2>
-      <label><input type="checkbox" checked={includeRaw} onChange={e => setIncludeRaw(e.target.checked)} /> Dołącz surowe artefakty</label>
-      <a className="rounded-md border border-line-strong px-3 py-2 text-accent" href={(operator ? operatorPackageUrl : campaignPackageUrl)(Number(id), { raw: includeRaw })} download>Pobierz pakiet ZIP</a>
+      {group.ads.length === 0 ? <p>Grupa nie ma reklam. Pakiet dowodowy jest niedostępny.</p> : <>
+        <label><input type="checkbox" checked={includeRaw} onChange={e => setIncludeRaw(e.target.checked)} /> Dołącz surowe pliki HAR i HTML</label>
+        {includeRaw && <p>Surowe pliki zawierają niezredagowaną treść ze stron oszustów.</p>}
+        <a className="rounded-md border border-line-strong px-3 py-2 text-accent" href={(operator ? operatorPackageUrl : campaignPackageUrl)(Number(id), { raw: includeRaw })} download>Pobierz pakiet dowodowy (ZIP)</a>
+        <p className="text-sm text-muted">Po rozpakowaniu sprawdź sumy plików poleceniem <code>python weryfikuj.py</code>. Skrót SHA-256 całego ZIP do osobnego porównania podaje API w nagłówku <code>X-Package-SHA256</code>.</p>
+      </>}
     </section>
     <section><h2>Reklamy ({group.size})</h2><ul>{group.ads.map(ad =>
       <li key={ad.id}><Link className="text-accent" href={`/ads/${ad.id}`}>#{ad.id} · {adTitle(ad)}</Link></li>)}</ul></section>

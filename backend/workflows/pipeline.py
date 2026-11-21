@@ -27,7 +27,7 @@ from evidence import services as markers
 from evidence import store
 from evidence.kinds import FAMILIES, KINDS
 from evidence.models import Artifact
-from extractors import Observation, embedding, images
+from extractors import Observation, embedding, image_embedding, images
 from extractors.har import image_blobs, parse_har
 from extractors.html import extract_page
 from extractors.keywords import keywords, topics
@@ -223,6 +223,11 @@ def stage_extract(analysis: Analysis) -> dict:
     ad.save(update_fields=["text_embedding"])
     if vector:
         counts["narr"] = counts.get("narr", 0) + 1
+    # Podobne ujęcie: wektor jednego obrazu reklamy (zrzut, klatka nagrania, a dla strony z crawlera jej zrzut).
+    ad.image_embedding = image_embedding.ad_vector(ad, victim)
+    ad.save(update_fields=["image_embedding"])
+    if ad.image_embedding is not None:
+        counts["crea"] = counts.get("crea", 0) + 1
     ad.labels["keywords"] = keywords(full_text)
     ad.labels["topics"] = topics(full_text)
     ad.save(update_fields=["labels"])

@@ -19,6 +19,8 @@ MAX_CANDIDATES = 500
 # Sąsiedzi z indeksu HNSW po znaczeniu treści: najwyżej tylu, i tylko bliżsi niż ten dystans kosinusowy.
 SEMANTIC_NEIGHBOURS = 20
 SEMANTIC_MAX_DISTANCE = 0.25  # poniżej progu lo=0,75 marker i tak nic nie wnosi
+IMAGE_NEIGHBOURS = 20
+IMAGE_MAX_DISTANCE = 0.18  # poniżej progu lo=0,82 marker i tak nic nie wnosi
 # Zbiory obrazów porównujemy po odległości Hamminga, pozostałe sygnatury to MinHash.
 # Treść jest odporna na doklejoną sekcję: zapis strony z komentarzami to wciąż ten sam artykuł.
 SOFT_SIMILARITY = {
@@ -88,6 +90,18 @@ def link_ad(ad: Ad) -> list[Edge]:
         )
         semantic = {pk: 1.0 - float(distance) for pk, distance in neighbours}
         candidates = list(dict.fromkeys([*candidates, *semantic]))
+    visual: dict[int, float] = {}
+    if ad.image_embedding is not None:
+        look = (
+            Ad.objects.exclude(pk=ad.pk)
+            .filter(image_embedding__isnull=False)
+            .annotate(distance=CosineDistance("image_embedding", ad.image_embedding))
+            .filter(distance__lt=IMAGE_MAX_DISTANCE)
+            .order_by("distance")
+            .values_list("pk", "distance")[:IMAGE_NEIGHBOURS]
+        )
+        visual = {pk: 1.0 - float(distance) for pk, distance in look}
+        candidates = list(dict.fromkeys([*candidates, *visual]))
     if not candidates:
         return []
 
@@ -121,6 +135,8 @@ def link_ad(ad: Ad) -> list[Edge]:
         ]
         if other_id in semantic:
             soft.append(fusion.Soft("text_embedding", semantic[other_id]))
+        if other_id in visual:
+            soft.append(fusion.Soft("image_embedding", visual[other_id]))
         result = fusion.score_pair(shared, soft, corpus_n)
         artifacts = {am.marker.kind: (own[am.marker_id].artifact_id, am.artifact_id) for am in theirs}
         edge = _store_edge(ad.pk, other_id, result, artifacts)

@@ -44,6 +44,7 @@ class Ad(models.Model):
     labels = models.JSONField(default=dict, blank=True)
     raw = models.JSONField(default=dict, blank=True)
     text_embedding = VectorField(dimensions=settings.TEXT_EMBEDDING_DIM, null=True, blank=True)
+    image_embedding = VectorField(dimensions=settings.IMAGE_EMBEDDING_DIM, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -59,7 +60,14 @@ class Ad(models.Model):
                 m=16,
                 ef_construction=64,
                 opclasses=["vector_cosine_ops"],
-            )
+            ),
+            HnswIndex(
+                name="ad_image_embedding_hnsw",
+                fields=["image_embedding"],
+                m=16,
+                ef_construction=64,
+                opclasses=["vector_cosine_ops"],
+            ),
         ]
 
     def __str__(self) -> str:

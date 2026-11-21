@@ -8,7 +8,7 @@ class AdAdmin(admin.ModelAdmin):
     list_display = ["id", "source", "title", "landing_url", "first_seen"]
     list_filter = ["source"]
     search_fields = ["title", "text", "landing_url", "external_id"]
-    exclude = ["text_embedding"]
+    exclude = ["text_embedding", "image_embedding"]
     raw_id_fields = ["advertiser"]
 
 

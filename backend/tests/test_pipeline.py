@@ -9,7 +9,7 @@ from people.models import Person
 from similarity.models import Campaign, Edge
 from similarity.service import assign_campaign
 from tests import fakes
-from tests.test_extractors import LANDING_A, OTHER
+from tests.test_extractors import LANDING_A, OTHER, _article
 from workflows import pipeline
 
 pytestmark = pytest.mark.django_db
@@ -138,6 +138,29 @@ def test_text_only_ads_link_as_similar_without_any_landing_page():
     assert edge.relation == Edge.Relation.SIMILAR
     assert {e.kind for e in edge.evidence.all()} == {"text_minhash", "person_mention"}
     assert Campaign.objects.count() == 0
+
+
+def test_same_article_with_appended_section_links_by_text():
+    # Ten sam artykuł, ale drugi zapis ma doklejoną sekcję prawie tej samej długości.
+    # Sam Jaccard spada wtedy do połowy i para nie dostawała żadnego dowodu treści.
+    # Pasma LSH przy takim Jaccardzie zwykle się nie spotykają, więc kandydata daje wspólny
+    # zestaw parametrów, tak jak w danych organizatora daje go tytuł strony albo silnik lejka.
+    from evidence import services as markers
+    from extractors import Observation
+    from extractors.text import extract_text
+    from similarity.service import link_ad
+
+    article = _article(11, 600)
+    first, second = Ad.objects.create(), Ad.objects.create()
+    for ad, text in ((first, article), (second, article + " " + _article(12, 500))):
+        markers.attach(ad, [Observation("url_param_keys", "sub1,utm_source")])
+        markers.set_signature(ad, "text_minhash", extract_text(text).signature)
+    link_ad(second)
+    edge = Edge.objects.get()
+    assert edge.relation == Edge.Relation.SIMILAR
+    text = edge.evidence.get(kind="text_minhash")
+    assert text.similarity > 0.9
+    assert text.weight_bits >= 5
 
 
 def test_shared_contact_in_text_links_ads_into_campaign():

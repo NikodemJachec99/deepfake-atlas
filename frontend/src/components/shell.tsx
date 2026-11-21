@@ -1,6 +1,6 @@
 "use client";
 
-import { Scale, Bell, Archive, Compass, FolderOpen, Network, UsersRound } from "lucide-react";
+import { ScanSearch, Scale, Bell, Archive, Compass, FolderOpen, Network, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -9,13 +9,13 @@ import { api, RELATION_LABELS, type Stats } from "@/lib/api";
 import { dateTime } from "@/lib/format";
 
 const sections: Record<string, string> = {
-  "/": "Analiza", "/investigation": "Śledztwo", "/archive": "Archiwum",
+  "/hunt": "Łowca domen", "/": "Analiza", "/investigation": "Śledztwo", "/archive": "Archiwum",
   "/operators": "Operatorzy", "/campaigns": "Kampanie", "/ads": "Reklamy", "/alerts": "Alerty", "/weights": "Wagi markerów",
 };
 
 const navigation = [
   { href: "/", Icon: Compass }, { href: "/investigation", Icon: Network },
-  { href: "/archive", Icon: Archive }, { href: "/operators", Icon: UsersRound },
+  { href: "/hunt", Icon: ScanSearch }, { href: "/archive", Icon: Archive }, { href: "/operators", Icon: UsersRound },
   { href: "/campaigns", Icon: FolderOpen }, { href: "/alerts", Icon: Bell }, { href: "/weights", Icon: Scale },
 ];
 

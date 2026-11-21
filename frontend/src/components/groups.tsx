@@ -29,6 +29,15 @@ export function GroupList({ kind }: { kind: GroupKind }) {
   </main>;
 }
 
+function HuntProfile({ id }: { id: number }) {
+  const [open, setOpen] = useState(false);
+  const result = useApi(open ? String(id) : null, () => api.huntProfile(id));
+  return <details onToggle={event => setOpen(event.currentTarget.open)}><summary>Profil łowiecki operatora</summary>
+    {result.loading ? <Loading/> : result.error ? <ErrorBox message={result.error} onRetry={result.reload}/> :
+      <ul>{result.data?.patterns.map((pattern, index) => <li key={index}>{pattern.label} · {pattern.value} · {pattern.ad_count} reklam {pattern.ad_ids.map(ad => <Link className="mr-2 text-accent" key={ad} href={`/ads/${ad}`}>#{ad}</Link>)}</li>)}</ul>}
+  </details>;
+}
+
 export function GroupCard({ kind }: { kind: GroupKind }) {
   const { id } = useParams<{id: string}>();
   const valid = /^[1-9]\d*$/.test(id) && Number.isSafeInteger(Number(id));
@@ -66,6 +75,7 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
           <td>{marker.in_group}</td><td>{marker.ad_count}</td></tr>)}</tbody></table> : !paths.length && <p>Brak markerów rdzeniowych.</p>}
       {!!paths.length && <details><summary>Ścieżki zaplecza ({paths.length})</summary><ul>{paths.map(m => <li key={m.value} className="break-all">{m.display_value || m.value} · w grupie {m.in_group}, w korpusie {m.ad_count}</li>)}</ul></details>}
     </section>
+    {operator && <HuntProfile id={Number(id)}/>}
     <ObservationTimeline key={kind + id} id={Number(id)} operator={operator} />
     {"campaigns" in group && Array.isArray(group.campaigns) && <section><h2>Kampanie operatora</h2>
       {group.campaigns.length ? <ul>{group.campaigns.map(key => <li key={key}><GroupLink group={key} /></li>)}</ul> : <p>Brak przypisanych kampanii.</p>}</section>}

@@ -449,8 +449,29 @@ export interface Stats {
   operators: number;
   edges: Partial<Record<Relation, number>>;
   by_source: Partial<Record<Source, number>>;
+  alerts_unseen: number;
   cert_pl_listed: number;
   last_analysis: string | null;
+}
+
+export type AlertKind = "joined_campaign" | "new_campaign_known_operator" | "joined_operator";
+
+export interface Alert {
+  id: number;
+  kind: AlertKind;
+  kind_label: string;
+  ad: number;
+  ad_title: string;
+  campaign: string | null;
+  campaign_id: number | null;
+  operator: string | null;
+  operator_id: number | null;
+  description: string;
+  // Najwyżej 3 najmocniejsze typy markerów łączące reklamę z grupą, malejąco po bits.
+  evidence: { kind: string; label: string; family: Family; bits: number; value: string }[];
+  seen: boolean;
+  seen_at: string | null;
+  created_at: string;
 }
 
 export interface Kinds {
@@ -701,6 +722,10 @@ export const api = {
   graph: (query = "") => request<Graph>(`/api/graph${query}`),
   kinds: () => request<Kinds>("/api/kinds"),
   stats: () => request<Stats>("/api/stats"),
+  // Alerty: nowy materiał w znanej kampanii albo u znanego operatora. unseenOnly zostawia nieprzejrzane.
+  alerts: (unseenOnly = false) => request<Page<Alert>>(`/api/alerts${unseenOnly ? "?unseen=1" : ""}`),
+  markAlertSeen: (id: number, seen = true) =>
+    request<Alert>(`/api/alerts/${id}/seen`, { method: "POST", body: JSON.stringify({ seen }) }),
 };
 
 // Strumień postępu analizy. Zdarzenia przychodzą w kolejności, w jakiej backend je zapisał.

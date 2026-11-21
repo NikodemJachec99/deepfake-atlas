@@ -4,7 +4,7 @@ from ads.models import Ad, Analysis, AnalysisEvent
 from evidence.kinds import BAND_KINDS, FAMILIES, KINDS
 from evidence.models import Artifact
 from people.display import PERSON_KINDS, display_value, person_names
-from similarity.models import Campaign, Edge, EdgeDecision, EdgeEvidence, Operator
+from similarity.models import Alert, Campaign, Edge, EdgeDecision, EdgeEvidence, Operator
 
 
 class AnalysisCreateSerializer(serializers.Serializer):
@@ -190,6 +190,26 @@ class CampaignSerializer(serializers.ModelSerializer):
     class Meta:
         model = Campaign
         fields = ["id", "key", "label", "size", "created_at"]
+
+
+class AlertSerializer(serializers.ModelSerializer):
+    kind_label = serializers.CharField(source="get_kind_display", read_only=True)
+    campaign = serializers.SerializerMethodField()
+    operator = serializers.SerializerMethodField()
+    ad_title = serializers.CharField(source="ad.title", read_only=True)
+
+    class Meta:
+        model = Alert
+        fields = [
+            "id", "kind", "kind_label", "ad", "ad_title", "campaign", "campaign_id", "operator", "operator_id",
+            "description", "evidence", "seen", "seen_at", "created_at",
+        ]
+
+    def get_campaign(self, obj) -> str | None:
+        return obj.campaign.key if obj.campaign_id else None
+
+    def get_operator(self, obj) -> str | None:
+        return obj.operator.key if obj.operator_id else None
 
 
 class OperatorSerializer(serializers.ModelSerializer):

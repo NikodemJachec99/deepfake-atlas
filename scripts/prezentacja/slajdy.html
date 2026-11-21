@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>SCAM DNA</title>
+<style>
+  @page { size: 1280px 720px; margin: 0; }
+  :root { --ink: #14213d; --muted: #5b6475; --accent: #c2410c; --line: #e5e7eb; --soft: #f5f6f8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", "Inter", Arial, sans-serif; color: var(--ink); }
+  .slide { width: 1280px; height: 720px; padding: 48px 64px; position: relative; overflow: hidden; page-break-after: always; background: #fff; }
+  .slide:last-child { page-break-after: auto; }
+  h1 { font-size: 46px; margin: 0 0 12px; letter-spacing: -0.5px; }
+  h2 { font-size: 34px; margin: 0 0 22px; letter-spacing: -0.3px; }
+  p, li { font-size: 21px; line-height: 1.42; margin: 0 0 10px; }
+  ul { padding-left: 24px; margin: 0; }
+  li { margin-bottom: 9px; }
+  .muted { color: var(--muted); }
+  .accent { color: var(--accent); }
+  .tag { display: inline-block; font-size: 15px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 10px; }
+  .foot { position: absolute; left: 64px; right: 64px; bottom: 22px; display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+  .two { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 32px; align-items: start; }
+  .shot { width: 100%; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 18px rgba(20,33,61,.12); }
+  .shot.full { height: 520px; object-fit: cover; object-position: top center; }
+  .cap { font-size: 14px; color: var(--muted); margin-top: 6px; }
+  .title { background: var(--ink); color: #fff; display: flex; flex-direction: column; justify-content: center; }
+  .title h1 { font-size: 72px; color: #fff; }
+  .title p { font-size: 26px; color: #d7dbe5; max-width: 980px; }
+  .title .foot { color: #aab1c2; border-color: #2d3a5c; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 18px; }
+  .stat { background: var(--soft); border-radius: 10px; padding: 14px 18px; }
+  .stat b { display: block; font-size: 40px; line-height: 1.1; }
+  .stat span { font-size: 15px; color: var(--muted); }
+  .rule { background: var(--soft); border-left: 4px solid var(--accent); padding: 12px 16px; border-radius: 6px; font-size: 19px; margin: 10px 0 14px; }
+  table { border-collapse: collapse; width: 100%; font-size: 18px; }
+  td, th { border-bottom: 1px solid var(--line); padding: 8px 6px; text-align: left; }
+  th { color: var(--muted); font-weight: 600; font-size: 15px; text-transform: uppercase; letter-spacing: .5px; }
+</style>
+</head>
+<body>
+
+<section class="slide title">
+  <div class="tag" style="color:#f6ad55">NASK · Kolekcjoner fejków (Follow the Fake) · HackNation 2026</div>
+  <h1>SCAM DNA</h1>
+  <p>Łączymy pozornie niezależne fałszywe reklamy w kampanie i operatorów na podstawie wspólnych śladów. Każde połączenie ma listę dowodów, którą da się sprawdzić i podważyć.</p>
+  <div class="foot"><span>Zespół: Nikodem i Sokół</span><span>Liczby z API stosu demo, $generated</span></div>
+</section>
+
+<section class="slide">
+  <div class="tag">1 · Problem</div>
+  <h2>Pojedyncza fałszywa reklama mówi mało</h2>
+  <ul>
+    <li>Domena żyje kilka dni, treść się zmienia, twarz celebryty jest wszędzie ta sama.</li>
+    <li>Pytanie NASK: które materiały pochodzą z tego samego źródła i skąd to wiemy.</li>
+    <li><b>Nasza odpowiedź:</b> nie oceniamy, czy reklama jest oszustwem. Łączymy materiały w <b>kampanie</b> i <b>operatorów</b>, a każde połączenie ma dowody z wkładem w bitach.</li>
+    <li>Nowy materiał dostaje ocenę: duplikat, nowa odsłona znanej kampanii, nowa kampania znanego operatora, tylko podobieństwo albo nowy wzorzec.</li>
+  </ul>
+  <div class="foot"><span>SCAM DNA</span><span>2</span></div>
+</section>
+
+<section class="slide">
+  <div class="tag">2 · Genom reklamy</div>
+  <div class="two">
+    <div>
+      <h2>Ok. 50 typów markerów w 7 rodzinach</h2>
+      <ul>
+        <li>Infrastruktura, tracking i lejek, szablon strony, kreacja, narracja, osoby i marki, zachowanie.</li>
+        <li>Wejście: URL, zrzut reklamy, nagranie, zapisana strona, HAR, ZIP sprawy, archiwum NASK.</li>
+        <li>Rozstrzygały: identyfikator strony w panelu lejka z żądań POST, ścieżki zaplecza z HAR, piksel Meta, konto Google Ads, własny host zasobów operatora.</li>
+        <li>Znaczenie treści: lokalny model łapie przepisany artykuł.</li>
+        <li>Materiał z przechwycenia analizujemy bez sieci.</li>
+      </ul>
+    </div>
+    <div><img class="shot full" src="$shots/karta-reklamy.jpg"><div class="cap">Karta reklamy: genom w 7 rodzinach</div></div>
+  </div>
+  <div class="foot"><span>SCAM DNA</span><span>3</span></div>
+</section>
+
+<section class="slide">
+  <div class="tag">3 · Metoda: Evidence Fusion</div>
+  <div class="two">
+    <div>
+      <h2>Wagi w bitach, a nie progi podobieństwa</h2>
+      <ul>
+        <li>Wspólny marker waży tyle, o ile bardziej prawdopodobny jest przy wspólnym źródle niż przez przypadek (Fellegi-Sunter z ważeniem rzadkością).</li>
+        <li>Adres z puli Cloudflare: ułamek bita. Identyfikator w panelu lejka: 18 bitów.</li>
+      </ul>
+      <div class="rule">Wspólne źródło wymaga rzadkiego markera rozstrzygającego albo dwóch niezależnych potwierdzeń, z których jedno dotyczy zaplecza.</div>
+      <ul>
+        <li>Trzy relacje: ta sama kampania, ten sam operator, podobna koncepcja.</li>
+        <li>Grupy to składowe spójne po krawędziach, które przeszły regułę: bez efektu łańcucha.</li>
+      </ul>
+    </div>
+    <div><img class="shot full" src="$shots/krawedz-kampania.jpg"><div class="cap">Panel dowodów: 77,4 bitu, marker rozstrzygający, wkład rodzin</div></div>
+  </div>
+  <div class="foot"><span>SCAM DNA</span><span>4</span></div>
+</section>
+
+<section class="slide">
+  <div class="tag">4 · Wynik na danych organizatora</div>
+  <div class="two">
+    <div>
+      <div class="stats">
+        <div class="stat"><b>$pages</b><span>stron z $cases spraw</span></div>
+        <div class="stat"><b>$campaigns</b><span>kampanie</span></div>
+        <div class="stat"><b>$operators</b><span>operatorów</span></div>
+        <div class="stat"><b>$same_campaign</b><span>krawędzi: ta sama kampania</span></div>
+        <div class="stat"><b>$same_operator</b><span>ten sam operator</span></div>
+        <div class="stat"><b>$cert</b><span>stron na Liście CERT</span></div>
+      </div>
+      <ul>
+        <li><b>Operator A</b>: $op_a_pages stron na 7 domenach w 2 kampaniach, spięte identyfikatorami z panelu lejka i pikselem Meta.</li>
+        <li><b>Operator B</b>: $op_b_pages strony na 2 domenach, spięte własnym hostem zasobów.</li>
+        <li>Jedna znana domena z Listy CERT wskazuje resztę zaplecza operatora.</li>
+      </ul>
+    </div>
+    <div><img class="shot full" src="$shots/graf-operatora.jpg"><div class="cap">Graf operatora A: krawędzie według rodziny o największym wkładzie</div></div>
+  </div>
+  <div class="foot"><span>Silnik nie dostał informacji, które sprawy pasują do siebie</span><span>5</span></div>
+</section>
+
+<section class="slide">
+  <div class="tag">5 · Ten sam operator, inna kampania</div>
+  <div class="two">
+    <div>
+      <h2>Inna domena, inny artykuł, inna osoba</h2>
+      <ul>
+        <li>Strona o napaści na dziennikarza i artykuł o zamachu na prezesa InPostu: zero wspólnej opowieści.</li>
+        <li>Wspólne zaplecze: identyfikatory w panelu lejka, piksel, ścieżki silnika.</li>
+        <li>Wynik: <b>ten sam operator</b>, osobna kampania.</li>
+        <li>Na demo ta strona wchodzi na żywo jako ZIP i dołącza do znanego operatora.</li>
+      </ul>
+    </div>
+    <div><img class="shot full" src="$shots/krawedz-operator.jpg"><div class="cap">Krawędź "ten sam operator" między sprawami 2 i p3</div></div>
+  </div>
+  <div class="foot"><span>SCAM DNA</span><span>6</span></div>
+</section>
+
+<section class="slide">
+  <div class="tag">6 · Czego nie łączymy</div>
+  <h2>Podobne to nie to samo źródło</h2>
+  <ul>
+    <li>Ten sam artykuł na innym zapleczu: tylko podobieństwo, bo treść da się skopiować.</li>
+    <li>Ten sam silnik lejka bez śladu konta operatora: tylko podobieństwo, bo silnik da się kupić. Tak skończyły sprawy 48, 61 i p11, które wcześniej wisiały przy operatorze A. Przegląd każdej krawędzi to wyłapał, reguła poprawiona z testem.</li>
+    <li>14 stron zostało bez operatora.</li>
+  </ul>
+  <table style="margin-top:16px">
+    <tr><th>Odporność (pomiar na danych organizatora)</th><th>Połączenia wspólnego źródła</th><th>Fałszywe nowe</th></tr>
+    <tr><td>Pełny import</td><td>33</td><td>—</td></tr>
+    <tr><td>Bez plików HAR</td><td>19 z 33</td><td>0</td></tr>
+    <tr><td>Bez zapisu strony</td><td>30 z 33</td><td>0</td></tr>
+    <tr><td>Bez zrzutów reklamy</td><td>32 z 33</td><td>0</td></tr>
+    <tr><td>Wagi modelu ±50%</td><td>zmieniają się 4 pary graniczne</td><td>rdzeń operatora A bez zmian</td></tr>
+  </table>
+  <div class="foot"><span>docs/dane-organizatora.md</span><span>7</span></div>
+</section>
+
+<section class="slide">
+  <div class="tag">7 · Laboratorium dowodów</div>
+  <div class="two">
+    <div>
+      <h2>Co zostanie z połączenia bez tych śladów?</h2>
+      <ul>
+        <li>Analityk wyłącza dowody i widzi nową relację, bez zapisu w bazie.</li>
+        <li>Test najsłabszego ogniwa: najmniejszy zestaw grup śladów, który zmienia relację. Tu: treść strony i kreacja (2 grupy, 45 scenariuszy).</li>
+        <li>Pamięć sprzeciwu: decyzja z powodem i migawką dowodów wraca przy podobnej sprawie jako precedens.</li>
+      </ul>
+    </div>
+    <div><img class="shot full" src="$shots/najslabszy-punkt.jpg"><div class="cap">Laboratorium na krawędzi sprawy 1 i 2</div></div>
+  </div>
+  <div class="foot"><span>SCAM DNA</span><span>8</span></div>
+</section>
+
+<section class="slide">
+  <div class="tag">8 · Dwie twarze jednego linku</div>
+  <div class="two">
+    <div>
+      <h2>Ten sam adres, dwie różne strony</h2>
+      <ul>
+        <li>Sprawa 61: pełny adres dał w odstępie 3 minut ofertę inwestycyjną z pikselem Google Ads i neutralny "portal analiz".</li>
+        <li>Porównanie pokazuje czas i źródło obserwacji, kontekst przeglądarki, różne trackery i hosty.</li>
+        <li>Mówimy "cloaking albo jednorazowy token wizyty", bo nie wiemy, kto przechwytywał.</li>
+      </ul>
+    </div>
+    <div><img class="shot full" src="$shots/dwie-twarze.jpg"><div class="cap">Porównanie dwóch przechwyceń tego samego adresu</div></div>
+  </div>
+  <div class="foot"><span>SCAM DNA</span><span>9</span></div>
+</section>
+
+<section class="slide">
+  <div class="tag">9 · Ograniczenia i dalej</div>
+  <h2>Co wiemy, a czego nie</h2>
+  <ul>
+    <li>Wagi są eksperckie. Bez oznaczonego zbioru nie podajemy precyzji ani czułości. Następny krok: model uczony na decyzjach analityków, które już zapisujemy.</li>
+    <li>Twarze rozpoznajemy tylko dla osób z małej bazy referencyjnej. Z nagrań bierzemy klatki, dźwięku nie analizujemy.</li>
+    <li>Strony na żywo pobieramy bez JavaScriptu. Pełny zestaw cech dają przechwycenia z HAR.</li>
+    <li>Zewnętrzny model decyzyjny (Jev) jest opcjonalny i wyłączony: w naszej ocenie nie zastąpił reguły, a danych spraw do niego nie wysyłamy.</li>
+  </ul>
+  <div class="rule">Uruchomienie: <code>docker compose up</code> (Postgres z pgvector, Temporal, S3, Neo4j, OpenSearch). Wzbogacony korpus jako ZIP i operatorzy w STIX 2.1 do wymiany z zespołami CERT.</div>
+  <div class="foot"><span>Repozytorium: github.com/NikodemJachec99/deepfake-atlas (prywatne)</span><span>10</span></div>
+</section>
+
+</body>
+</html>

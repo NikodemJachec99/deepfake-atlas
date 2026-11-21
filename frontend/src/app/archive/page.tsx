@@ -28,7 +28,7 @@ export default function Archive() {
   }
   return <main className="flex flex-col gap-4 p-4">
     <h1 className="text-lg">Archiwum reklam</h1>
-    <form key={query} className="flex flex-wrap items-end gap-2" onSubmit={event => {
+    <form key={query} onReset={() => { if (query) router.push("/archive"); }} className="flex flex-wrap items-end gap-2" onSubmit={event => {
       event.preventDefault();
       const form = new FormData(event.currentTarget);
       const next = new URLSearchParams();
@@ -45,7 +45,7 @@ export default function Archive() {
           type={key === "campaign" || key === "operator" ? "number" : "text"} min="1" />}
       </label>)}
       <button className="border border-line p-1">Zastosuj filtry</button>
-      <Link href="/archive" className="p-1 text-accent">Wyczyść</Link>
+      <button type="reset" className="p-1 text-accent">Wyczyść</button>
     </form>
     {data.loading ? <Loading /> : data.error ? <ErrorBox message={data.error} onRetry={data.reload} /> : data.data &&
       <><p>Wyniki: {data.data.count}</p>

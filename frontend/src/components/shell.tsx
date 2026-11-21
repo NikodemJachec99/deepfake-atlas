@@ -1,5 +1,6 @@
 "use client";
 
+import { Archive, Compass, FolderOpen, Network, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -9,6 +10,12 @@ const sections: Record<string, string> = {
   "/": "Discovery", "/investigation": "Investigation", "/archive": "Archiwum",
   "/operators": "Operatorzy", "/campaigns": "Kampanie", "/ads": "Reklamy",
 };
+
+const navigation = [
+  { href: "/", Icon: Compass }, { href: "/investigation", Icon: Network },
+  { href: "/archive", Icon: Archive }, { href: "/operators", Icon: UsersRound },
+  { href: "/campaigns", Icon: FolderOpen },
+];
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -32,16 +39,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
     void refresh();
     return () => { active = false; clearTimeout(timer); };
   }, []);
-  return <div data-theme={root === "/ads" ? "light" : undefined} className="flex h-dvh flex-col bg-bg text-fg">
+  return <div className="flex h-dvh flex-col bg-bg text-fg">
     <div className="flex min-h-0 flex-1">
-      <nav aria-label="Nawigacja główna" className="flex shrink-0 flex-col gap-1 overflow-auto border-r border-line bg-panel p-2">
-        <strong className="px-2 py-3">SCAM DNA</strong>
-        {Object.entries(sections).filter(([href]) => href !== "/ads").map(([href, label]) =>
+      <nav aria-label="Nawigacja główna" className="flex shrink-0 flex-col gap-1 overflow-auto border-r border-line bg-panel p-1.5 md:p-2">
+        <strong className="hidden px-2 py-3 text-lg tracking-tight md:block">SCAM DNA</strong>
+        {navigation.map(({ href, Icon }) =>
           <Link key={href} href={href} aria-current={root === href ? "page" : undefined}
-            className="rounded-sm px-2 py-2 hover:bg-hover aria-[current=page]:bg-raised">{label}</Link>)}
+            title={sections[href]} className="flex items-center gap-2 rounded-md px-2 py-2 font-medium hover:bg-hover aria-[current=page]:bg-accent-soft aria-[current=page]:text-accent"><Icon size={16} aria-hidden /><span className="sr-only md:not-sr-only">{sections[href]}</span></Link>)}
       </nav>
       <div className="flex min-w-0 flex-1 flex-col">
-        {root !== "/investigation" && <header className="border-b border-line bg-panel px-4 py-2">{sections[root] ?? "SCAM DNA"}{id && " › #" + id}</header>}
+        {root !== "/investigation" && <header className="border-b border-line bg-panel/95 px-4 py-2.5 font-semibold backdrop-blur">{sections[root] ?? "SCAM DNA"}{id && " › #" + id}</header>}
         <div className="flex min-h-0 flex-1 flex-col overflow-auto">{children}</div>
       </div>
     </div>
@@ -61,7 +68,7 @@ export interface Crumb {
 }
 
 export function TopBar({ crumbs }: { crumbs: Crumb[] }) {
-  return <nav aria-label="Ścieżka śledztwa" className="flex shrink-0 gap-2 border-b border-line px-3 py-2">
+  return <nav aria-label="Ścieżka śledztwa" className="flex shrink-0 gap-2 border-b border-line bg-panel/95 px-3 py-2.5 font-medium backdrop-blur">
     {crumbs.map((crumb, index) => <span key={index}>{index > 0 && " › "}
       {crumb.href ? <Link href={crumb.href}>{crumb.label}</Link> : crumb.label}
     </span>)}

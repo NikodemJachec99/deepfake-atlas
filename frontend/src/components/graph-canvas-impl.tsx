@@ -193,7 +193,6 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
   const graph = useRef<Graph | null>(null);
   const layoutKey = useRef("");
   const targets = useRef(new Map<number, { x: number; y: number }>());
-  const theme = "dark";
   const reduced = useReducedMotion();
   const [hover, setHover] = useState<{ kind: "node" | "edge"; id: number } | null>(null);
   const [failed, setFailed] = useState("");
@@ -275,7 +274,7 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
       const target = targets.current.get(node.id) ?? { x: 0, y: 0 };
       const isSelected = node.id === selectedNode || (picked !== undefined && (picked.source === node.id || picked.target === node.id));
       const dim = (!linked.has(node.id) && !node.focus && edges.length > 0) || (anySelection && !isSelected);
-      const base = groupColor(colorBy === "operator" ? node.operator : node.campaign, theme);
+      const base = groupColor(colorBy === "operator" ? node.operator : node.campaign, "light");
       const title = node.label.length > 38 ? `${node.label.slice(0, 37)}…` : node.label;
       const fill = dim ? alpha(base, 0.35) : base;
       const ring = isSelected ? accent : node.listed ? listed : node.focus ? fg : null;
@@ -334,7 +333,7 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
       else if (!g.hasEdge(edge.source, edge.target)) g.addEdgeWithKey(edge.id, edge.source, edge.target, attributes);
     }
     s.scheduleRefresh();
-  }, [nodes, edges, colorBy, layout, selectedEdge, selectedNode, theme, reduced]);
+  }, [nodes, edges, colorBy, layout, selectedEdge, selectedNode, reduced]);
 
   const zoom = (factor: number) => {
     const camera = sigma.current?.getCamera();

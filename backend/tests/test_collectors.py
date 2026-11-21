@@ -115,3 +115,22 @@ def test_registry_queues_one_analysis_per_new_ad(monkeypatch):
     assert run("microsoft", {"query": "inwestycje"})["analyses"] == []
     with pytest.raises(KeyError):
         run("nieznany", {})
+
+
+def test_cert_block_unblock_block_is_active_again():
+    lines = "\n".join(
+        [
+            '{"RegisterPositionId": 1, "DomainAddress": "wraca.example", "ActionTime": "2026-01-01T00:00:00+00:00", "ActionType": "block"}',
+            '{"RegisterPositionId": 1, "DomainAddress": "wraca.example", "ActionTime": "2026-02-01T00:00:00+00:00", "ActionType": "unblock"}',
+            '{"RegisterPositionId": 1, "DomainAddress": "wraca.example", "ActionTime": "2026-03-01T00:00:00+00:00", "ActionType": "block"}',
+            '{"RegisterPositionId": 2, "DomainAddress": "zdjeta.example", "ActionTime": "2026-01-01T00:00:00+00:00", "ActionType": "block"}',
+            '{"RegisterPositionId": 2, "DomainAddress": "zdjeta.example", "ActionTime": "2026-02-01T00:00:00+00:00", "ActionType": "unblock"}',
+            "",
+        ]
+    )
+    cert_pl.sync_history(2026, client_for(lambda request: httpx.Response(200, text=lines)))
+    assert set(WarningDomain.objects.active().values_list("domain", flat=True)) == {"wraca.example"}
+    # Ponowna blokada w późniejszym roczniku czyści wcześniejsze wykreślenie zapisane w bazie.
+    again = '{"RegisterPositionId": 2, "DomainAddress": "zdjeta.example", "ActionTime": "2027-01-01T00:00:00+00:00", "ActionType": "block"}\n'
+    cert_pl.sync_history(2027, client_for(lambda request: httpx.Response(200, text=again)))
+    assert set(WarningDomain.objects.active().values_list("domain", flat=True)) == {"wraca.example", "zdjeta.example"}

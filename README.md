@@ -9,6 +9,7 @@ System łączy pozornie niezależne fałszywe reklamy w kampanie i operatorów n
 - Wyniki na danych organizatora: [docs/dane-organizatora.md](docs/dane-organizatora.md)
 - Kontrakt API: [docs/api.md](docs/api.md)
 - Laboratorium dowodów (co zostaje z połączenia po wyłączeniu śladów): [docs/laboratorium.md](docs/laboratorium.md)
+- Pakiet dowodowy operatora i kampanii do przekazania dalej (raport HTML, artefakty z sumami SHA-256, STIX, skrypt weryfikacji): `GET /api/operators/{id}/package`, opis w [docs/api.md](docs/api.md#pakiet-dowodowy) i [docs/metodyka.md](docs/metodyka.md)
 - Dwie strony pod jednym adresem w sprawie 61, audyt przechwyceń: [docs/dwie-twarze.md](docs/dwie-twarze.md)
 - Prompt do designu interfejsu: [docs/design-prompt.md](docs/design-prompt.md)
 - Biblioteki, modele, usługi, dane i ich licencje: [docs/licencje.md](docs/licencje.md)
@@ -40,6 +41,8 @@ docker compose exec backend python manage.py collect cert_pl        # opcjonalni
 Wymagania: Docker z Compose, ok. 6 GB RAM na wszystkie usługi, ok. 8 GB miejsca na obrazy, dostęp do internetu przy pierwszym budowaniu obrazów i przy pierwszym użyciu OCR (pobranie modelu). Pierwsze `up --build` pobiera obrazy usług i paczki Pythona (m.in. onnxruntime, OpenCV, numpy). Sprawdzone 2026-11-21 na świeżym klonie z pustymi wolumenami: na Windowsie przy łączu ok. 100 KB/s `up --build` trwało 31 minut, import paczki `nask` (13 stron) 58 sekund; na Linuksie (Ubuntu 24.04 w WSL2, klon w systemie plików Linuksa, bash) 16 minut i 161 sekund, z tym samym wynikiem. Na macOS nie sprawdzaliśmy. CI przy każdym PR stawia cały stos na ubuntu i importuje zmyśloną sprawę (`backend/tests/smoke_compose.py`).
 
 Porty zmienisz w `.env`: `BACKEND_PORT`, `FRONTEND_PORT`, a jeśli masz zajęte porty usług pomocniczych (np. własny Postgres na 5432), także `DB_PORT`, `TEMPORAL_PORT`, `S3_PORT`, `NEO4J_HTTP_PORT`, `OPENSEARCH_PORT` i pozostałe z `.env.example`. Po zmianie `FRONTEND_PORT` dopisz nowy adres interfejsu do `CORS_ALLOWED_ORIGINS`, a po zmianie `BACKEND_PORT` przebuduj interfejs (`docker compose up -d --build frontend`), bo adres API jest wkompilowany w czasie budowania.
+
+Usługi słuchają tylko na `127.0.0.1`, więc inne komputery w sieci ich nie widzą. Żeby drugi komputer (np. koder na MacBooku) połączył się z backendem, ustaw w `.env` `BACKEND_BIND=0.0.0.0` (analogicznie `FRONTEND_BIND` dla interfejsu) i uruchom `docker compose up -d`; rób to tylko w zaufanej sieci.
 
 Windows z Git Bash: przed poleceniami z `/data/...` ustaw `export MSYS_NO_PATHCONV=1`, inaczej Git Bash zamieni ścieżkę kontenera na ścieżkę Windows i `import_bundle` nie znajdzie katalogu. W PowerShellu i cmd ten problem nie występuje. Praca nad interfejsem bez kontenera:
 

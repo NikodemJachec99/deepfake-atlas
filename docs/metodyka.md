@@ -173,6 +173,12 @@ Ograniczenia łowcy: crt.sh nie szuka po dacie ani po fragmencie nazwy szybko, w
 
 Każda krawędź ma w bazie listę dowodów (`EdgeEvidence`): rodzina, typ, wartości po obu stronach, liczba źródeł z tą wartością, wkład w bitach, znacznik rozstrzygania i odnośniki do plików, z których cecha pochodzi. Krawędź bez dowodów nie powstaje. Decyzja analityka (potwierdź, odrzuć, niepewne) zapisuje się w dzienniku audytu.
 
+### Pakiet dowodowy i łańcuch dowodu
+
+Operator albo kampanię można pobrać jako jeden ZIP (`/api/operators/{id}/package`, `/api/campaigns/{id}/package`, `similarity/package.py`): raport HTML do druku, artefakty, manifest i sumy SHA-256, STIX, krawędzie z dowodami. Łańcuch dowodu jest prosty i sprawdzalny bez naszego systemu: artefakt w magazynie jest adresowany swoim SHA-256, pakiet zapisuje go pod tą samą nazwą, a `manifest.json` i `SHA256SUMS` podają sumę, rozmiar, rodzaj, źródło (adres po redakcji tokenów), czas pozyskania do systemu i reklamy, z których plik pochodzi. Przy pakowaniu liczymy sumę odczytanych bajtów ponownie: plik, którego suma nie zgadza się z zapisaną, nie trafia do pakietu, tylko do listy pominiętych z powodem. `weryfikuj.py` (sam Python) sprawdza sumy, brakujące i nadmiarowe pliki.
+
+Co to dowodzi, a czego nie: pakiet pokazuje, że pliki nie zmieniły się po jego utworzeniu i skąd każdy pochodzi w systemie. Nie dowodzi, kiedy powstał oryginał (czas pozyskania to chwila zapisu w SCAM DNA) ani kto go wytworzył, i nie jest podpisany elektronicznie. Raport nie renderuje stron oszustów: HTML i HAR są tylko plikami (`.html.txt`), niezredagowanymi, z ostrzeżeniem. Argumentem za jednym operatorem są najmocniejsze dowody z wkładem w bitach tak jak w interfejsie (`EdgeEvidence`), a test najsłabszego ogniwa pokazuje, co by się stało bez wybranych śladów, dla pojedynczych par (3 najmocniejszych i 2 najsłabszych powiązań grupy), nie dla całej grupy. Raport nie ma wersji PDF: HTML ma układ do druku (A4), a PDF z polskimi znakami wymagałby nowej biblioteki i osadzonej czcionki, więc analityk drukuje do PDF z przeglądarki.
+
 ## 10. Źródła danych
 
 | Źródło | Do czego | Pochodzenie |

@@ -1,4 +1,11 @@
 from django.db import models
+from django.db.models import F, Q
+
+
+class WarningDomainQuerySet(models.QuerySet):
+    def active(self):
+        """Wpis jest aktywny, gdy domenę zdjęto z listy nigdy albo zablokowano ponownie po zdjęciu."""
+        return self.filter(Q(removed_at__isnull=True) | Q(added_at__gt=F("removed_at")))
 
 
 class WarningDomain(models.Model):
@@ -9,6 +16,8 @@ class WarningDomain(models.Model):
     added_at = models.DateTimeField(null=True, blank=True)
     removed_at = models.DateTimeField(null=True, blank=True)
     source = models.CharField(max_length=16, default="cert_pl")
+
+    objects = WarningDomainQuerySet.as_manager()
 
     def __str__(self) -> str:
         return self.domain

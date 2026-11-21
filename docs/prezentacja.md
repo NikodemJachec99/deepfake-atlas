@@ -53,7 +53,7 @@ Przed prezentacją sprawdź je jeszcze raz: `curl localhost:8000/api/stats`. Je�
 ### 7. Ograniczenia i dalej (30 s)
 
 - Wagi są eksperckie. Bez oznaczonego zbioru nie podajemy precyzji ani czułości. Następny krok: model uczony na decyzjach analityków, które już zapisujemy w dzienniku audytu.
-- Osoby rozpoznajemy po tekście, nie po twarzy. Wideo rejestrujemy, nie analizujemy.
+- Twarze rozpoznajemy tylko dla osób z małej bazy referencyjnej. Wideo i głos rejestrujemy, nie analizujemy.
 - Strony na żywo pobieramy bez JavaScriptu. Pełny zestaw cech dają przechwycenia z HAR.
 - Działa jako `docker compose up`, z Temporalem, Postgresem i projekcją do Neo4j. Harmonogram skanuje bibliotekę reklam Microsoft.
 
@@ -107,6 +107,6 @@ Próba 2026-11-21 na świeżym klonie (`main` po #16, crt.sh włączony): przygo
 | Jaka skuteczność? | Nie mamy oznaczonego zbioru, więc nie podajemy liczb. Każdą krawędź między sprawami przejrzeliśmy ręcznie po dowodach, wynik w `docs/dane-organizatora.md`. |
 | Co z nową kampanią z innej domeny i innym artykułem? | Właśnie to pokazuje demo: łączy ślad konta w panelu lejka i piksel, nie treść. |
 | Co, gdy strona już nie działa? | Analiza kończy się z mniejszą liczbą cech. Sam zrzut reklamy daje OCR, nazwę reklamodawcy i hash kreacji. |
-| Twarze? | Osoby rozpoznajemy po wzmiance w tekście z odmianą, baza 30 osób. Twarzy nie porównujemy. |
+| Twarze? | Twarz na zrzucie reklamy porównujemy z małą bazą osób publicznych (YuNet i SFace, zdjęcia z Commons na wolnej licencji). Na danych organizatora rozpoznało wstawki w 6 zrzutach, zgodnie z nazwiskami w tekście. Twarz to motyw: nie łączy operatorów, bo ta sama twarz występuje u różnych. |
 | Skąd wiecie, które połączenie jest kruche? | Laboratorium dowodów: `POST /api/edges/{id}/simulate` przelicza krawędź bez wybranych śladów i niczego nie zapisuje, a `GET /api/edges/{id}/suggestions` mówi, czego brakuje. Przykład z danych: operator B trzyma się na jednym hoście zasobów. Bez niego para spada do podobieństwa. Opis: `docs/laboratorium.md`. |
 | Dlaczego sprawy 48 i p11 nie są przy operatorze A? | Dzielą z nim tylko silnik lejka. Program mógł kupić każdy, operatora wskazuje ślad jego konta albo infrastruktury. |

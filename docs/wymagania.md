@@ -23,7 +23,7 @@
 | Przyjmuje dane z udostępnionego zbioru | jest | `manage.py import_bundle`, ZIP przez interfejs |
 | Przyjmuje inną wskazówkę | jest | tekst, nazwa produktu |
 | Tekst, słowa kluczowe, tematyka | jest | treść strony, OCR reklamy, `extractors/keywords.py` |
-| Wizerunki osób | częściowo | wzmianka w tekście z odmianą, baza 30 osób; brak rozpoznawania twarzy |
+| Wizerunki osób | jest, w zakresie bazy | wzmianka w tekście z odmianą (30 osób) i twarz na zrzucie reklamy porównana z bazą referencyjną ze zdjęć na wolnej licencji (`people/faces.py`); głosu i wideo nie analizujemy |
 | Logotypy | częściowo | podszycie pod markę po tekście; brak rozpoznawania logo na obrazie |
 | Cechy wizualne | częściowo | hash percepcyjny zrzutu reklamy i obrazów strony; brak embeddingów obrazu |
 | Domeny, przekierowania, linki, struktura stron | jest | URL, HAR, DOM |

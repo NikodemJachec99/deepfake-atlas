@@ -62,6 +62,7 @@ Każdą cechę zapisujemy jako marker: typ i znormalizowana wartość. Markery d
 - **Obrazy** (`extractors/images.py`). Hash różnicowy (dHash, 64 bity) odporny na zmianę rozmiaru i kompresję. Dwa obrazy są tym samym obrazem, gdy hasze różnią się o najwyżej 6 bitów. Stronę opisuje zbiór haszy jej obrazów, pomijamy obrazy mniejsze niż 160 pikseli.
 - **OCR** (`extractors/ocr.py`). Ze zrzutu reklamy wyciągamy nazwę reklamodawcy (wiersz przy "Sponsorowane"), tekst reklamy i numer z Biblioteki Reklam Mety.
 - **Osoby** (`people/matching.py`). Baza referencyjna 30 osób publicznych. Dopasowanie po imieniu i nazwisku z tolerancją na odmianę: "Jana Kowalskiego" to Jan Kowalski.
+- **Twarze** (`people/faces.py`). Na zrzucie reklamy YuNet wykrywa twarze (pomijamy mniejsze niż 40 pikseli), SFace liczy wektor 128 liczb, porównujemy podobieństwem kosinusowym z wektorami osób z bazy referencyjnej (`people/face_refs.json`, zdjęcia z Wikidata i Wikimedia Commons na wolnej licencji). Od 0,363 (próg autorów SFace) powstaje marker `face_match` z nazwiskiem i wynikiem. Wektorów twarzy spoza bazy nie zapisujemy. Twarz jest motywem, tak jak wzmianka: różni operatorzy używają tych samych twarzy.
 - **Podszycie pod markę.** Nazwa redakcji albo marki w tytule lub na początku strony, przy domenie, która do tej marki nie należy.
 - **Słowa kluczowe i tematyka** (`extractors/keywords.py`). Najczęstsze znaczące wyrazy oraz regułowa klasyfikacja motywu: inwestycje, zdrowie, hazard, sensacja, sklep.
 - **Cloaking.** Gdy automat dostaje inną stronę niż ofiara, struktura tej "białej strony" jest osobnym markerem.
@@ -156,7 +157,7 @@ Szczegóły: [dane-organizatora.md](dane-organizatora.md). W skrócie: 28 stron 
 ## 12. Ograniczenia
 
 - **Wagi są eksperckie.** Parametry `m`, `f0`, `cap` dobraliśmy ręcznie. Nie mamy zbioru z oznaczonymi kampaniami, więc nie podajemy precyzji ani czułości. Etap dalszy: model uczony na parach oznaczonych przez analityków.
-- **Brak twarzy i głosu.** Osoby rozpoznajemy po tekście. Deepfake z osobą, której nazwisko nie pada w tekście, pozostaje nierozpoznany.
+- **Twarze tylko z bazy referencyjnej, bez głosu.** Twarz na zrzucie reklamy rozpoznajemy, gdy osoba jest w małej bazie zbudowanej ze zdjęć na wolnej licencji. Deepfake z osobą spoza bazy i bez nazwiska w tekście pozostaje nierozpoznany. Głosu nie analizujemy.
 - **Wideo.** Rejestrujemy plik, nie analizujemy treści.
 - **Strony na żywo.** Pobieramy HTML bez wykonywania JavaScriptu i bez obrazów. Pełny zestaw cech dają dopiero przechwycenia z HAR.
 - **Hash obrazu** wykrywa ten sam obraz po przeróbkach, nie podobne ujęcie tej samej sceny.

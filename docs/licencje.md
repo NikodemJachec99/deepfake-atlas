@@ -50,8 +50,16 @@ psycopg jest na LGPL: używamy go jako biblioteki bez modyfikacji, co nie nakła
 | Model | Do czego | Licencja | Ograniczenia |
 |---|---|---|---|
 | PP-OCRv5 (detekcja i rozpoznawanie, alfabet łaciński), przez RapidOCR | tekst ze zrzutów reklam | Apache-2.0 (projekt) | pobierany przy pierwszym użyciu, działa lokalnie, niczego nie wysyła na zewnątrz |
+| YuNet (`face_detection_yunet_2023mar.onnx`, OpenCV Zoo) | wykrywanie twarzy na zrzutach reklam | MIT | pobierany przy pierwszym użyciu do `data/models/`, działa lokalnie na CPU |
+| SFace (`face_recognition_sface_2021dec.onnx`, OpenCV Zoo) | wektor twarzy do porównania z bazą referencyjną | Apache-2.0 | jak wyżej; bez modelu analiza działa, tylko bez twarzy (`FACE_MODELS_DOWNLOAD=0` wyłącza pobieranie) |
 
-Innych modeli nie używamy. Nie ma modeli twarzy, głosu ani modeli językowych.
+Nie ma modeli głosu ani modeli językowych.
+
+### Baza referencyjna twarzy
+
+`backend/people/face_refs.json`: dla każdej osoby nazwisko, identyfikator Wikidata, plik z Wikimedia Commons, strona pliku, licencja, autor i wektor SFace (128 liczb). Samych zdjęć w repozytorium nie ma. Zdjęcie bierzemy z właściwości P18 w Wikidata i tylko wtedy, gdy licencja na Commons jest wolna (CC0, CC BY, CC BY-SA, GFDL, domena publiczna). Bazę odtwarza `python manage.py build_face_refs`.
+
+Porównujemy wyłącznie z tą bazą osób publicznych, jak dopuszcza opis wyzwania (pkt 5). Wektorów twarzy spoza bazy nie zapisujemy, zostaje tylko marker "twarz osoby X" z wynikiem podobieństwa. Przed użyciem poza konkursem trzeba ustalić podstawę prawną przetwarzania danych biometrycznych (RODO art. 9).
 
 ## Usługi uruchamiane lokalnie (kontenery)
 
@@ -74,6 +82,7 @@ Neo4j, OpenSearch i Redis działają jako osobne usługi. Nasz kod łączy się 
 | RDAP rejestru .pl (`rdap.dns.pl`), `rdap.org` | dane rejestrowe domen | bez klucza | dane osób fizycznych zamaskowane |
 | crt.sh (Sectigo) | certyfikaty domeny z dzienników CT | bez klucza | serwis bywa wolny i ogranicza ruch; pytamy co 3 s, odpowiedź trzymamy 7 dni |
 | Team Cymru IP→ASN | numer AS | bez klucza, zapytania DNS | tylko strony badane na żywo |
+| Wikidata, Wikimedia Commons API | zdjęcia do bazy referencyjnej twarzy, tylko przy `build_face_refs` | bez klucza | tylko pliki na wolnej licencji, autor i licencja zapisane przy każdym wektorze |
 | Microsoft Ad Library API | reklamy z adresem docelowym | bez klucza | ostre limity zapytań bez konta |
 | Meta Ad Library API | reklamy z UE | **wymaga tokenu**: weryfikacja tożsamości na facebook.com/ID, aplikacja deweloperska, token w `META_AD_LIBRARY_TOKEN` | tylko oficjalne API, scraping webowej biblioteki jest zabroniony; konektor nie był uruchomiony na żywym tokenie |
 

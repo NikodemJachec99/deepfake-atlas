@@ -23,6 +23,8 @@ from evidence import store
 from extractors import images, ocr
 from extractors.har import image_blobs, is_cloudflare, parse_har
 from extractors.url import host_of, redact_url, registered_domain
+from people import faces
+from people.models import Person
 
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
 VIDEO_EXT = {".mp4", ".mov", ".webm", ".mkv"}
@@ -236,6 +238,10 @@ def import_case(case_dir: Path, bundle: str = "upload", case: str | None = None)
         if shot.text:
             ocr_texts.append(shot.text)
         creative_obs += [[o.kind, o.value, {**o.detail, "artifact": artifact.sha256}] for o in shot.observations]
+        for face in faces.match_faces(image.read_bytes()):
+            person = Person.objects.filter(name=face.name).first() or Person.objects.create(name=face.name)
+            detail = {"file": image.name, "artifact": artifact.sha256, "name": face.name, "score": face.score, "box": list(face.box)}
+            creative_obs.append(["face_match", person.marker_value, detail])
 
     video_files = []
     for video in capture.videos:

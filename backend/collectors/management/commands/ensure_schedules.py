@@ -13,10 +13,40 @@ SCHEDULES = [
 
 
 class Command(BaseCommand):
-    help = "Zakłada w Temporalu harmonogramy skanów źródeł. Istniejących nie rusza."
+    help = (
+        "Zakłada w Temporalu harmonogramy skanów źródeł. Istniejących nie rusza. "
+        "--pause wstrzymuje skany bibliotek reklam (np. na czas demo, żeby korpus się nie zmieniał), --resume je wznawia."
+    )
+
+    def add_arguments(self, parser):
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument("--pause", action="store_true", help="Wstrzymaj skany bibliotek reklam")
+        group.add_argument("--resume", action="store_true", help="Wznów skany bibliotek reklam")
 
     def handle(self, *args, **options):
-        asyncio.run(self._ensure())
+        if options["pause"] or options["resume"]:
+            asyncio.run(self._toggle(pause=options["pause"]))
+        else:
+            asyncio.run(self._ensure())
+
+    async def _toggle(self, pause: bool):
+        from temporalio.client import Client
+        from temporalio.service import RPCError
+
+        client = await Client.connect(settings.TEMPORAL_ADDRESS, namespace=settings.TEMPORAL_NAMESPACE)
+        # Lista CERT Polska tylko odświeża etykiety domen i nie dodaje reklam, więc zostaje włączona.
+        for schedule_id, collector, _params, _every in SCHEDULES:
+            if collector == "cert_pl":
+                continue
+            handle = client.get_schedule_handle(schedule_id)
+            try:
+                if pause:
+                    await handle.pause(note="wstrzymane na czas demo")
+                else:
+                    await handle.unpause(note="wznowione")
+                self.stdout.write(f"{'Wstrzymano' if pause else 'Wznowiono'}: {schedule_id}")
+            except RPCError as exc:
+                self.stdout.write(f"Brak harmonogramu {schedule_id}: {exc}")
 
     async def _ensure(self):
         from temporalio.client import (

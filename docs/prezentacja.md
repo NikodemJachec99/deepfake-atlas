@@ -73,6 +73,16 @@ uv run --no-project --with playwright python scripts/prezentacja/pdf.py --api ht
 - `pdf.py` liczy wynik z API z filtrem `source=capture` (same paczki organizatora): strony, sprawy, kampanie, operatorów, krawędzie między stronami z paczek i strony z Listy CERT. Wstawia liczby i zrzuty do `scripts/prezentacja/slajdy.html` i drukuje 10 slajdów 1280x720. Przerywa, gdy PDF ma ponad 10 MB.
 - Treść slajdów (poza liczbami ze slajdu z wynikiem) jest w szablonie. Zmiana opisu metody wymaga zmiany w `slajdy.html` i tutaj.
 
+## Nagranie demo do zgłoszenia
+
+Nagranie (ok. 64 s, 1440x900, napisy na ekranie) powstaje skryptem na osobnym stosie przygotowanym jak w scenariuszu niżej, bo wrzucenie `p3.zip` zmienia korpus. Plik zawiera dane organizatora, więc leży w `data/zgloszenie/demo.mp4` (poza gitem).
+
+```powershell
+uv run --no-project --with playwright --with imageio-ffmpeg python scripts/nagranie_demo.py --ui http://localhost:3100 --api http://localhost:8100 --zip data/raw/p3.zip --out data/zgloszenie
+```
+
+Kolejność: Discovery i wrzucenie `p3.zip`, wynik "nowa kampania znanego operatora", graf i panel dowodów, laboratorium z testem najsłabszego ogniwa, karta operatora O-0001, dwie twarze sprawy 61. Sprawdzone 21.11 na stosie `fresh-z14` (main po #205): 64 s, mp4 1,6 MB. Przed kolejnym nagraniem korpus trzeba przygotować od nowa, bo p3 jest już w nim po pierwszym przebiegu.
+
 ## Scenariusz demo (2 min)
 
 Cel: pokazać pełny proces na nowym materiale i dołączenie do znanego operatora jako nowej kampanii. Kampania B operatora A (sprawy p3 i p4 z drugiej paczki) zostaje poza importem.

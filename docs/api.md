@@ -18,6 +18,7 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | POST | `/api/ads/{id}/recluster` | | ponowne przypisanie do kampanii i operatora |
 | GET | `/api/edges/{id}` | | `EdgeDetail`: obie reklamy i lista dowodów |
 | POST | `/api/edges/{id}/verdict` | `{"verdict":"confirmed"\|"rejected"\|"unsure","note":""}` | `EdgeDetail`, wpis w dzienniku audytu |
+| POST | `/api/edges/{id}/simulate` | `{"exclude":[<id dowodu>],"edge_version":"<Edge.updated_at>"}` | `Simulation`: krawędź przed i po wyłączeniu dowodów, nic nie zapisuje |
 | GET | `/api/campaigns` | `?page=` | strona grup z `size` |
 | GET | `/api/campaigns/{id}` | | reklamy, krawędzie, markery rdzeniowe |
 | GET | `/api/operators` | `?page=` | strona grup z `size` |
@@ -91,6 +92,7 @@ Kampania (`K-0033`) to reklamy spięte krawędziami `same_campaign`. Operator (`
 
 ```json
 {
+  "id": 512,
   "family": "track", "family_label": "Tracking i lejek",
   "kind": "funnel_id", "label": "Identyfikator strony w panelu lejka",
   "value_a": "11111111-2222-4333-8444-555555555555", "value_b": "11111111-2222-4333-8444-555555555555",
@@ -106,6 +108,55 @@ Kampania (`K-0033`) to reklamy spięte krawędziami `same_campaign`. Operator (`
 - `weight_bits`: wkład dowodu po zniżce za korelację w rodzinie. Suma wkładów to `Edge.bits`.
 - Markery miękkie (`dom_minhash`, `text_minhash`, `page_text_minhash`) mają `df = 0` i podobieństwo w `similarity`.
 - `decisive`: rzadki marker rozstrzygający.
+- `id`: stały identyfikator dowodu w obrębie krawędzi. Zmienia się, gdy krawędź jest przeliczana na nowo (wtedy zmienia się też `Edge.updated_at`).
+
+## Laboratorium dowodów (`Simulation`)
+
+`POST /api/edges/{id}/simulate` przelicza parę tym samym silnikiem, raz ze wszystkimi zapisanymi dowodami krawędzi i raz bez wybranych. Niczego nie zapisuje: krawędź, decyzja analityka, dziennik audytu, kampanie i operatorzy zostają bez zmian. Nie wykonuje zapytań na zewnątrz.
+
+Żądanie:
+
+```json
+{"exclude": [512, 513], "edge_version": "2026-11-21T14:58:45.826265+00:00"}
+```
+
+- `exclude`: identyfikatory dowodów z `EdgeDetail.evidence[].id`. Pusta lista zwraca sam wynik bazowy.
+- `edge_version`: opcjonalne, `Edge.updated_at` z chwili wczytania. Jeśli krawędź zmieniła się od tego czasu, odpowiedź to `409` z bieżącym `edge_version`. Interfejs odświeża wtedy dowody.
+- Identyfikator dowodu z innej krawędzi: `400`, w polu `unknown` lista nieznanych identyfikatorów.
+
+Odpowiedź:
+
+```json
+{
+  "edge": 64, "edge_version": "2026-11-21T14:58:45.826265+00:00", "model_version": "fs-5",
+  "stored": {"relation": "same_operator", "bits": 56.3, "model_version": "fs-5"},
+  "baseline": {
+    "relation": "same_operator", "relation_label": "ten sam operator",
+    "probability": 1.0, "bits": 56.3, "decisive": true, "duplicate": false,
+    "families": {"track": 29.3, "tmpl": 16.0, "infra": 5.8},
+    "independent": ["kit", "track"],
+    "reasons": ["Pewność 1.000 spełnia próg 0.9.", "Jest rzadki marker rozstrzygający.", "..."]
+  },
+  "simulated": {"relation": "similar", "relation_label": "podobna koncepcja", "...": "jak baseline"},
+  "relation_changed": true,
+  "excluded": [{"id": 512, "family": "track", "kind": "funnel_id", "label": "Identyfikator strony w panelu lejka",
+                "value": "11111111-2222-4333-8444-555555555555", "weight_bits": 18.0, "decisive": true}],
+  "group_impact": {
+    "campaign": {"binds_before": false, "binds_after": false, "pair_still_connected": null, "path_length": null,
+                 "note": "Krawędź nie spina tej grupy ani przed, ani po."},
+    "operator": {"binds_before": true, "binds_after": false, "pair_still_connected": true, "path_length": 2,
+                 "note": "Obie reklamy zostają w jednej grupie przez inne krawędzie (ścieżka długości 2)."}
+  },
+  "warnings": ["Wynik dotyczy tylko tej pary. Pozostałe krawędzie liczymy bez zmian."]
+}
+```
+
+- `baseline` to przeliczenie zapisanych dowodów bieżącym modelem, `stored` to krawędź z bazy. Gdy się różnią (inna wersja modelu), w `warnings` jest ostrzeżenie, a porównanie idzie względem `baseline`.
+- `relation: null` w `simulated` oznacza, że po wyłączeniu krawędź by nie powstała.
+- `independent`: niezależne silne potwierdzenia. `kit` to ślady jednego silnika lejka (ścieżki zaplecza, zestaw parametrów, szablon ścieżki) liczone razem.
+- `reasons`: zdania odpowiadające regułom z `similarity/fusion.py`, w kolejności sprawdzania.
+- `group_impact`: liczone tylko wtedy, gdy krawędź przestałaby spinać grupę. `pair_still_connected` mówi, czy obie reklamy łączy inna ścieżka z krawędzi tego samego rodzaju (bez odrzuconych). `false` oznacza, że grupa rozpadłaby się w tym miejscu na dwie, przy reszcie grafu bez zmian. Nie przeliczamy innych par.
+- Bity to wkład dowodów w skali logarytmicznej, nie procent i nie identyfikacja osoby.
 
 ## Typy markerów
 
@@ -123,4 +174,4 @@ Pełny słownik zwraca `/api/kinds`. Najważniejsze:
 
 ## Czego API jeszcze nie ma
 
-Oś czasu kampanii (migawki są w bazie, brakuje endpointu), stan źródeł i skanów, przegląd bazy osób, kolejka etykietowania, alerty, raporty, role i klucze. Interfejs nie powinien udawać tych danych.
+Stan źródeł i skanów, przegląd bazy osób, kolejka etykietowania, alerty, raporty, role i klucze. Interfejs nie powinien udawać tych danych.

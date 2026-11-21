@@ -71,6 +71,8 @@ class PairResult:
     duplicate: bool = False
     families: dict[str, float] = field(default_factory=dict)
     evidence: list[EvidenceItem] = field(default_factory=list)
+    # Stan reguł, z których wyszła relacja. Pozwala wyjaśnić wynik bez ponownego liczenia.
+    checks: dict = field(default_factory=dict)
 
 
 def frequency(df: int, corpus_n: int, f0: float) -> float:
@@ -166,13 +168,24 @@ def score_pair(shared: list[Shared], soft: list[Soft], corpus_n: int) -> PairRes
     # więc dwie rodziny koncepcyjne nie dowodzą wspólnego źródła.
     backed = any(f not in CONCEPT_FAMILIES for f in strong_families)
     same_source = result.probability >= SAME_PROBABILITY and (result.decisive or (len(strong_families) >= 2 and backed))
+    kit_path_bits = sum(e.weight_bits for e in items if e.kind == "kit_path")
+    result.checks = {
+        "probability_ok": result.probability >= SAME_PROBABILITY,
+        "decisive": result.decisive,
+        "independent": sorted(strong_families),
+        "backed": backed,
+        "same_source": same_source,
+        "story_bits": round(story_bits, 2),
+        "concept_bits": round(concept_bits, 2),
+        "kit_path_bits": round(kit_path_bits, 2),
+    }
     if same_source:
         # To samo źródło i ta sama opowieść to jedna kampania. To samo źródło z inną opowieścią
         # to ten sam operator, który prowadzi kilka kampanii na wspólnym zapleczu.
         result.relation = "same_campaign" if story_bits >= SIMILAR_MIN_BITS else "same_operator"
     elif story_bits >= SIMILAR_MIN_BITS or concept_bits >= WEAK_SIMILAR_MIN_BITS:
         result.relation = "similar"
-    elif sum(e.weight_bits for e in items if e.kind == "kit_path") >= FAMILY_MIN_BITS:
+    elif kit_path_bits >= FAMILY_MIN_BITS:
         # Te same ścieżki zaplecza bez śladu konkretnego operatora: ten sam silnik lejka.
         # Warto to pokazać, ale nie scalać. Sam szablon ścieżki albo zestaw parametrów to za mało.
         result.relation = "similar"

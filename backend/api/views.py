@@ -22,7 +22,7 @@ from evidence import store
 from evidence.kinds import BAND_KINDS, FAMILIES, KINDS
 from evidence.models import AdMarker, Artifact, AuditLog
 from extractors.url import redact_url
-from similarity import timeline
+from similarity import simulation, timeline
 from similarity.models import Campaign, Edge, Operator
 from similarity.service import assign_campaign, assign_operator
 from workflows import runner
@@ -194,6 +194,20 @@ def edge_verdict(request, pk):
         payload={"verdict": edge.verdict, "note": edge.verdict_note},
     )
     return Response(s.EdgeDetailSerializer(edge).data)
+
+
+@extend_schema(request=s.SimulationSerializer, responses=dict)
+@api_view(["POST"])
+def edge_simulate(request, pk):
+    """Laboratorium dowodów: przeliczenie krawędzi bez wybranych dowodów. Niczego nie zapisuje."""
+    edge = get_object_or_404(Edge, pk=pk)
+    payload = s.SimulationSerializer(data=request.data)
+    payload.is_valid(raise_exception=True)
+    try:
+        result = simulation.simulate(edge, payload.validated_data["exclude"], payload.validated_data.get("edge_version") or None)
+    except simulation.SimulationError as exc:
+        return Response({"detail": str(exc), **exc.extra}, status=exc.status)
+    return Response(result)
 
 
 def _group_detail(group, serializer, relations: list[str]) -> dict:

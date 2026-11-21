@@ -118,9 +118,23 @@ export function Discovery() {
     if (!busy && files.length) void run(() => api.uploadCase(files));
   }
 
-  const strongest = events.filter(item => item.stage === "fuse" && item.status === "info")
-    .flatMap(item => (item.payload as Partial<FuseEventPayload>).top_evidence ?? [])
-    .sort((a, b) => b.bits - a.bits).slice(0, 5);
+  const markers = new Map<string, { best: FuseEventPayload["top_evidence"][number]; edges: Set<number> }>();
+  for (const event of events) {
+    if (event.stage !== "fuse" || event.status !== "info") continue;
+    const { edge, top_evidence } = event.payload as Partial<FuseEventPayload>;
+    if (typeof edge !== "number") continue;
+    for (const item of top_evidence ?? []) {
+      const key = JSON.stringify([item.kind, item.value]);
+      const match = markers.get(key);
+      if (match) {
+        match.edges.add(edge);
+        if (item.bits > match.best.bits) match.best = item;
+      } else {
+        markers.set(key, { best: item, edges: new Set([edge]) });
+      }
+    }
+  }
+  const strongest = [...markers.values()].sort((a, b) => b.best.bits - a.best.bits).slice(0, 5);
   const cluster = [...events].reverse().find(item => item.stage === "cluster" && item.status === "done")?.payload as Partial<ClusterResult> | undefined;
 
   return (
@@ -201,7 +215,9 @@ export function Discovery() {
         <section className="flex min-w-0 flex-col gap-2">
           <h2 className="font-semibold">{cluster?.assessment_label || assessment || "Powiązania"}</h2>
           {cluster && <p>Kampania {cluster.campaign ?? "brak"} · Operator {cluster.operator ?? "brak"}</p>}
-          {strongest.length > 0 && <section><h3>Najsilniejsze dowody</h3><ol>{strongest.map((item, index) => <li key={index}><FamilyDot family={item.family} /> {item.label} · {item.value} · {item.bits} bitów</li>)}</ol></section>}
+          {strongest.length > 0 && <section><h3>Najsilniejsze dowody</h3><ol>{strongest.map(({ best, edges }) => (
+            <li key={JSON.stringify([best.kind, best.value])}><FamilyDot family={best.family} /> {best.label} · {best.value} · {best.bits} bitów · liczba powiązań: {edges.size}</li>
+          ))}</ol></section>}
           {ad && (
             <p>
               Reklama #{ad.id}

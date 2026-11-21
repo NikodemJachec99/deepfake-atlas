@@ -10,6 +10,7 @@ Dwa tryby wejścia:
 """
 
 import base64
+import json
 from collections.abc import Callable
 
 import mmh3
@@ -26,7 +27,8 @@ from evidence import services as markers
 from evidence import store
 from evidence.kinds import FAMILIES, KINDS
 from evidence.models import Artifact
-from extractors import Observation, embedding
+from extractors import Observation, embedding, images
+from extractors.har import image_blobs, parse_har
 from extractors.html import extract_page
 from extractors.keywords import keywords, topics
 from extractors.text import extract_text
@@ -105,15 +107,41 @@ def stage_crawl(analysis: Analysis) -> dict:
             "chain": [{"url": redact_url(h.url), "status": h.status, "via": h.via} for h in result.chain],
             "html_sha": None,
         }
+        page["engine"] = result.engine
+        page["screenshot_sha"] = None
         if result.body:
             artifact = store.put(result.body, kind=f"html_{profile}", content_type=result.content_type, source_url=page["final_url"])
             page["html_sha"] = artifact.sha256
+        if result.screenshot:
+            # Zrzut wyrenderowanej strony. Pokazujemy obraz, nigdy HTML oszusta.
+            shot = store.put(result.screenshot, kind="page_screenshot", content_type="image/png", source_url=page["final_url"])
+            page["screenshot_sha"] = shot.sha256
+        if result.har and profile == "victim":
+            # Ruch sieciowy z przeglądarki trafia tam, gdzie HAR z przechwycenia: te same ekstraktory w etapie extract.
+            capture = analysis.state.setdefault("capture", {})
+            har_artifact = store.put(json.dumps(result.har).encode("utf-8"), kind="har", content_type="application/json", source_url=page["final_url"])
+            capture["har"] = har_artifact.sha256
+            found = [*capture.get("observations", []), *([o.kind, o.value, o.detail] for o in parse_har(result.har).observations)]
+            # Ponowne uruchomienie etapu nie dubluje śladów.
+            capture["observations"] = list({json.dumps(o, sort_keys=True): o for o in found}.values())
+            capture["image_hashes"] = images.hash_set(image_blobs(result.har))
         pages[profile] = page
+        js_hops = sum(1 for h in result.chain if h.via == "js")
         emit(
             analysis, "crawl", "info",
-            f"Profil {profile}: {len(result.chain)} skoków, status {result.status or 'brak'}"
+            f"Profil {profile} ({'przeglądarka' if result.engine == 'browser' else 'HTTP'}): {len(result.chain)} skoków"
+            + (f", w tym {js_hops} skryptem" if js_hops else "")
+            + f", status {result.status or 'brak'}"
             + (f", błąd: {result.error}" if result.error else ""),
-            {"profile": profile, "chain": page["chain"], "final_url": page["final_url"]},
+            {
+                "profile": profile,
+                "engine": result.engine,
+                "chain": page["chain"],
+                "final_url": page["final_url"],
+                "screenshot": page["screenshot_sha"],
+                "har": bool(result.har),
+                "notes": [redact_url(n) if n.startswith("http") else n for n in result.notes][:20],
+            },
         )
     analysis.state["pages"] = pages
     analysis.save(update_fields=["state"])

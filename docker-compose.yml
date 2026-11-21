@@ -69,6 +69,36 @@ services:
     depends_on:
       db: {condition: service_healthy}
       temporal: {condition: service_started}
+    networks: [default, crawl]
+
+  # Przeglądarka do stron oszustów (docs/crawler.md). Sieć `crawl` jest wewnętrzna: bez wyjścia na zewnątrz,
+  # bez bazy, magazynu dowodów i kolejek. Jedyne wyjście to proxy `crawler-egress`, które wpuszcza
+  # wyłącznie adresy publiczne. Z crawlerem rozmawia tylko worker.
+  crawler:
+    build: ./crawler
+    image: deepfake-atlas-crawler
+    environment:
+      GUARD_PROXY_URL: http://crawler-egress:3128
+    networks: [crawl]
+    depends_on: [crawler-egress]
+    shm_size: 512m
+    read_only: true
+    tmpfs: ["/tmp", "/home/render"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 2g
+    pids_limit: 512
+
+  crawler-egress:
+    image: deepfake-atlas-crawler
+    build: ./crawler
+    command: ["python", "server.py", "--proxy-only"]
+    networks: [crawl, egress]
+    healthcheck: {disable: true}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 256m
 
   frontend:
     build:
@@ -82,6 +112,12 @@ services:
         NODE_IMAGE: ${NODE_IMAGE:-public.ecr.aws/docker/library/node:24-alpine}
     ports: ["${FRONTEND_PORT:-3000}:3000"]
     depends_on: [backend]
+
+networks:
+  default:
+  crawl:
+    internal: true
+  egress:
 
 volumes:
   dbdata:

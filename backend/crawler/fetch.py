@@ -1,7 +1,8 @@
 """Pobieranie stron docelowych: łańcuch przekierowań krok po kroku, w dwóch profilach.
 
 To jest wersja HTTP bez przeglądarki. Widzi przekierowania 3xx i meta refresh, nie wykona
-JavaScriptu. Crawler Playwright w piaskownicy zastąpi ją pod tym samym interfejsem `fetch`.
+JavaScriptu. Wersja z przeglądarką (`crawler.browser.BrowserFetcher`, usługa `crawler`) ma ten sam
+interfejs `fetch` i wraca do tej, gdy usługa nie odpowiada.
 """
 
 import ipaddress
@@ -78,7 +79,7 @@ def pinned_request(url: str, ip: str) -> tuple[str, dict, dict]:
 class Hop:
     url: str
     status: int
-    via: str = ""  # http | meta_refresh
+    via: str = ""  # http | meta_refresh | js
 
 
 @dataclass
@@ -90,6 +91,11 @@ class FetchResult:
     content_type: str = ""
     body: bytes = b""
     error: str = ""
+    engine: str = "http"  # http | browser
+    har: dict | None = None  # tylko z przeglądarki
+    screenshot: bytes = b""  # PNG, tylko z przeglądarki
+    console: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
 
     @property
     def html(self) -> str:

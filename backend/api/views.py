@@ -21,7 +21,7 @@ from evidence import store
 from evidence.kinds import BAND_KINDS, FAMILIES, KINDS
 from evidence.models import AdMarker, Artifact
 from extractors.url import redact_url
-from similarity import decisions, simulation, suggestions, timeline
+from similarity import decisions, simulation, suggestions, timeline, weakest
 from similarity.models import Campaign, Edge, EdgeDecision, Operator
 from similarity.service import assign_campaign, assign_operator
 from workflows import runner
@@ -219,6 +219,23 @@ def edge_suggestions(request, pk):
     """Co sprawdzić dalej: wskazówki z brakujących dowodów tej pary. Bez zapytań na zewnątrz."""
     edge = get_object_or_404(Edge.objects.select_related("ad_a", "ad_b"), pk=pk)
     return Response(suggestions.suggestions_for(edge))
+
+
+@extend_schema(request=s.WeakestLinkSerializer, responses=dict)
+@api_view(["POST"])
+def edge_weakest_link(request, pk):
+    """Test najsłabszego ogniwa: najmniejsze zestawy grup śladów, których utrata zmienia relację. Niczego nie zapisuje."""
+    edge = get_object_or_404(Edge, pk=pk)
+    payload = s.WeakestLinkSerializer(data=request.data)
+    payload.is_valid(raise_exception=True)
+    data = payload.validated_data
+    try:
+        result = weakest.weakest_link(
+            edge, data["max_group_size"], data["max_scenarios"], data["time_limit_ms"], data.get("edge_version") or None
+        )
+    except simulation.SimulationError as exc:
+        return Response({"detail": str(exc), **exc.extra}, status=exc.status)
+    return Response(result)
 
 
 def _group_detail(group, serializer, relations: list[str]) -> dict:

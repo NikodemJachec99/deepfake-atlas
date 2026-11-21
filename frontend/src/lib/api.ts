@@ -186,6 +186,37 @@ export interface Simulation {
   warnings: string[];
 }
 
+export interface WeakestLinkGroup {
+  id: string; // "kit" | "motif" | "infra" | "content" | "creative" | "template" | "kind:<typ>" | "unknown:<typ>"
+  label: string;
+  evidence_ids: number[];
+  weight_bits: number;
+}
+
+export interface WeakestLink {
+  edge: number;
+  edge_version: string;
+  baseline: SimulationResult;
+  groups: WeakestLinkGroup[];
+  searched: {
+    max_group_size: number;
+    scenarios_checked: number;
+    scenario_limit: number;
+    time_limit_ms: number;
+    complete: boolean;
+    stopped_reason: string;
+  };
+  solutions: {
+    groups: string[];
+    labels: string[];
+    excluded_evidence: number[]; // do api.simulateEdge, ten sam wynik
+    simulated: SimulationResult;
+    change: string;
+  }[];
+  minimal_size: number | null; // tylko przy pełnym przeszukiwaniu
+  message: string;
+}
+
 export type SuggestionCode =
   | "single_support"
   | "engine_without_account"
@@ -435,6 +466,9 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ exclude, ...(edgeVersion ? { edge_version: edgeVersion } : {}) }),
     }),
+  // Test najsłabszego ogniwa: najmniejsze zestawy grup śladów, których utrata zmienia relację. Niczego nie zapisuje.
+  weakestLink: (id: number, params: { max_group_size?: 1 | 2; max_scenarios?: number; time_limit_ms?: number; edge_version?: string } = {}) =>
+    request<WeakestLink>(`/api/edges/${id}/weakest-link`, { method: "POST", body: JSON.stringify(params) }),
   // Co sprawdzić dalej: wskazówki z brakujących dowodów pary, bez zapytań na zewnątrz.
   edgeSuggestions: (id: number) => request<Suggestions>(`/api/edges/${id}/suggestions`),
   campaigns: () => request<Page<Group>>("/api/campaigns"),

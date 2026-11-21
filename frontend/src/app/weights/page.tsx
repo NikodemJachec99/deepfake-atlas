@@ -12,7 +12,7 @@ export default function WeightsPage() {
   const data = result.data;
   if (!data) return null;
   return <main className="atlas-page"><h1 className="atlas-title">Wagi markerów</h1>
-    <p>Aktywne wagi: <strong>{data.active === "learned" ? "uczone" : "eksperckie"}</strong> · Model {data.model_version}</p>
+    <p>Aktywne wagi: <strong>{data.active === "learned" ? "uczone" : "eksperckie"}</strong> · Wersja modelu oceny powiązań · {data.model_version}</p>
     {!data.learned_available && <p>Wagi uczone niedostępne. {data.learned_error}</p>}
     <div className="atlas-table"><table className="dense"><thead><tr><th>Typ markera</th><th>Rodzina</th><th>Eksperckie (bity)</th><th>Uczone (bity)</th></tr></thead>
       <tbody>{data.kinds.map(kind => <tr key={kind.code}><td>{kind.label}</td><td>{kind.family_label}</td><td>{num(kind.expert.bits, 2)}</td>

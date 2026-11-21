@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Network } from "lucide-react";
 import { api, RELATION_LABELS, type Group } from "@/lib/api";
+import { bits } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 import { Loading, ErrorBox } from "./ui";
 import { CampaignMap } from "./campaign-map";
@@ -37,7 +38,7 @@ function CampaignBranch({ group }: { group: Group }) {
         return <li key={edge.id}><Link prefetch={false} href={`/investigation?campaign=${group.id}&edge=${edge.id}`}
           className="grid gap-0.5 border-b border-line px-2 py-2 hover:bg-panel">
           <span><span className="font-mono text-xs">↳ #{other}</span> {titles.get(other)}</span>
-          <span className="text-sm text-muted">{RELATION_LABELS[edge.relation]} · {edge.bits.toLocaleString("pl-PL")} bitów · <span className="text-accent">Dowody</span></span>
+          <span className="text-sm text-muted">{RELATION_LABELS[edge.relation]} · {bits(edge.bits)} bita · <span className="text-accent">Dowody</span></span>
         </Link></li>;
       })}</ol> : <p className="text-muted">Brak powiązań tej reklamy w kampanii.</p>}
     </section>

@@ -29,9 +29,9 @@ export function JevReview({ edge, open, onToggle }: { edge: EdgeDetail; open: bo
         {suggestion && <p>Zapis sugestii · {dateTime(suggestion.created_at)}</p>}
         <p>{data.notice}</p>
         <details><summary>Bieżące przesłanki przeglądu</summary>
-          <p>{RELATION_LABELS[data.premises.relacja]} · {bits(data.premises.bity)} bitów · niezależne grupy śladów {data.premises.niezalezne_grupy} (zaplecze {data.premises.niezalezne_grupy_zaplecza})</p>
+          <p>{RELATION_LABELS[data.premises.relacja]} · {bits(data.premises.bity)} bita · niezależne grupy śladów {data.premises.niezalezne_grupy} (zaplecze {data.premises.niezalezne_grupy_zaplecza})</p>
           {data.premises.grupy_sladow.length ? <ul>{data.premises.grupy_sladow.map(g =>
-            <li key={g.grupa}>{g.grupa} · ślady {g.slady} · {bits(g.bity)} bitów{g.rozstrzygajacy && " · ślad rozstrzygający"}</li>)}</ul> : <p>Brak grup śladów w danych wejściowych.</p>}
+            <li key={g.grupa}>{g.grupa} · ślady {g.slady} · {bits(g.bity)} bita{g.rozstrzygajacy && " · ślad rozstrzygający"}</li>)}</ul> : <p>Brak grup śladów w danych wejściowych.</p>}
         </details>
         <p className="text-muted">Decyzję zapisuje analityk. Jev nie ustala kolejności precedensów.</p>
       </>}

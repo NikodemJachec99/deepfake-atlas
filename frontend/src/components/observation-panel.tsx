@@ -4,15 +4,15 @@ import { CrawlShot } from "./crawl-shot";
 import Link from "next/link";
 import { useState } from "react";
 import { api, artifactDownloadUrl, type ObservationSide } from "@/lib/api";
+import { dateTime } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 import { ErrorBox, Loading } from "./ui";
 
 function Capture({ side }: { side: ObservationSide }) {
-  const date = side.captured_at && new Date(side.captured_at);
   return <article className="min-w-0 space-y-1 break-words border border-line p-2">
     <h4><Link href={`/ads/${side.ad}`} className="text-accent underline">Materiał #{side.ad}</Link> · {side.title || "Brak tytułu"}</h4>
     <p className="break-all font-mono">{side.exact_url || "Adres nieznany"}</p>
-    <p>{date && Number.isFinite(date.getTime()) ? date.toLocaleString("pl-PL", { timeZoneName: "short" }) : "Data nieznana"} · {side.time_source || "Źródło daty nieznane"}</p>
+    <p>{dateTime(side.captured_at) || "Data nieznana"} · {side.time_source || "Źródło daty nieznane"}</p>
     <p>Źródła obserwacji · {side.sources.join(", ") || "Brak informacji"}</p>
     <p>Kontekst · {side.context ? [side.context.browser, side.context.platform, side.context.accept_language].filter(Boolean).join(", ") || "Nieznany" : "Nieznany"}</p>
     {side.artifacts?.page_screenshot ? <CrawlShot sha={side.artifacts.page_screenshot.sha256} /> : <p>Brak zrzutu strony docelowej.</p>}

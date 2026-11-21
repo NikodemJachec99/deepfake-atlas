@@ -5,7 +5,7 @@
 
 import { FolderInput, ArrowUpRight } from "lucide-react";
 import { useApi } from "@/lib/hooks";
-import { adTitle } from "@/lib/format";
+import { bits, adTitle } from "@/lib/format";
 import { CrawlShot } from "./crawl-shot";
 import { GroupLink } from "./ui";
 import { LiveGraph } from "./live-graph";
@@ -295,7 +295,7 @@ export function Discovery() {
             Kampania <GroupLink group={ad ? ad.campaign : cluster?.campaign} /> · Operator <GroupLink group={ad ? ad.operator : cluster?.operator} />
           </p>}
           {strongest.length > 0 && <section><h3>Najsilniejsze dowody</h3><ol>{strongest.map(({ best, edges }) => (
-            <li key={JSON.stringify([best.kind, best.value])}><FamilyDot family={best.family} /> {best.label} · {markerValue(best.value, ad?.genome?.find(band => band.family === best.family)?.markers.find(marker => marker.kind === best.kind && marker.value === best.value)?.display_value)} · {best.bits} bitów · liczba powiązań: {edges.size}</li>
+            <li key={JSON.stringify([best.kind, best.value])}><FamilyDot family={best.family} /> {best.label} · {markerValue(best.value, ad?.genome?.find(band => band.family === best.family)?.markers.find(marker => marker.kind === best.kind && marker.value === best.value)?.display_value)} · {bits(best.bits)} bita · liczba powiązań: {edges.size}</li>
           ))}</ol></section>}
           {ad && (
             <p>
@@ -308,7 +308,7 @@ export function Discovery() {
           )}
           {ad && <nav aria-label="Szczegóły wyniku" className="flex flex-wrap gap-4 text-accent">
             <Link href={`/ads/${ad.id}`}>Karta reklamy #{ad.id}</Link>
-            <Link href={`/investigation?ad=${ad.id}`}>Otwórz w Investigation</Link>
+            <Link href={`/investigation?ad=${ad.id}`}>Otwórz w śledztwie</Link>
           </nav>}
           {ad && edges.length === 0 && <p className="text-muted">Brak powiązań powyżej progu.</p>}
           <ul className="flex flex-col gap-1">

@@ -107,6 +107,10 @@ Laboratorium dowodów na kampanii A i operatorze B, kroki i sprawdzone wyniki w 
 
 Sprawa 61: ten sam pełny adres dał w 161 s dwie różne strony. Kroki i wyniki w [dwie-twarze.md](dwie-twarze.md#scenariusz-pokazu-65). Po laboratorium, jeśli jest czas.
 
+### Trzeci dodatek: pamięć sprzeciwu (45 s)
+
+Odrzucenie krawędzi 1 ↔ 48 z powodem "wspólne narzędzie" wraca jako precedens przy `p11.zip` z Planu B. Panel Jev pokazuje "Model wyłączony". Kroki i wyniki w [pamiec-sprzeciwu.md](pamiec-sprzeciwu.md). Po pozostałych dodatkach, jeśli jest czas.
+
 ## Pytania, których się spodziewamy
 
 | Pytanie | Odpowiedź |

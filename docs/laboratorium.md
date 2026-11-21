@@ -108,7 +108,7 @@ Główne demo z [prezentacja.md](prezentacja.md) (#15) zostaje bez zmian: nowa s
 
 Decyzję analityka można uzasadnić wybranym powodem i notatką. System zachowuje historię oraz migawkę przesłanek z chwili decyzji: bieżące dowody krawędzi mogą się zmienić przy jej ponownym przeliczeniu. Przy kolejnej sprawie pokaże podobne wcześniejsze rozstrzygnięcia, powód podobieństwa i istotne różnice. Precedens jest kontekstem do oceny, nie automatycznym werdyktem; sam nie zmienia wag ani grup.
 
-Kolejność: [#67 historia i migawka](https://github.com/NikodemJachec99/deepfake-atlas/issues/67) → [#68 wyszukiwanie precedensów](https://github.com/NikodemJachec99/deepfake-atlas/issues/68) → [#69 panel analityka](https://github.com/NikodemJachec99/deepfake-atlas/issues/69). Stare decyzje bez zapisanego powodu pozostają oznaczone jako nieznane. Notatki i źródła wymagają ochrony oraz redakcji; obecne API nie ma uwierzytelniania.
+Scenariusz pokazu: [pamiec-sprzeciwu.md](pamiec-sprzeciwu.md). Kolejność: [#67 historia i migawka](https://github.com/NikodemJachec99/deepfake-atlas/issues/67) → [#68 wyszukiwanie precedensów](https://github.com/NikodemJachec99/deepfake-atlas/issues/68) → [#69 panel analityka](https://github.com/NikodemJachec99/deepfake-atlas/issues/69). Stare decyzje bez zapisanego powodu pozostają oznaczone jako nieznane. Notatki i źródła wymagają ochrony oraz redakcji; obecne API nie ma uwierzytelniania.
 
 ## Jev jako pomoc analityka
 

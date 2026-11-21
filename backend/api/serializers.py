@@ -138,6 +138,13 @@ class SimulationSerializer(serializers.Serializer):
     edge_version = serializers.CharField(required=False, allow_blank=True)
 
 
+class WeakestLinkSerializer(serializers.Serializer):
+    max_group_size = serializers.IntegerField(min_value=1, max_value=2, default=2)
+    max_scenarios = serializers.IntegerField(min_value=1, max_value=5000, default=500)
+    time_limit_ms = serializers.IntegerField(min_value=100, max_value=10000, default=3000)
+    edge_version = serializers.CharField(required=False, allow_blank=True)
+
+
 class CampaignSerializer(serializers.ModelSerializer):
     key = serializers.CharField(read_only=True)
     size = serializers.IntegerField(read_only=True)

@@ -8,6 +8,7 @@ Stan na 2026-11-21.
 
 | Krok | Zadanie | Strefa | Priorytet | Stan |
 |---|---|---|---|---|
+| 1b | [#56](https://github.com/NikodemJachec99/deepfake-atlas/issues/56) test najsłabszego ogniwa | backend | p1 | w `main`: `POST /api/edges/{id}/weakest-link` |
 | 1 | [#48](https://github.com/NikodemJachec99/deepfake-atlas/issues/48) czysta symulacja i kontrakt API | backend | p0 | w `main`: `POST /api/edges/{id}/simulate`, opis w [api.md](api.md) |
 | 2 | [#49](https://github.com/NikodemJachec99/deepfake-atlas/issues/49) interaktywny panel co-jeśli w widoku powiązania | frontend | p0 | czeka na koder |
 | 3 | [#50](https://github.com/NikodemJachec99/deepfake-atlas/issues/50) co sprawdzić dalej: wskazówki z brakujących dowodów | backend | p1 | w `main`: `GET /api/edges/{id}/suggestions` |
@@ -38,6 +39,30 @@ Symulacja na krawędziach z obu paczek (model `fs-5`, odczyt z bazy, bez zapisu)
 | nask/2 (drugi HAR) do backup/p5 (operator B) | host zasobów `crimsonbase.pro` | spada do `similar` (30 → 21 bitów); obie reklamy nie łączą się inną ścieżką, więc grupa rozpadłaby się w tym miejscu |
 
 Wniosek dla analityka: połączenie operatora B wisi na jednym śladzie. Warto go potwierdzić czymś niezależnym (np. HAR-em strony p5 z innego dnia), zanim się na nim oprze. To jest materiał na scenariusz z #52.
+
+## Test najsłabszego ogniwa
+
+`POST /api/edges/{id}/weakest-link` (#56) sam szuka, utrata których śladów zmieniłaby relację. Ślady są zgrupowane według przyczyny, żeby jedna przyczyna nie udawała kilku niezależnych dowodów:
+
+| Grupa | Co zawiera | Dlaczego razem |
+|---|---|---|
+| `kit` | ścieżki zaplecza, zestaw parametrów, szablon ścieżki | ustawia je jeden silnik lejka |
+| `motif` | wzmianka o osobie, twarz, podszycie pod markę, tematyka | wspólne motywy różnych operatorów |
+| `infra` | domena, adres IP, certyfikat, serwery nazw, rejestracja | ta sama domena pociąga za sobą ten sam adres i certyfikat |
+| `content` | tytuł, treść strony, tekst reklamy | kopiowane razem |
+| `creative` | zrzut reklamy, plik kreacji, obrazy strony | kopiowane razem |
+| `template` | struktura DOM strony i białej strony | jeden szablon |
+| `kind:<typ>` | każdy inny typ, np. identyfikator w panelu lejka, piksel, konto Google Ads | osobne konta i ślady; kilka wartości tego samego typu to jedna grupa |
+
+Przeszukiwanie jest wyczerpujące: wszystkie pojedyncze grupy, potem wszystkie pary, do limitu 500 scenariuszy i 3 sekund (oba do zmiany w żądaniu). **Minimalność** znaczy tyle: nie ma mniejszego zestawu grup w sprawdzonym zakresie, a przeszukiwanie się skończyło. Nie mówi nic o koszcie ani prawdopodobieństwie, że ktoś te ślady usunie.
+
+Na danych organizatora (odczyt z bazy):
+
+| Krawędź | Najmniejszy zestaw | Zmiana |
+|---|---|---|
+| nask/2 (drugi HAR) do backup/p5, operator B | 1 grupa: host zasobów albo ślady silnika (2 rozwiązania) | ten sam operator → podobna koncepcja |
+| nask/1 do nask/2, kampania A | 2 grupy: treść i obrazy | ta sama kampania → ten sam operator |
+| backup/p3 do backup/p7, operator A | nie znaleziono wśród pojedynczych grup i par (21 scenariuszy) | relacja się utrzymuje |
 
 ## Relacja do prezentacji i demo
 

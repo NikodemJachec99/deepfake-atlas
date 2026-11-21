@@ -18,6 +18,7 @@ Wymaga tylko `git` i `gh` (zalogowanego). Działa na Windowsie i macOS.
 
 import argparse
 import json
+import os
 import re
 import socket
 import subprocess
@@ -75,6 +76,12 @@ try:
 except (subprocess.CalledProcessError, FileNotFoundError):
     print("STOP: uruchom w katalogu repozytorium (potrzebny git)")
     sys.exit(1)
+# Główny katalog repo. W worktree to katalog, w którym leży wspólny .git.
+try:
+    MAIN_ROOT = Path(subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], capture_output=True, text=True,
+                                    check=True).stdout.strip()).parent
+except (subprocess.CalledProcessError, FileNotFoundError):
+    MAIN_ROOT = ROOT
 CONFIG = ROOT / ".maszyna"
 
 
@@ -320,6 +327,15 @@ def outside_zone(me: str, files: list[str]) -> list[str]:
     return [f for f in files if f.startswith("frontend/") and f not in MAIN_ONLY_IN_FRONTEND and not f.startswith("frontend/src/lib/")]
 
 
+def backend_python() -> Path | None:
+    """Python z backend/.venv: najpierw w tym katalogu, potem w głównym katalogu repo (worktree nie ma własnego venv)."""
+    for base in dict.fromkeys((ROOT, MAIN_ROOT)):
+        for candidate in (base / "backend/.venv/Scripts/python.exe", base / "backend/.venv/bin/python"):
+            if candidate.exists():
+                return candidate
+    return None
+
+
 def local_checks(files: list[str]) -> None:
     if any(f.startswith("frontend/") for f in files):
         npm = "npm.cmd" if sys.platform == "win32" else "npm"
@@ -329,13 +345,20 @@ def local_checks(files: list[str]) -> None:
             if result.returncode != 0:
                 fail("frontend nie przechodzi:\n" + (result.stdout + result.stderr)[-2500:])
     if any(f.startswith("backend/") for f in files):
-        python = next((p for p in (ROOT / "backend/.venv/Scripts/python.exe", ROOT / "backend/.venv/bin/python") if p.exists()), None)
+        python = backend_python()
         if python is None:
+            if ci_disabled():
+                fail("brak backend/.venv ani w tym katalogu, ani w głównym, a CI jest wyłączone: nie ma kto uruchomić testów")
             print("  backend: brak .venv, testy zrobi CI")
             return
-        for step in (["-m", "ruff", "check", "."], ["-m", "pytest", "-q"]):
-            print(f"  backend: python {' '.join(step)}")
-            result = subprocess.run([str(python), *step], cwd=ROOT / "backend", capture_output=True, text=True, encoding="utf-8", errors="replace")
+        env = dict(os.environ)
+        if MAIN_ROOT != ROOT and "DATABASE_URL" not in env:
+            # Osobna baza testowa dla worktree, żeby równoległe sesje nie kasowały sobie test_deepfake_atlas.
+            env["DATABASE_URL"] = f"postgres://hack:hack@localhost:5432/deepfake_atlas_{slug(ROOT.name).replace('-', '_')}"
+        for step in (["-m", "ruff", "check", "."], ["-m", "pytest", "-q", "-p", "no:cacheprovider"]):
+            print(f"  backend: python z {python.parents[3].name}/backend/.venv {' '.join(step)}")
+            result = subprocess.run([str(python), *step], cwd=ROOT / "backend", capture_output=True, text=True, encoding="utf-8",
+                                    errors="replace", env=env, stdin=subprocess.DEVNULL)
             if result.returncode != 0:
                 fail("backend nie przechodzi:\n" + (result.stdout + result.stderr)[-2500:])
 

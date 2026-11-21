@@ -15,7 +15,7 @@ from pathlib import Path
 
 from evidence.kinds import CONCEPT_FAMILIES, KINDS
 
-EXPERT_VERSION = "fs-5"  # fs-5: podobieństwo treści odporne na doklejoną sekcję
+EXPERT_VERSION = "fs-5.1"  # fs-5.1: kopia kreacji nie rozstrzyga. fs-5: podobieństwo treści odporne na doklejoną sekcję
 LEARNED_VERSION = "fs-6"  # fs-6: m, u i limity typów markerów z EM (similarity/learning.py)
 
 PRIOR = 1e-4  # szansa, że dwie losowe reklamy z korpusu należą do jednej kampanii

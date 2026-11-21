@@ -438,7 +438,7 @@ export interface Graph {
   total: number;
   total_by_relation: Partial<Record<Relation, number>>;
   returned_by_relation: Partial<Record<Relation, number>>;
-  nodes: { id: number; label: string; source: Source; campaign: string | null; operator: string | null; case: string | null; listed: boolean }[];
+  nodes: { id: number; label: string; source: Source; campaign: string | null; operator: string | null; case: string | null; listed: boolean; /** Tylko przy `?campaign=` i `?operator=`: czy reklama należy do tej grupy (false = sąsiad spoza grupy). */ member?: boolean }[];
   edges: {
     id: number;
     source: number;

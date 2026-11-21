@@ -487,10 +487,13 @@ def graph(request):
     limit = int_param(params, "limit", GRAPH_DEFAULT_LIMIT, minimum=1, maximum=GRAPH_MAX_LIMIT)
     edges = Edge.objects.all()
     focus: set[int] = set()
+    group_view = False
     if campaign is not None:
         focus = set(get_object_or_404(Campaign, pk=campaign).memberships.values_list("ad_id", flat=True))
+        group_view = True
     elif operator is not None:
         focus = set(get_object_or_404(Operator, pk=operator).memberships.values_list("ad_id", flat=True))
+        group_view = True
     elif ad is not None:
         get_object_or_404(Ad, pk=ad)
         focus = {ad}
@@ -525,6 +528,7 @@ def graph(request):
                     "operator": n.operator_membership.operator.key if hasattr(n, "operator_membership") else None,
                     "case": n.labels.get("case"),
                     "listed": "cert_pl" in n.labels,
+                    **({"member": n.pk in focus} if group_view else {}),
                 }
                 for n in nodes
             ],

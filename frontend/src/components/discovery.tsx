@@ -39,6 +39,9 @@ export function Discovery() {
   const [edges, setEdges] = useState<Edge[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
   const [assessment, setAssessment] = useState("");
+  const [batch, setBatch] = useState<Analysis[]>([]);
+  const [activeId, setActiveId] = useState("");
+  const [retry, setRetry] = useState<Analysis | null>(null);
   const stop = useRef<(() => void) | null>(null);
 
   const generation = useRef(0);
@@ -49,10 +52,12 @@ export function Discovery() {
     setBusy(false);
   }, []);
 
-  async function run(start: () => Promise<Analysis>) {
+  async function run(start: (() => Promise<Analysis | Analysis[]>) | Analysis) {
     const current = ++generation.current;
     stop.current?.();
+    if (typeof start === "function") setBatch([]);
     setBusy(true);
+    setRetry(null);
     setError("");
     setEvents([]);
     setAd(null);
@@ -60,15 +65,29 @@ export function Discovery() {
     setSelected(null);
     setAssessment("");
     try {
-      const analysis = await start();
+      const result = typeof start === "function" ? await start() : start;
       if (generation.current !== current) return;
+      const analysis = Array.isArray(result) ? result[0] : result;
+      if (!analysis) throw new Error("W przesłanych plikach nie znaleziono materiału do analizy.");
+      if (Array.isArray(result)) setBatch(result);
+      setActiveId(analysis.id);
       stop.current = streamAnalysis(
         analysis,
-        (item) => setEvents((previous) => [...previous, item]),
+        (item) => {
+          if (generation.current === current) setEvents(previous => [...previous, item]);
+        },
         async () => {
           try {
             const finished = await api.analysis(analysis.id);
             if (generation.current !== current) return;
+            if (finished.status === "running" || finished.status === "queued") {
+              setRetry(analysis);
+              return;
+            }
+            if (finished.status === "failed") {
+              setError(finished.error || "Backend zgłosił błąd analizy.");
+              return;
+            }
             setAssessment((finished.result.cluster as ClusterResult | undefined)?.assessment_label ?? "");
             if (finished.ad) {
               const [detail, links] = await Promise.all([api.ad(finished.ad), api.adEdges(finished.ad)]);
@@ -76,10 +95,8 @@ export function Discovery() {
               setAd(detail);
               setEdges(links);
             }
-            if (finished.status === "failed") setError(finished.error || "Backend zgłosił błąd analizy.");
-            if (finished.status === "running" || finished.status === "queued") setError("Utracono połączenie ze strumieniem. Analiza pozostaje w kolejce backendu.");
-          } catch (reason) {
-            if (generation.current === current) setError(String(reason));
+          } catch {
+            if (generation.current === current) setRetry(analysis);
           } finally {
             if (generation.current === current) setBusy(false);
           }
@@ -98,11 +115,7 @@ export function Discovery() {
   }
 
   function upload(files: File[]) {
-    if (!busy && files.length) void run(async () => {
-      const [first] = await api.uploadCase(files);
-      if (!first) throw new Error("W przesłanych plikach nie znaleziono materiału do analizy.");
-      return first;
-    });
+    if (!busy && files.length) void run(() => api.uploadCase(files));
   }
 
   const strongest = events.filter(item => item.stage === "fuse" && item.status === "info")
@@ -145,6 +158,20 @@ export function Discovery() {
         <input id="input-files" type="file" multiple disabled={busy} onChange={event => { upload(Array.from(event.target.files ?? [])); event.target.value = ""; }} className="text-xs" />
       </label>
 
+      {batch.length > 1 && <label className="flex items-center gap-2">Materiał z paczki
+        <select className="min-w-0 max-w-full rounded border border-line bg-panel p-2" value={activeId} onChange={event => {
+          const analysis = batch.find(item => item.id === event.target.value);
+          if (analysis) void run(analysis);
+        }}>
+          {batch.map((item, index) => <option key={item.id} value={item.id}>
+            {index + 1}. {item.input_value || item.id}
+          </option>)}
+        </select>
+      </label>}
+      {retry && <div role="status" className="flex flex-wrap items-center gap-3 rounded border border-line p-3">
+        <span>Przerwano odbiór danych analizy.</span>
+        <button className="text-accent underline" onClick={() => void run(retry)}>Wznów podgląd</button>
+      </div>}
       {error && <p className="rounded border border-red-500 px-3 py-2 text-red-400">Analiza nie powiodła się: {error}</p>}
 
       <div className="grid gap-6 lg:grid-cols-2">

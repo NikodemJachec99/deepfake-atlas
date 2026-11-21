@@ -128,6 +128,7 @@ export interface Edge {
 }
 
 export interface Evidence {
+  id: number; // stały w obrębie krawędzi, do wyłączania w laboratorium dowodów
   family: Family;
   family_label: string;
   kind: string;
@@ -149,6 +150,73 @@ export interface EdgeDetail extends Edge {
   verdict_at: string | null;
   ads: AdSummary[];
   evidence: Evidence[];
+}
+
+export interface SimulationResult {
+  relation: Relation | null; // null: krawędź by nie powstała
+  relation_label: string;
+  probability: number;
+  bits: number;
+  decisive: boolean;
+  duplicate: boolean;
+  families: Partial<Record<Family, number>>;
+  independent: string[]; // niezależne silne potwierdzenia; "kit" to ślady jednego silnika lejka
+  reasons: string[];
+}
+
+export interface GroupImpact {
+  binds_before: boolean;
+  binds_after: boolean;
+  pair_still_connected: boolean | null; // liczone tylko, gdy krawędź przestałaby spinać grupę
+  path_length: number | null;
+  note: string;
+}
+
+export interface Simulation {
+  edge: number;
+  edge_version: string;
+  model_version: string;
+  stored: { relation: Relation; bits: number; model_version: string };
+  baseline: SimulationResult;
+  simulated: SimulationResult;
+  relation_changed: boolean;
+  excluded: { id: number; family: Family; kind: string; label: string; value: string; weight_bits: number; decisive: boolean }[];
+  group_impact: { campaign: GroupImpact; operator: GroupImpact };
+  warnings: string[];
+}
+
+export type SuggestionCode =
+  | "single_support"
+  | "engine_without_account"
+  | "copy_without_backend"
+  | "har_missing"
+  | "screenshot_only"
+  | "story_unknown";
+
+export interface Suggestion {
+  code: SuggestionCode;
+  missing: string; // jakiego dowodu brakuje (hipoteza, nie istniejący dowód)
+  why: string;
+  next_step: string;
+  limitation: string;
+  rule: string; // reguła silnika albo stan materiałów, z której wynika wskazówka
+  sides: string[]; // "A (reklama #12)"; pusta, gdy dotyczy całej pary
+}
+
+export interface EdgeMaterials {
+  har: boolean;
+  page: boolean;
+  creative: boolean;
+  library_ids: string[];
+}
+
+export interface Suggestions {
+  edge: number;
+  relation: Relation | null;
+  materials: { A: EdgeMaterials; B: EdgeMaterials };
+  suggestions: Suggestion[]; // pusta lista to poprawny wynik
+  note: string;
+  warnings: string[];
 }
 
 export interface Group {
@@ -177,6 +245,35 @@ export interface GroupDetail extends Group {
 
 export interface OperatorDetail extends GroupDetail {
   campaigns: string[];
+}
+
+// Oś czasu kampanii albo operatora. Zdarzenie bez daty w bazie się nie pojawia.
+export type TimelineEventType =
+  | "domain_registered"
+  | "cert_issued"
+  | "ad_first_seen"
+  | "snapshot"
+  | "ad_last_seen"
+  | "cert_pl_added"
+  | "cert_pl_removed";
+
+export interface TimelineEvent {
+  type: TimelineEventType;
+  label: string;
+  at: string;
+  ads: number[];
+  value: string;
+  detail: {
+    registrar?: string;
+    issuer?: string;
+    domains?: string[];
+    active?: boolean;
+  };
+}
+
+export interface Timeline {
+  group: string;
+  events: TimelineEvent[];
 }
 
 export interface Graph {
@@ -246,10 +343,20 @@ export const api = {
   edge: (id: number) => request<EdgeDetail>(`/api/edges/${id}`),
   setVerdict: (id: number, verdict: Exclude<Verdict, "">, note = "") =>
     request<EdgeDetail>(`/api/edges/${id}/verdict`, { method: "POST", body: JSON.stringify({ verdict, note }) }),
+  // Laboratorium dowodów: przeliczenie bez wybranych dowodów. Niczego nie zapisuje. 409, gdy krawędź się zmieniła.
+  simulateEdge: (id: number, exclude: number[], edgeVersion?: string) =>
+    request<Simulation>(`/api/edges/${id}/simulate`, {
+      method: "POST",
+      body: JSON.stringify({ exclude, ...(edgeVersion ? { edge_version: edgeVersion } : {}) }),
+    }),
+  // Co sprawdzić dalej: wskazówki z brakujących dowodów pary, bez zapytań na zewnątrz.
+  edgeSuggestions: (id: number) => request<Suggestions>(`/api/edges/${id}/suggestions`),
   campaigns: () => request<Page<Group>>("/api/campaigns"),
   campaign: (id: number) => request<GroupDetail>(`/api/campaigns/${id}`),
   operators: () => request<Page<Group>>("/api/operators"),
   operator: (id: number) => request<OperatorDetail>(`/api/operators/${id}`),
+  campaignTimeline: (id: number) => request<Timeline>(`/api/campaigns/${id}/timeline`),
+  operatorTimeline: (id: number) => request<Timeline>(`/api/operators/${id}/timeline`),
   // Filtry: ?campaign=ID, ?operator=ID, ?ad=ID, ?relation=same_campaign,same_operator, ?limit=
   graph: (query = "") => request<Graph>(`/api/graph${query}`),
   kinds: () => request<Kinds>("/api/kinds"),

@@ -22,6 +22,7 @@ from evidence import store
 from evidence.kinds import BAND_KINDS, FAMILIES, KINDS
 from evidence.models import AdMarker, Artifact, AuditLog
 from extractors.url import redact_url
+from similarity import simulation, suggestions, timeline
 from similarity.models import Campaign, Edge, Operator
 from similarity.service import assign_campaign, assign_operator
 from workflows import runner
@@ -195,6 +196,28 @@ def edge_verdict(request, pk):
     return Response(s.EdgeDetailSerializer(edge).data)
 
 
+@extend_schema(request=s.SimulationSerializer, responses=dict)
+@api_view(["POST"])
+def edge_simulate(request, pk):
+    """Laboratorium dowodów: przeliczenie krawędzi bez wybranych dowodów. Niczego nie zapisuje."""
+    edge = get_object_or_404(Edge, pk=pk)
+    payload = s.SimulationSerializer(data=request.data)
+    payload.is_valid(raise_exception=True)
+    try:
+        result = simulation.simulate(edge, payload.validated_data["exclude"], payload.validated_data.get("edge_version") or None)
+    except simulation.SimulationError as exc:
+        return Response({"detail": str(exc), **exc.extra}, status=exc.status)
+    return Response(result)
+
+
+@extend_schema(responses=dict)
+@api_view(["GET"])
+def edge_suggestions(request, pk):
+    """Co sprawdzić dalej: wskazówki z brakujących dowodów tej pary. Bez zapytań na zewnątrz."""
+    edge = get_object_or_404(Edge.objects.select_related("ad_a", "ad_b"), pk=pk)
+    return Response(suggestions.suggestions_for(edge))
+
+
 def _group_detail(group, serializer, relations: list[str]) -> dict:
     """Wspólny kształt karty kampanii i operatora: reklamy, krawędzie i markery, które grupę spinają."""
     ad_ids = list(group.memberships.values_list("ad_id", flat=True))
@@ -255,6 +278,23 @@ def operator_detail(request, pk):
     detail = _group_detail(operator, s.OperatorSerializer, [Edge.Relation.SAME_CAMPAIGN, Edge.Relation.SAME_OPERATOR])
     detail["campaigns"] = sorted({ad["campaign"] for ad in detail["ads"] if ad["campaign"]})
     return Response(detail)
+
+
+def _timeline(group) -> dict:
+    ad_ids = list(group.memberships.values_list("ad_id", flat=True))
+    return {"group": group.key, "events": timeline.events_for(ad_ids)}
+
+
+@api_view(["GET"])
+def campaign_timeline(request, pk):
+    """Zdarzenia kampanii w czasie: wystąpienia reklam, migawki, rejestracja domen, certyfikaty, wpisy CERT Polska."""
+    return Response(_timeline(get_object_or_404(Campaign, pk=pk)))
+
+
+@api_view(["GET"])
+def operator_timeline(request, pk):
+    """Zdarzenia operatora w czasie, w tym samym kształcie co oś kampanii."""
+    return Response(_timeline(get_object_or_404(Operator, pk=pk)))
 
 
 @api_view(["GET"])

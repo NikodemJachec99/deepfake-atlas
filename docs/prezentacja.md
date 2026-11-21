@@ -108,4 +108,5 @@ Próba 2026-11-21 na świeżym klonie (`main` po #16, crt.sh włączony): przygo
 | Co z nową kampanią z innej domeny i innym artykułem? | Właśnie to pokazuje demo: łączy ślad konta w panelu lejka i piksel, nie treść. |
 | Co, gdy strona już nie działa? | Analiza kończy się z mniejszą liczbą cech. Sam zrzut reklamy daje OCR, nazwę reklamodawcy i hash kreacji. |
 | Twarze? | Osoby rozpoznajemy po wzmiance w tekście z odmianą, baza 30 osób. Twarzy nie porównujemy. |
+| Skąd wiecie, które połączenie jest kruche? | Laboratorium dowodów: `POST /api/edges/{id}/simulate` przelicza krawędź bez wybranych śladów i niczego nie zapisuje, a `GET /api/edges/{id}/suggestions` mówi, czego brakuje. Przykład z danych: operator B trzyma się na jednym hoście zasobów. Bez niego para spada do podobieństwa. Opis: `docs/laboratorium.md`. |
 | Dlaczego sprawy 48 i p11 nie są przy operatorze A? | Dzielą z nim tylko silnik lejka. Program mógł kupić każdy, operatora wskazuje ślad jego konta albo infrastruktury. |

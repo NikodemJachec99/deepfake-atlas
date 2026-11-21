@@ -31,17 +31,20 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("path", help="Katalog docelowy, powstanie, jeśli go nie ma")
+        parser.add_argument("--source", help="Tylko reklamy z tego źródła, np. capture (materiały spraw) albo microsoft")
 
     def handle(self, *args, **options):
         out = Path(options["path"])
         out.mkdir(parents=True, exist_ok=True)
+        selected = Ad.objects.filter(source=options["source"]) if options.get("source") else Ad.objects.all()
         ads = list(
-            Ad.objects.select_related("membership__campaign", "operator_membership__operator")
+            selected.select_related("membership__campaign", "operator_membership__operator")
             .prefetch_related(Prefetch("ad_markers", queryset=AdMarker.objects.select_related("marker", "artifact")))
             .order_by("id")
         )
+        edge_query = Edge.objects.filter(ad_a__source=options["source"], ad_b__source=options["source"]) if options.get("source") else Edge.objects.all()
         edges = list(
-            Edge.objects.select_related("ad_a", "ad_b")
+            edge_query.select_related("ad_a", "ad_b")
             .prefetch_related(Prefetch("evidence", queryset=EdgeEvidence.objects.order_by("-weight_bits")))
             .order_by("id")
         )

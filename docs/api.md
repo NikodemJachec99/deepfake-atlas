@@ -35,6 +35,7 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | GET | `/api/graph` | `?campaign=` \| `?operator=` \| `?ad=`, `?relation=a,b`, `?limit=` | `{nodes, edges}` dla Sigma.js |
 | GET | `/api/kinds` | | słownik 7 rodzin i typów markerów |
 | GET | `/api/stats` | | liczby do paska stanu |
+| GET | `/api/export` | `?source=capture` (opcjonalnie) | ZIP z wzbogaconym korpusem: `korpus/reklamy.jsonl` (reklamy z markerami), `korpus/krawedzie.jsonl` (krawędzie z dowodami), `korpus/grupy.csv`, `korpus/opis.json`; tokeny tylko jako skróty; nieznane źródło `400` |
 | GET | `/api/artifacts/{sha256}` | | surowy dowód jako załącznik (nigdy się nie renderuje) |
 | GET | `/api/artifacts/{sha256}/image` | | zrzut reklamy albo klatka poglądowa nagrania jako obraz (tylko artefakty obrazów) |
 | GET | `/api/artifacts/{sha256}/video` | nagłówek `Range` (opcjonalny) | nagranie do odtworzenia (MP4, MOV, WebM po sygnaturze bajtów), `206` dla zakresu, `416` poza plikiem |

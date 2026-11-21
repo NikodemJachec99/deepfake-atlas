@@ -44,3 +44,25 @@ def test_export_writes_ads_edges_groups_without_secrets(tmp_path):
     assert "EAATESTfake00000000" not in everything
     summary = json.loads((out / "opis.json").read_text(encoding="utf-8"))
     assert summary["reklamy"] == 3 and summary["krawedzie"]["same_campaign"] >= 1
+
+
+def test_export_endpoint_returns_zip_and_filters_by_source(tmp_path):
+    import io
+    import zipfile
+
+    from rest_framework.test import APIClient
+
+    run(bundle.import_case(make_case(tmp_path / "p", "1", "civic.example", "Zamach", ARTICLE_X), bundle="t"))
+    Ad.objects.create(source="microsoft", external_id="ms-1", title="Legalna reklama")
+    client = APIClient()
+    response = client.get("/api/export?source=capture")
+    assert response.status_code == 200 and response["Content-Type"] == "application/zip"
+    assert "attachment" in response["Content-Disposition"]
+    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+        names = set(archive.namelist())
+        ads = archive.read("korpus/reklamy.jsonl").decode("utf-8").splitlines()
+    assert {"korpus/reklamy.jsonl", "korpus/krawedzie.jsonl", "korpus/grupy.csv", "korpus/opis.json"} <= names
+    assert len(ads) == 1 and "ms-1" not in ads[0]
+    with zipfile.ZipFile(io.BytesIO(client.get("/api/export").content)) as archive:
+        assert len(archive.read("korpus/reklamy.jsonl").decode("utf-8").splitlines()) == 2
+    assert client.get("/api/export?source=nie-ma").status_code == 400

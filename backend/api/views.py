@@ -22,7 +22,7 @@ from evidence.kinds import BAND_KINDS, FAMILIES, KINDS
 from evidence.models import AdMarker, Artifact
 from extractors.url import redact_url
 from people.display import display_value, person_names
-from similarity import decisions, simulation, suggestions, timeline, weakest
+from similarity import decisions, precedents, simulation, suggestions, timeline, weakest
 from similarity.models import Campaign, Edge, EdgeDecision, Operator
 from similarity.service import assign_campaign, assign_operator
 from workflows import runner
@@ -189,6 +189,18 @@ def edge_verdict(request, pk):
     decisions.decide(edge.pk, data["verdict"], data.get("reason") or EdgeDecision.Reason.UNKNOWN, data.get("note", ""), user)
     edge.refresh_from_db()
     return Response(s.EdgeDetailSerializer(edge).data)
+
+
+@extend_schema(responses=dict)
+@api_view(["GET"])
+def edge_precedents(request, pk):
+    """Podobne wcześniejsze rozstrzygnięcia innych par. Doradczo, bez zmian krawędzi, wag i grup."""
+    edge = get_object_or_404(Edge, pk=pk)
+    try:
+        limit = int(request.query_params.get("limit", precedents.DEFAULT_LIMIT))
+    except ValueError:
+        return Response({"detail": "limit musi być liczbą"}, status=status.HTTP_400_BAD_REQUEST)
+    return Response(precedents.find(edge, limit))
 
 
 @extend_schema(responses=dict)

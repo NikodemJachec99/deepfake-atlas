@@ -19,6 +19,7 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | GET | `/api/edges/{id}` | | `EdgeDetail`: obie reklamy i lista dowodów |
 | POST | `/api/edges/{id}/verdict` | `{"verdict":"confirmed"\|"rejected"\|"unsure","reason":"...","note":""}` | `EdgeDetail`; wpis w historii decyzji z migawką i w dzienniku audytu |
 | GET | `/api/edges/{id}/decisions` | | `EdgeDecisions`: historia decyzji od najnowszej (opis niżej) |
+| GET | `/api/edges/{id}/precedents` | `?limit=` (domyślnie 5, najwyżej 20) | `Precedents`: podobne wcześniejsze rozstrzygnięcia innych par (opis niżej) |
 | POST | `/api/edges/{id}/simulate` | `{"exclude":[<id dowodu>],"edge_version":"<Edge.updated_at>"}` | `Simulation`: krawędź przed i po wyłączeniu dowodów, nic nie zapisuje |
 | GET | `/api/edges/{id}/suggestions` | | `Suggestions`: co sprawdzić dalej, z brakujących dowodów tej pary |
 | POST | `/api/edges/{id}/weakest-link` | `{"max_group_size":2,"max_scenarios":500,"time_limit_ms":3000,"edge_version":"..."}` | `WeakestLink`: najmniejsze zestawy grup śladów, których utrata zmienia relację |
@@ -74,6 +75,21 @@ Powody (`reason`, lista z etykietami w `GET /api/kinds` jako `verdict_reasons`):
 `GET /api/edges/{id}/decisions` zwraca `{"edge": 12, "current": "rejected", "decisions": [EdgeDecision]}`. `EdgeDecision`: `id`, `edge` (null, gdy krawędź zniknęła przy przeliczeniu), `ad_a`, `ad_b`, `verdict`, `previous_verdict`, `reason`, `reason_label`, `note`, `legacy`, `user`, `created_at`, `has_snapshot`, `snapshot`.
 
 `snapshot` to stan z chwili decyzji, bo dowody krawędzi są przebudowywane przy każdym przeliczeniu: `relation`, `bits`, `probability`, `decisive`, `duplicate`, `families`, `model_version`, `edge_version` (wersja dowodów, ta sama co w Laboratorium dowodów), `evidence` (rodzaj, rodzina, wartości po redakcji do 300 znaków, podobieństwo, `df`, `corpus_n`, wkład w bitach, `decisive`, `kit`, `motif`), `groups` (kampania i operator obu reklam), `ads` (źródło, sprawa, adres po redakcji).
+
+### Precedensy
+
+`GET /api/edges/{id}/precedents` szuka wcześniejszych decyzji o innych parach, które dotyczyły podobnych śladów. Wynik jest doradczy: wcześniejsza decyzja nie przesądza o tej krawędzi, a zapytanie niczego nie zmienia.
+
+Reguły:
+
+1. Kandydat to najnowsza decyzja o każdej innej parze, która ma migawkę. Decyzje bez migawki są liczone w `skipped_without_snapshot` i nie są pokazywane jako precedensy. Własna historia pary jest w `/decisions`.
+2. Ślady obu stron są sprowadzane do grup z testu najsłabszego ogniwa (`kit`, `motif`, `infra`, `content`, `creative`, `template`, `kind:<typ>`). Liczą się tylko dowody z wkładem większym od zera.
+3. Kandydat musi dzielić z krawędzią co najmniej jedną grupę inną niż `motif`.
+4. `similarity` to Jaccard zbiorów grup. Kolejność: podobieństwo, ta sama relacja, nowsza decyzja, id.
+
+`Precedents`: `edge`, `edge_version`, `relation`, `groups` (grupy tej krawędzi), `status` (`found` albo `none`), `considered` (pary z decyzjami), `matching` (spełniające reguły), `skipped_without_snapshot`, `limit`, `conflict` (wśród zwróconych są i potwierdzenia, i odrzucenia), `notice`, `precedents`.
+
+Precedens: `decision`, `edge`, `ad_a`, `ad_b`, `verdict`, `reason`, `reason_label`, `reason_known` (`false` dla powodu `unknown`), `note` (po redakcji), `user`, `created_at`, `source`, `similarity`, `same_relation`, `relation_then`, `relation_now`, `model_then`, `shared_groups`, `only_now`, `only_then`, `new_independent` (grupy tylko w tej krawędzi, inne niż motywy i silnik lejka, czyli niezależne ślady, których wcześniejsza decyzja nie oceniała), `why` i `differences` (zdania z reguł, nie generowane), `evidence_then` (do 12 dowodów z migawki).
 
 API nie ma uwierzytelniania, więc notatka jest widoczna dla każdego z dostępem do API, tak jak wcześniej `verdict_note`. Przed zapisem sekrety w notatce są zamieniane na skróty: parametry z tokenami w adresach i tokeny dostępu Mety pod dowolną nazwą. Danych osobowych notatka nie powinna zawierać, system ich nie wykrywa.
 

@@ -36,8 +36,13 @@ class BlockedUrl(ValueError):
     pass
 
 
-def assert_public(url: str) -> None:
-    """Crawler przyjmuje adresy od użytkowników, więc nie może dać się wysłać do sieci wewnętrznej."""
+def resolve_public(url: str) -> str:
+    """Rozwiązuje nazwę raz i zwraca publiczny adres IP, z którym crawler się połączy.
+
+    Crawler przyjmuje adresy od użytkowników, więc nie może dać się wysłać do sieci wewnętrznej.
+    Odmawiamy, gdy którykolwiek adres z DNS jest niepubliczny, a łączymy się z tym sprawdzonym,
+    żeby podmiana DNS między sprawdzeniem a połączeniem (rebinding) nic nie dała.
+    """
     parts = urlsplit(url)
     if parts.scheme not in ("http", "https") or not parts.hostname:
         raise BlockedUrl(f"Niedozwolony adres: {url}")
@@ -45,10 +50,28 @@ def assert_public(url: str) -> None:
         infos = socket.getaddrinfo(parts.hostname, parts.port or (443 if parts.scheme == "https" else 80))
     except socket.gaierror as exc:
         raise BlockedUrl(f"Nie można rozwiązać nazwy: {parts.hostname}") from exc
-    for info in infos:
-        ip = ipaddress.ip_address(info[4][0])
+    addresses = [ipaddress.ip_address(info[4][0]) for info in infos]
+    for ip in addresses:
         if not ip.is_global:
             raise BlockedUrl(f"Adres prowadzi do sieci niepublicznej: {parts.hostname} -> {ip}")
+    if not addresses:
+        raise BlockedUrl(f"Nie można rozwiązać nazwy: {parts.hostname}")
+    return str(addresses[0])
+
+
+def assert_public(url: str) -> None:
+    resolve_public(url)
+
+
+def pinned_request(url: str, ip: str) -> tuple[str, dict, dict]:
+    """Adres z wpisanym sprawdzonym IP, nagłówek Host i SNI oryginalnej nazwy. Certyfikatu i tak nie weryfikujemy."""
+    parts = urlsplit(url)
+    host = f"[{ip}]" if ":" in ip else ip
+    netloc = f"{host}:{parts.port}" if parts.port else host
+    target = parts._replace(netloc=netloc).geturl()
+    original = parts.hostname + (f":{parts.port}" if parts.port else "")
+    extensions = {"sni_hostname": parts.hostname} if parts.scheme == "https" else {}
+    return target, {"Host": original}, extensions
 
 
 @dataclass
@@ -92,8 +115,13 @@ class HttpFetcher:
         try:
             with self._client(profile) as client:
                 for _ in range(self.max_hops + 1):
-                    assert_public(current)
-                    with client.stream("GET", current) as response:
+                    ip = resolve_public(current)
+                    if self.proxy:
+                        # Przez proxy nazwę rozwiązuje proxy; sprawdzenie zostaje, przypięcia nie da się zrobić.
+                        target, headers, extensions = current, {}, {}
+                    else:
+                        target, headers, extensions = pinned_request(current, ip)
+                    with client.stream("GET", target, headers=headers, extensions=extensions) as response:
                         body = b""
                         for chunk in response.iter_bytes():
                             body += chunk

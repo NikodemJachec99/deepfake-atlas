@@ -31,7 +31,7 @@ from similarity.models import Edge
 
 INFRA_KINDS = {code for code, k in KINDS.items() if k.family == "infra" and not k.kit}
 CONTENT_KINDS = {"page_title", "page_text_minhash", "text_minhash"}
-CREATIVE_KINDS = {"creative_sha256", "creative_phash", "image_set"}
+CREATIVE_KINDS = {"creative_sha256", "creative_phash", "image_set", "video_frames"}
 TEMPLATE_KINDS = {"dom_hash", "dom_minhash", "white_dom_hash"}
 GROUP_LABELS = {
     "kit": "Ślady silnika lejka",

@@ -15,7 +15,7 @@ Nie oceniamy, czy pojedyncza reklama jest oszustwem. Odpowiadamy na pytanie: **k
 | zrzut ekranu reklamy | `POST /api/analyses/upload` |
 | log komunikacji (HAR) | `POST /api/analyses/upload` |
 | zapisana strona, archiwum sprawy (ZIP), zrzut z `page-capture`, archiwum NASK | `POST /api/analyses/upload`, `manage.py import_bundle` |
-| plik wideo z metadanymi yt-dlp | `POST /api/analyses/upload` (rejestrujemy plik i numer reklamy, treści wideo nie analizujemy) |
+| plik wideo z metadanymi yt-dlp | `POST /api/analyses/upload` (plik, numer reklamy i 8 klatek: hasze, tekst z OCR, twarze; dźwięku nie analizujemy) |
 | reklamy z bibliotek | konektory w `collectors/`, uruchamiane ręcznie albo z harmonogramu |
 
 Jedna strona docelowa to jedna jednostka analizy. Zapisana strona i HAR tej samej domeny z jednego katalogu łączymy w jedną jednostkę. Zrzuty reklamy z katalogu sprawy dołączamy do każdej strony tej sprawy (`collectors/bundle.py`).
@@ -158,7 +158,7 @@ Szczegóły: [dane-organizatora.md](dane-organizatora.md). W skrócie: 28 stron 
 
 - **Wagi są eksperckie.** Parametry `m`, `f0`, `cap` dobraliśmy ręcznie. Nie mamy zbioru z oznaczonymi kampaniami, więc nie podajemy precyzji ani czułości. Etap dalszy: model uczony na parach oznaczonych przez analityków.
 - **Twarze tylko z bazy referencyjnej, bez głosu.** Twarz na zrzucie reklamy rozpoznajemy, gdy osoba jest w małej bazie zbudowanej ze zdjęć na wolnej licencji. Deepfake z osobą spoza bazy i bez nazwiska w tekście pozostaje nierozpoznany. Głosu nie analizujemy.
-- **Wideo.** Rejestrujemy plik, nie analizujemy treści.
+- **Wideo tylko z klatek.** Z nagrania bierzemy 8 klatek rozłożonych równomiernie, bez jednolitych plansz. Każda daje hash percepcyjny (miękki marker `video_frames`: ten sam materiał po ponownym zakodowaniu albo przycięciu), tekst z OCR (dołączony do tekstu reklamy, z reklamodawcą przy "Sponsorowane") i twarze z bazy referencyjnej. Dźwięku, głosu i ruchu nie analizujemy.
 - **Strony na żywo.** Pobieramy HTML bez wykonywania JavaScriptu i bez obrazów. Pełny zestaw cech dają dopiero przechwycenia z HAR.
 - **Hash obrazu** wykrywa ten sam obraz po przeróbkach, nie podobne ujęcie tej samej sceny.
 - **Mały korpus.** Rzadkość opiera się głównie na częstościach bazowych typów. Z czasem zastąpią je częstości z danych.

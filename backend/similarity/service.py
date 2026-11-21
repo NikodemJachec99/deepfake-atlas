@@ -19,6 +19,7 @@ MAX_CANDIDATES = 500
 # Treść jest odporna na doklejoną sekcję: zapis strony z komentarzami to wciąż ten sam artykuł.
 SOFT_SIMILARITY = {
     "image_set": images.set_similarity,
+    "video_frames": images.set_similarity,
     "page_text_minhash": minhash.text_similarity,
     "text_minhash": minhash.text_similarity,
 }

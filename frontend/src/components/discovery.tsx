@@ -19,18 +19,8 @@ import {
   type Family,
 } from "@/lib/api";
 
-const FAMILY_COLORS: Record<Family, string> = {
-  infra: "#5AA9F0",
-  track: "#E3A53A",
-  tmpl: "#4CC38F",
-  crea: "#F0736A",
-  narr: "#A98BEB",
-  pers: "#E273BF",
-  beh: "#9AA7B6",
-};
-
 function FamilyDot({ family }: { family: Family }) {
-  return <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: FAMILY_COLORS[family] }} />;
+  return <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: `var(--fam-${family})` }} />;
 }
 
 export function Discovery() {

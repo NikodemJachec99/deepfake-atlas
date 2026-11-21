@@ -19,11 +19,11 @@
 | Przyjmuje URL reklamy lub strony | jest | `POST /api/analyses` |
 | Przyjmuje zrzut ekranu | jest | `POST /api/analyses/upload`, OCR |
 | Przyjmuje log komunikacji | jest | HAR |
-| Przyjmuje plik multimedialny | jest, bez dźwięku | obraz: tak; wideo: metadane, klatka poglądowa i 8 klatek z hashem, OCR i twarzami (`extractors/video.py`); dźwięku nie analizujemy |
+| Przyjmuje plik multimedialny | jest | obraz: tak; wideo: metadane, klatka poglądowa, 8 klatek z hashem, OCR i twarzami (`extractors/video.py`) oraz mowa z nagrania zamieniona na tekst (`extractors/speech.py`, Whisper lokalnie) |
 | Przyjmuje dane z udostępnionego zbioru | jest | `manage.py import_bundle`, ZIP przez interfejs |
 | Przyjmuje inną wskazówkę | jest | tekst, nazwa produktu |
 | Tekst, słowa kluczowe, tematyka | jest | treść strony, OCR reklamy, `extractors/keywords.py` |
-| Wizerunki osób | jest, w zakresie bazy | wzmianka w tekście z odmianą (30 osób) i twarz na zrzucie reklamy porównana z bazą referencyjną ze zdjęć na wolnej licencji (`people/faces.py`); także na klatkach nagrań; głosu nie analizujemy |
+| Wizerunki osób | jest, w zakresie bazy | wzmianka w tekście z odmianą (30 osób) i twarz na zrzucie reklamy porównana z bazą referencyjną ze zdjęć na wolnej licencji (`people/faces.py`); także na klatkach nagrań, oraz nazwisko wypowiedziane w nagraniu (transkrypt mowy); głosu mówcy nie porównujemy |
 | Logotypy | częściowo | podszycie pod markę po tekście; brak rozpoznawania logo na obrazie |
 | Cechy wizualne | częściowo | hash percepcyjny zrzutu reklamy i obrazów strony, wektor obrazu CLIP (podobne ujęcie); bez rozpoznawania logo |
 | Domeny, przekierowania, linki, struktura stron | jest | URL, HAR, DOM |

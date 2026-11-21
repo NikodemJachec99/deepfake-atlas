@@ -15,7 +15,7 @@ Nie oceniamy, czy pojedyncza reklama jest oszustwem. Odpowiadamy na pytanie: **k
 | zrzut ekranu reklamy | `POST /api/analyses/upload` |
 | log komunikacji (HAR) | `POST /api/analyses/upload` |
 | zapisana strona, archiwum sprawy (ZIP), zrzut z `page-capture`, archiwum NASK | `POST /api/analyses/upload`, `manage.py import_bundle` |
-| plik wideo z metadanymi yt-dlp | `POST /api/analyses/upload` (plik, numer reklamy i 8 klatek: hasze, tekst z OCR, twarze; dźwięku nie analizujemy) |
+| plik wideo z metadanymi yt-dlp | `POST /api/analyses/upload` (plik, numer reklamy, 8 klatek: hasze, tekst z OCR, twarze, oraz transkrypt mowy) |
 | reklamy z bibliotek | konektory w `collectors/`, uruchamiane ręcznie albo z harmonogramu |
 
 Jedna strona docelowa to jedna jednostka analizy. Zapisana strona i HAR tej samej domeny z jednego katalogu łączymy w jedną jednostkę. Zrzuty reklamy z katalogu sprawy dołączamy do każdej strony tej sprawy (`collectors/bundle.py`).
@@ -163,8 +163,8 @@ Szczegóły: [dane-organizatora.md](dane-organizatora.md). W skrócie: 28 stron 
 ## 12. Ograniczenia
 
 - **Wagi są eksperckie.** Parametry `m`, `f0`, `cap` dobraliśmy ręcznie. Wrażliwość sprawdziliśmy na danych organizatora: szansa wstępna ×0,1 albo ×10 i próg pewności 0,8 albo 0,95 nie zmieniają żadnej relacji, a zmiana siły dowodów o ±50% rusza tylko 4 pary graniczne ([dane-organizatora.md](dane-organizatora.md)). Nie mamy zbioru z oznaczonymi kampaniami, więc nie podajemy precyzji ani czułości. Etap dalszy: model uczony na parach oznaczonych przez analityków.
-- **Twarze tylko z bazy referencyjnej, bez głosu.** Twarz na zrzucie reklamy rozpoznajemy, gdy osoba jest w małej bazie zbudowanej ze zdjęć na wolnej licencji. Deepfake z osobą spoza bazy i bez nazwiska w tekście pozostaje nierozpoznany. Głosu nie analizujemy.
-- **Wideo tylko z klatek.** Z nagrania bierzemy 8 klatek rozłożonych równomiernie, bez jednolitych plansz. Każda daje hash percepcyjny (miękki marker `video_frames`: ten sam materiał po ponownym zakodowaniu albo przycięciu), tekst z OCR (dołączony do tekstu reklamy, z reklamodawcą przy "Sponsorowane") i twarze z bazy referencyjnej. Dźwięku, głosu i ruchu nie analizujemy.
+- **Twarze tylko z bazy referencyjnej, bez głosu.** Twarz na zrzucie reklamy rozpoznajemy, gdy osoba jest w małej bazie zbudowanej ze zdjęć na wolnej licencji. Deepfake z osobą spoza bazy i bez nazwiska w tekście pozostaje nierozpoznany. Głosu jako cechy mówcy nie analizujemy.
+- **Wideo z klatek i mowy.** Z nagrania bierzemy 8 klatek rozłożonych równomiernie, bez jednolitych plansz. Każda daje hash percepcyjny (miękki marker `video_frames`: ten sam materiał po ponownym zakodowaniu albo przycięciu), tekst z OCR (dołączony do tekstu reklamy, z reklamodawcą przy "Sponsorowane") i twarze z bazy referencyjnej. Z dźwięku bierzemy mowę: ffmpeg wyciąga pierwsze 120 s do 16 kHz mono, a lokalny model Whisper `small` (faster-whisper, CPU, język polski, `extractors/speech.py`) zamienia ją na tekst. Transkrypt dołączamy do tekstu reklamy po redakcji adresów, więc działają na nim te same ekstraktory (kontakty, słowa kluczowe, wzmianki o osobach, wektor znaczenia), a osobno zapisujemy go w opisie nagrania z oznaczeniem "mowa z nagrania". Segmenty uznane przez model za brak mowy odrzucamy. Nagranie bez dźwięku albo z samą ciszą nie daje transkryptu. Rozpoznaje mowę, a nie mówcę: nie porównujemy głosów, nie wykrywamy klonów głosu ani ruchu.
 - **Strony na żywo.** Pobieramy HTML bez wykonywania JavaScriptu i bez obrazów. Pełny zestaw cech dają dopiero przechwycenia z HAR.
 - **Hash obrazu** wykrywa ten sam obraz po przeróbkach, nie podobne ujęcie tej samej sceny.
 - **Mały korpus.** Rzadkość opiera się głównie na częstościach bazowych typów. Z czasem zastąpią je częstości z danych.

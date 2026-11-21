@@ -130,7 +130,7 @@ Sprawdzone 2026-11-21:
 - Projekcja do Neo4j, indeks w OpenSearch, skan z harmonogramu Temporala.
 
 Jeszcze nie ma:
-- Głosu. Z nagrań reklam bierzemy 8 klatek: hasze, tekst z OCR i twarze, bez dźwięku i ruchu. Twarze rozpoznajemy tylko dla osób z małej bazy referencyjnej (`python manage.py build_face_refs` ją odbudowuje, modele pobierają się przy pierwszym użyciu). Obrazy porównujemy hashem percepcyjnym, reklamodawcę i tekst ze zrzutu czyta OCR.
+- Rozpoznawania głosu i ruchu. Z nagrań reklam bierzemy 8 klatek (hasze, tekst z OCR, twarze) i mowę zamienioną na tekst lokalnym modelem Whisper (pierwsze 120 s, `TRANSCRIBE=off` wyłącza, `python manage.py transcribe_videos` przelicza już zaimportowane nagrania). Porównania mówcy i klonu głosu nie ma. Twarze rozpoznajemy tylko dla osób z małej bazy referencyjnej (`python manage.py build_face_refs` ją odbudowuje, modele pobierają się przy pierwszym użyciu). Obrazy porównujemy hashem percepcyjnym, reklamodawcę i tekst ze zrzutu czyta OCR.
 - Crawler z przeglądarką (Chromium w osobnym kontenerze, [docs/crawler.md](docs/crawler.md)) nie ma jeszcze wyjścia przez polski adres domowy ani zachowania ludzkiego. Strony z wykrywaniem automatu po odcisku przeglądarki mogą pokazać białą stronę.
 - Konektor Mety jest napisany według dokumentacji, nie był uruchomiony na żywym tokenie.
 - Wagi modelu par są eksperckie, nie uczone.

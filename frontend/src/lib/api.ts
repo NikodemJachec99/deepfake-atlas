@@ -130,6 +130,8 @@ export interface VideoMaterial {
   poster: { artifact: string; at_s: number; position: number | null; url: string } | null;
   // długość oryginału z metadanych pobrania; clip: czy plik jest krótszym wycinkiem (null: nie wiadomo)
   original: { duration_s: number | null; clip: boolean | null };
+  // mowa z nagrania zamieniona na tekst (model może się mylić); null: brak dźwięku, cisza albo kanał wyłączony
+  speech: { source: string; text: string; language: string; model: string; audio_s: number; truncated: boolean } | null;
   missing: string[];
 }
 

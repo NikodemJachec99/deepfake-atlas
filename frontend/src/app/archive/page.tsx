@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, exportCorpusUrl } from "@/lib/api";
 import { adTitle, SOURCE_LABELS } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 import { ErrorBox, GroupLink, Loading } from "@/components/ui";
@@ -13,6 +14,7 @@ const filters = [
 ] as const;
 
 export default function Archive() {
+  const [wholeCorpus, setWholeCorpus] = useState(false);
   const params = useSearchParams();
   const router = useRouter();
   const query = params.toString();
@@ -28,6 +30,14 @@ export default function Archive() {
   }
   return <main className="atlas-page">
     <h1 className="atlas-title">Archiwum reklam</h1>
+    <details className="rounded-md border border-line p-3">
+      <summary className="font-medium">Pobierz wzbogacony korpus</summary>
+      <p className="my-2 text-muted">ZIP zawiera reklamy z markerami, powiązania z dowodami, grupy i opis danych. Tokeny zapisano wyłącznie jako skróty.</p>
+      <label>Zakres eksportu <select className="border border-line p-1" value={wholeCorpus ? "all" : "capture"} onChange={event => setWholeCorpus(event.target.value === "all")}>
+        <option value="capture">Materiały spraw</option><option value="all">Cały korpus</option>
+      </select></label>
+      <a className="ml-3 text-accent underline" download href={exportCorpusUrl(wholeCorpus ? undefined : "capture")}>Pobierz ZIP</a>
+    </details>
     <form key={query} onReset={() => { if (query) router.push("/archive"); }} className="atlas-filters" onSubmit={event => {
       event.preventDefault();
       const form = new FormData(event.currentTarget);

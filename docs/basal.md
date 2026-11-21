@@ -79,6 +79,31 @@ Np. tematyka tekstu reklamy z zamkniętej listy. Tekst reklamy jest niezaufany: 
 - Tryby: wyłączony (domyślnie), `shadow` (liczy i zapisuje, interfejs nie pokazuje), `on` (interfejs pokazuje z etykietą "sugestia modelu"). Limit czasu, rozmiaru stanu i liczby zapytań. Brak modelu albo błąd nie przerywa analizy.
 - Interfejs pokazuje obok sugestii tylko rzeczywiste przesłanki: dowody, reguły i zapisane decyzje. Żadnego generowanego tekstu.
 
+## Uruchomienie adaptera ([#71](https://github.com/NikodemJachec99/deepfake-atlas/issues/71))
+
+Silnik i wagi nie są częścią repozytorium ani obrazów kontenerów. Instalacja w osobnym środowisku, poza repo:
+
+```bash
+uv venv --python 3.12 .venv
+uv pip install --python .venv/Scripts/python.exe torch==2.11.0 --index-url https://download.pytorch.org/whl/cu128
+uv pip install --python .venv/Scripts/python.exe "basal @ https://github.com/rkinas/basal/archive/refs/tags/v2.8.1.tar.gz"
+.venv/Scripts/basal-serve --model Remek/basal-2.0-mini --revision 1fb226f19c9ba9f2053991081e6c4dfc7890de64     --mode eager --host 127.0.0.1 --port 8090
+```
+
+Backend (zmienne w `.env`, wszystkie domyślnie puste albo `off`):
+
+| Zmienna | Znaczenie |
+|---|---|
+| `BASAL_MODE` | `off` (domyślnie), `shadow` (zapisuje, interfejs nie pokazuje), `on` |
+| `BASAL_URL` | np. `http://127.0.0.1:8090`; z kontenera `http://host.docker.internal:8090` |
+| `BASAL_MODEL`, `BASAL_REVISION`, `BASAL_VARIANT` | przypięty model, rewizja HF i wariant (np. `eager-bf16`); bez `BASAL_MODEL` adapter się nie uruchomi |
+| `BASAL_API_KEY` | klucz, gdy serwer działa z `--api-keys` (wysyłany jako `Authorization: Bearer`) |
+| `BASAL_TIMEOUT` | sekundy na jedną decyzję, domyślnie 20 |
+| `BASAL_MAX_ERROR` | np. `0.05`: poniżej progu model się wstrzymuje; pusty: bez wstrzymywania |
+| `BASAL_ALLOWED_HOSTS` | hosty, do których adapter w ogóle wyśle zapytanie; domyślnie tylko lokalne i `basal` |
+
+`python manage.py basal_review [--edge N] [--relation same_operator] [--limit 100]` zapisuje sugestie do `AssistSuggestion` ze statusem `ok`, `abstain`, `unavailable`, `timeout` albo `error`. Po trzech zapytaniach bez odpowiedzi przerywa. Niepoprawna odpowiedź (odpowiedź spoza listy, rozkład spoza zakresu, przekierowanie, za duża treść) jest błędem, nigdy zgadywanym wynikiem. Pytanie ma wersję `edge-review-v1`, stan jego skrót SHA-256.
+
 ## Prywatność
 
 - Do modelu idzie tylko stan zbudowany z pól policzonych przez silnik. Bez HAR, HTML, adresów, tokenów, kontaktów, nazwisk, tekstu stron i reklam (z wyjątkiem zastosowania 3, po osobnej decyzji).

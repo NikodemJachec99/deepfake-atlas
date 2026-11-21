@@ -137,3 +137,42 @@ class EdgeDecision(models.Model):
     class Meta:
         ordering = ["-created_at", "-id"]
         indexes = [models.Index(fields=["edge", "created_at"])]
+
+
+class AssistSuggestion(models.Model):
+    """Sugestia lokalnego modelu decyzji (basal) o krawędzi. Doradcza i oddzielna od dowodów.
+
+    Nie wpływa na krawędź, wagi, dowody, grupy ani decyzje analityka. Zapisujemy wersję modelu,
+    pytania i skrót stanu, żeby wynik dało się odtworzyć i porównać między wersjami.
+    """
+
+    class Status(models.TextChoices):
+        OK = "ok", "Odpowiedź modelu"
+        ABSTAIN = "abstain", "Model wstrzymał się poniżej progu"
+        UNAVAILABLE = "unavailable", "Usługa niedostępna"
+        TIMEOUT = "timeout", "Przekroczony czas"
+        ERROR = "error", "Błąd albo niepoprawna odpowiedź"
+
+    edge = models.ForeignKey(Edge, null=True, blank=True, on_delete=models.SET_NULL, related_name="suggestions")
+    ad_a = models.ForeignKey("ads.Ad", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    ad_b = models.ForeignKey("ads.Ad", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    task = models.CharField(max_length=32)
+    mode = models.CharField(max_length=8)  # shadow albo on, w chwili zapisu
+    status = models.CharField(max_length=12, choices=Status.choices)
+    answer = models.CharField(max_length=32, blank=True)
+    probabilities = models.JSONField(default=dict, blank=True)
+    confidence = models.FloatField(null=True, blank=True)
+    model = models.CharField(max_length=128, blank=True)  # skonfigurowany, np. Remek/basal-2.0-mini
+    revision = models.CharField(max_length=64, blank=True)
+    variant = models.CharField(max_length=64, blank=True)  # tryb i kwantyzacja, np. eager-bf16
+    served_model = models.CharField(max_length=128, blank=True)  # co podał serwer w odpowiedzi
+    question_version = models.CharField(max_length=32)
+    state_fingerprint = models.CharField(max_length=64)
+    edge_version = models.CharField(max_length=40, blank=True)
+    latency_ms = models.PositiveIntegerField(null=True, blank=True)
+    error = models.CharField(max_length=300, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [models.Index(fields=["edge", "task", "created_at"])]

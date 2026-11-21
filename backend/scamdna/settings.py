@@ -101,6 +101,18 @@ TEMPORAL_TASK_QUEUE = env("TEMPORAL_TASK_QUEUE", "scamdna")
 
 CRAWLER_FETCHER = env("CRAWLER_FETCHER", "crawler.fetch.HttpFetcher")
 ENRICHER = env("ENRICHER", "enrichment.providers.LiveEnricher")
+
+# Opcjonalny lokalny model decyzji basal (docs/basal.md). Pusty adres albo tryb "off" wyłącza go całkowicie.
+BASAL_URL = env("BASAL_URL", "")
+BASAL_MODE = env("BASAL_MODE", "off")  # off | shadow | on
+BASAL_MODEL = env("BASAL_MODEL", "")
+BASAL_REVISION = env("BASAL_REVISION", "")
+BASAL_VARIANT = env("BASAL_VARIANT", "")
+BASAL_API_KEY = env("BASAL_API_KEY", "")
+BASAL_TIMEOUT = float(env("BASAL_TIMEOUT", "20"))
+BASAL_MAX_ERROR = env("BASAL_MAX_ERROR", "")  # np. 0.05; pusty: bez wstrzymywania
+# Poza tymi hostami adapter nie wyśle niczego. Model ma działać lokalnie.
+BASAL_ALLOWED_HOSTS = [h for h in env("BASAL_ALLOWED_HOSTS", "127.0.0.1,localhost,::1,basal,host.docker.internal").split(",") if h]
 CRAWLER_TIMEOUT = float(env("CRAWLER_TIMEOUT", "15"))
 CRAWLER_MAX_HOPS = int(env("CRAWLER_MAX_HOPS", "10"))
 CRAWLER_MAX_BYTES = int(env("CRAWLER_MAX_BYTES", str(3 * 1024 * 1024)))

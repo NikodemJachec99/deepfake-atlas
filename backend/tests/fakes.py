@@ -9,6 +9,9 @@ PAGES: dict[str, dict] = {}
 DNS: dict[str, dict] = {}
 CERTS: dict[str, list[dict] | None] = {}  # odpowiedź crt.sh; None to brak odpowiedzi
 CERT_CALLS: list[str] = []
+CT: dict[str, list[dict] | None] = {}  # odpowiedź crt.sh na wyszukiwanie po tokenie nazwy; None to brak odpowiedzi
+CT_CALLS: list[str] = []
+FETCH_CALLS: list[str] = []
 
 
 def reset() -> None:
@@ -16,14 +19,20 @@ def reset() -> None:
     DNS.clear()
     CERTS.clear()
     CERT_CALLS.clear()
+    CT.clear()
+    CT_CALLS.clear()
+    FETCH_CALLS.clear()
 
 
-def page(url: str, html: str, *, bot_html: str | None = None, chain: list[str] | None = None, favicon: bytes = b"") -> None:
-    PAGES[url] = {"html": html, "bot_html": bot_html, "chain": chain or [], "favicon": favicon}
+def page(
+    url: str, html: str, *, bot_html: str | None = None, chain: list[str] | None = None, favicon: bytes = b"", har: dict | None = None
+) -> None:
+    PAGES[url] = {"html": html, "bot_html": bot_html, "chain": chain or [], "favicon": favicon, "har": har}
 
 
 class FakeFetcher:
     def fetch(self, url: str, profile: str = "victim") -> FetchResult:
+        FETCH_CALLS.append(url)
         entry = PAGES.get(url)
         if entry is None:
             return FetchResult(profile=profile, final_url=url, error="ConnectError: brak strony w teście")
@@ -36,6 +45,7 @@ class FakeFetcher:
             status=200,
             content_type="text/html",
             body=html.encode("utf-8"),
+            har=entry.get("har"),
         )
 
     def fetch_bytes(self, url: str, profile: str = "victim") -> bytes:
@@ -67,3 +77,7 @@ class FakeEnricher(NullEnricher):
     def crtsh(self, domain: str) -> list[dict] | None:
         CERT_CALLS.append(domain)
         return CERTS.get(domain, [])
+
+    def crtsh_search(self, token: str) -> list[dict] | None:
+        CT_CALLS.append(token)
+        return CT.get(token, [])

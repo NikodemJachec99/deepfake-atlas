@@ -26,4 +26,12 @@ def run_collector(collector: str, params: dict) -> dict:
     return run(collector, params)
 
 
-ALL = [run_stage, finish_analysis, run_collector]
+@activity.defn(name="run_hunt")
+def run_hunt(run_id: str, params: dict) -> dict:
+    close_old_connections()
+    from hunting import service
+
+    return service.execute(run_id, params)
+
+
+ALL = [run_stage, finish_analysis, run_collector, run_hunt]

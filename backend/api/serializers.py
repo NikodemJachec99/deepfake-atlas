@@ -197,14 +197,21 @@ class AlertSerializer(serializers.ModelSerializer):
     kind_label = serializers.CharField(source="get_kind_display", read_only=True)
     campaign = serializers.SerializerMethodField()
     operator = serializers.SerializerMethodField()
-    ad_title = serializers.CharField(source="ad.title", read_only=True)
+    ad_title = serializers.SerializerMethodField()
+    domain = serializers.SerializerMethodField()
 
     class Meta:
         model = Alert
         fields = [
-            "id", "kind", "kind_label", "ad", "ad_title", "campaign", "campaign_id", "operator", "operator_id",
-            "description", "evidence", "seen", "seen_at", "created_at",
+            "id", "kind", "kind_label", "ad", "ad_title", "hunt_candidate", "domain", "campaign", "campaign_id", "operator",
+            "operator_id", "description", "evidence", "seen", "seen_at", "created_at",
         ]
+
+    def get_ad_title(self, obj) -> str:
+        return obj.ad.title if obj.ad_id else ""
+
+    def get_domain(self, obj) -> str | None:
+        return obj.hunt_candidate.domain if obj.hunt_candidate_id else None
 
     def get_campaign(self, obj) -> str | None:
         return obj.campaign.key if obj.campaign_id else None

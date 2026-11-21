@@ -19,6 +19,7 @@ RDAP_PL = "https://rdap.dns.pl/domain/{domain}"
 RDAP_BOOTSTRAP = "https://rdap.org/domain/{domain}"
 CRTSH = "https://crt.sh/"
 CRTSH_TIMEOUT = 25.0  # crt.sh bywa wolny, ale dłużej analiza nie czeka
+CRTSH_SEARCH_TIMEOUT = 90.0  # wyszukiwanie po fragmencie nazwy (łowca domen) liczy się długo
 CRTSH_INTERVAL = 3.0  # odstęp między zapytaniami z jednego procesu, crt.sh prosi o umiar
 CRTSH_PAUSE = 600.0  # po braku odpowiedzi nie pytamy przez 10 minut
 _crtsh_lock = threading.Lock()
@@ -113,6 +114,17 @@ class LiveEnricher:
         Po nieudanym zapytaniu crt.sh jest pomijany przez CRTSH_PAUSE, żeby import kilkudziesięciu
         stron nie czekał na każdy limit czasu osobno.
         """
+        return self._crtsh_get({"q": domain, "output": "json"}, CRTSH_TIMEOUT)
+
+    def crtsh_search(self, token: str) -> list[dict] | None:
+        """Certyfikaty z nazwą zawierającą `token` (zapytanie `%token%`), tylko niewygasłe. Łowca domen.
+
+        Zapytania z wieloznacznikiem są dla crt.sh drogie, więc mają dłuższy limit czasu, ale idą tym samym
+        torem co zwykłe: jedno naraz, z odstępem i z pauzą po braku odpowiedzi.
+        """
+        return self._crtsh_get({"q": f"%{token}%", "output": "json", "exclude": "expired"}, CRTSH_SEARCH_TIMEOUT)
+
+    def _crtsh_get(self, params: dict, timeout: float) -> list[dict] | None:
         global _crtsh_last, _crtsh_down_until
         with _crtsh_lock:
             if time.monotonic() < _crtsh_down_until:
@@ -122,7 +134,7 @@ class LiveEnricher:
                 time.sleep(wait)
             data = None
             try:
-                response = httpx.get(CRTSH, params={"q": domain, "output": "json"}, timeout=CRTSH_TIMEOUT)
+                response = httpx.get(CRTSH, params=params, timeout=timeout)
                 if response.status_code == 200:
                     parsed = response.json()
                     data = parsed if isinstance(parsed, list) else None
@@ -153,4 +165,7 @@ class NullEnricher:
         return None
 
     def crtsh(self, domain: str) -> list[dict] | None:
+        return []
+
+    def crtsh_search(self, token: str) -> list[dict] | None:
         return []

@@ -622,7 +622,7 @@ class AlertList(generics.ListAPIView):
     serializer_class = s.AlertSerializer
 
     def get_queryset(self):
-        queryset = Alert.objects.select_related("ad", "campaign", "operator")
+        queryset = Alert.objects.select_related("ad", "hunt_candidate", "campaign", "operator")
         if self.request.query_params.get("unseen") in ("1", "true"):
             queryset = queryset.filter(seen=False)
         return queryset
@@ -631,7 +631,7 @@ class AlertList(generics.ListAPIView):
 @api_view(["POST"])
 def alert_seen(request, pk):
     """Oznacza alert jako przejrzany. Ciało `{"seen": false}` cofa oznaczenie."""
-    alert = get_object_or_404(Alert.objects.select_related("ad", "campaign", "operator"), pk=pk)
+    alert = get_object_or_404(Alert.objects.select_related("ad", "hunt_candidate", "campaign", "operator"), pk=pk)
     seen = request.data.get("seen", True) not in (False, "false", "0", 0)
     if alert.seen != seen:
         alert.seen = seen

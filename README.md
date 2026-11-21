@@ -12,6 +12,7 @@ System łączy pozornie niezależne fałszywe reklamy w kampanie i operatorów n
 - Prompt do designu interfejsu: [docs/design-prompt.md](docs/design-prompt.md)
 - Biblioteki, modele, usługi, dane i ich licencje: [docs/licencje.md](docs/licencje.md)
 - Plan rozwoju na rok: [docs/plan-roczny.md](docs/plan-roczny.md)
+- Łowca domen (nowe domeny znanych operatorów z logów CT, `manage.py hunt`): [docs/metodyka.md](docs/metodyka.md), sekcja 8a
 
 ## Start
 
@@ -138,6 +139,7 @@ Sprawdzone 2026-11-21:
 
 Jeszcze nie ma:
 - Rozpoznawania głosu i ruchu. Z nagrań reklam bierzemy 8 klatek (hasze, tekst z OCR, twarze) i mowę zamienioną na tekst lokalnym modelem Whisper (pierwsze 120 s, `TRANSCRIBE=off` wyłącza, `python manage.py transcribe_videos` przelicza już zaimportowane nagrania). Porównania mówcy i klonu głosu nie ma. Twarze rozpoznajemy tylko dla osób z małej bazy referencyjnej (`python manage.py build_face_refs` ją odbudowuje, modele pobierają się przy pierwszym użyciu). Obrazy porównujemy hashem percepcyjnym, reklamodawcę i tekst ze zrzutu czyta OCR.
+- Łowca domen pyta crt.sh po tokenach nazw domen znanych operatorów (limit zapytań na przebieg) i sprawdza kandydatów crawlerem. Harmonogram Temporala jest założony jako wstrzymany (`ensure_schedules --resume-hunt` go włącza), a crt.sh potrafi nie odpowiedzieć na zapytania o częste słowa.
 - Crawler z przeglądarką (Chromium w osobnym kontenerze, [docs/crawler.md](docs/crawler.md)) nie ma jeszcze wyjścia przez polski adres domowy ani zachowania ludzkiego. Strony z wykrywaniem automatu po odcisku przeglądarki mogą pokazać białą stronę.
 - Konektor Mety jest napisany według dokumentacji, nie był uruchomiony na żywym tokenie.
 - Wagi uczone metodą EM (`python manage.py estimate_weights`, `MODEL_WEIGHTS=learned`) są policzone, ale domyślnie działają eksperckie: na 28 reklamach z paczek uczone dają to samo grupowanie, a na korpusie z reklamami Microsoft łamią rdzeń operatora A. Kalibracji na decyzjach analityka nie ma, bo decyzji jest 0. Wyniki w [docs/dane-organizatora.md](docs/dane-organizatora.md).

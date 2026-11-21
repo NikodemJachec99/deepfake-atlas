@@ -50,7 +50,7 @@ Działa całość od wczytania materiału do wyniku: import przechwyceń i uploa
 
 | Do 22.11 | Dalej |
 |---|---|
-| alerty o nowych materiałach znanych kampanii i operatorów ([#208](https://github.com/NikodemJachec99/deepfake-atlas/issues/208)) | powiadomienia (e-mail, komunikator), reguły per operator |
+| alerty o nowych materiałach znanych kampanii i operatorów ([#208](https://github.com/NikodemJachec99/deepfake-atlas/issues/208)), łowca domen: nowe domeny znanych operatorów z logów Certificate Transparency i Listy CERT, potwierdzane przez crawlera śladami operatora z wynikiem w bitach, alert `hunt_confirmed` przed pojawieniem się reklamy ([#226](https://github.com/NikodemJachec99/deepfake-atlas/issues/226)) | powiadomienia (e-mail, komunikator), reguły per operator, własny odczyt logów CT (CertStream albo Google Argon) zamiast zapytań do crt.sh, zgłaszanie potwierdzonych domen do operatorów rejestrów |
 | eksport STIX 2.1 i ZIP z wzbogaconym korpusem | serwer TAXII, synchronizacja z MISP, wpisy na Listę Ostrzeżeń CERT Polska po decyzji analityka |
 | klucz API dla zapisu (domyślnie wyłączony), kontrola Origin, ochrona przed SSRF | konta i role (analityk, przeglądający), dziennik audytu w interfejsie, wdrożenie w sieci NASK |
 | `docker compose up`, sprawdzone na Windowsie i Linuksie | Kubernetes, kopie zapasowe, monitoring kolejek Temporala |

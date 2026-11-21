@@ -16,13 +16,13 @@ async def main() -> None:
     from temporalio.worker import Worker
 
     from . import activities
-    from .temporal_workflows import AnalyzeAdWorkflow, ScanSourceWorkflow
+    from .temporal_workflows import AnalyzeAdWorkflow, HuntOperatorsWorkflow, ScanSourceWorkflow
 
     client = await Client.connect(settings.TEMPORAL_ADDRESS, namespace=settings.TEMPORAL_NAMESPACE)
     worker = Worker(
         client,
         task_queue=settings.TEMPORAL_TASK_QUEUE,
-        workflows=[AnalyzeAdWorkflow, ScanSourceWorkflow],
+        workflows=[AnalyzeAdWorkflow, ScanSourceWorkflow, HuntOperatorsWorkflow],
         activities=activities.ALL,
         activity_executor=ThreadPoolExecutor(max_workers=8),
     )

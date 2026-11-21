@@ -55,3 +55,21 @@ class ScanSourceWorkflow:
                 parent_close_policy=workflow.ParentClosePolicy.ABANDON,
             )
         return result
+
+
+@workflow.defn(name="HuntOperators")
+class HuntOperatorsWorkflow:
+    """Łowca domen: nowe domeny znanych operatorów z logów Certificate Transparency (jedna aktywność, bo kroki dzielą stan).
+
+    `run_id` pusty oznacza przebieg z harmonogramu: aktywność zakłada go z `params`. Bez ponowień, bo przebieg
+    zapisuje rozstrzygnięcia na bieżąco i sam pomija to, co już sprawdził.
+    """
+
+    @workflow.run
+    async def run(self, run_id: str, params: dict) -> dict:
+        return await workflow.execute_activity(
+            "run_hunt",
+            args=[run_id, params],
+            start_to_close_timeout=timedelta(minutes=90),
+            retry_policy=RetryPolicy(maximum_attempts=1),
+        )

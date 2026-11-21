@@ -1,7 +1,9 @@
 "use client";
 
+import { WeakestLinkTest } from "./weakest-link-test";
 import { useState } from "react";
 import { api, artifactDownloadUrl, type EdgeDetail } from "@/lib/api";
+import { utcEdgeVersion } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 
 export function EvidenceLab({ edge, refresh }: { edge: EdgeDetail; refresh: () => void }) {
@@ -9,13 +11,14 @@ export function EvidenceLab({ edge, refresh }: { edge: EdgeDetail; refresh: () =
   const [excluded, setExcluded] = useState<number[]>([]);
   const ready = edge.updated_at && edge.evidence.length > 0 && edge.evidence.every(item => Number.isInteger(item.id));
   const query = useApi(open && ready ? JSON.stringify([edge.id, edge.updated_at, excluded]) : null,
-    () => api.simulateEdge(edge.id, excluded, edge.updated_at));
+    () => api.simulateEdge(edge.id, excluded, utcEdgeVersion(edge.updated_at)));
   const result = query.data;
   return <section className="border-b border-line p-2">
     <button type="button" aria-expanded={open} className="text-accent underline" onClick={() => setOpen(!open)}>Laboratorium dowodów</button>
     {open && <div className="mt-2 grid gap-2">
       <p>Symulacja bez zapisu. Wyłącz dowody, aby sprawdzić ich wpływ.</p>
       {!ready ? <p>Brak danych wymaganych do symulacji.</p> : <>
+        <WeakestLinkTest edge={edge} apply={setExcluded} refresh={refresh} />
         <fieldset className="max-h-48 overflow-auto"><legend>Wyłączone dowody</legend>
           {edge.evidence.map(item => <div key={item.id} className="border-b border-line py-1">
             <label className="break-all"><input type="checkbox" checked={excluded.includes(item.id)}

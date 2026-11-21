@@ -1,4 +1,6 @@
-FROM python:3.12-slim
+# Lustro ECR, bo Docker Hub ogranicza pobrania (429). Inne źródło: --build-arg PYTHON_IMAGE=python:3.12-slim
+ARG PYTHON_IMAGE=public.ecr.aws/docker/library/python:3.12-slim
+FROM ${PYTHON_IMAGE}
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 WORKDIR /app
 # OpenCV (zależność OCR) potrzebuje bibliotek systemowych, których nie ma w obrazie slim.

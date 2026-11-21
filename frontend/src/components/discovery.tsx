@@ -6,6 +6,7 @@
 import { FolderInput, ArrowUpRight } from "lucide-react";
 import { useApi } from "@/lib/hooks";
 import { adTitle } from "@/lib/format";
+import { CrawlShot } from "./crawl-shot";
 import { GroupLink } from "./ui";
 import { LiveGraph } from "./live-graph";
 import { EdgePanel } from "./edge-panel";
@@ -232,10 +233,14 @@ export function Discovery() {
             })}
           </ol>
           {events.filter(event => event.stage === "crawl" && Array.isArray(event.payload.chain)).map(event =>
-            <ol key={event.seq} aria-label="Łańcuch przekierowań" className="break-all font-mono">
-              {(event.payload.chain as {url: string; status?: number}[]).map((hop, index) =>
-                <li key={index}>{hop.status} {hop.url}</li>)}
-            </ol>)}
+            <section key={event.seq}>
+              <h3>{event.payload.profile === "bot" ? "Profil automatu" : event.payload.profile === "victim" ? "Profil odbiorcy" : "Przechwycenie"}</h3>
+              <CrawlShot sha={event.payload.screenshot} />
+              <ol aria-label="Łańcuch przekierowań" className="break-all font-mono">
+              {(event.payload.chain as {url: string; status?: number; via?: string}[]).map((hop, index) =>
+                <li key={index}>{hop.via === "js" ? "Skrypt / meta refresh" : hop.via === "http" ? "HTTP" : ""} {hop.status} {hop.url}</li>)}
+            </ol></section>)}
+          {events.some(e => e.payload.cloaking === true) && <p>Cloaking: automat i odbiorca otrzymali różne wersje strony.</p>}
           {events.length === 0 && <p className="text-muted">Tu pojawią się kolejne etapy, na żywo.</p>}
           <ol className="flex flex-col gap-1 font-mono text-xs">
             {events.map((item) => (

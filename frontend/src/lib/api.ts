@@ -97,6 +97,7 @@ export interface Marker {
   kind: string;
   label: string;
   value: string;
+  display_value: string; // do pokazania: nazwisko zamiast person:ID; dla pozostałych typów równe value
   ad_count: number;
   decisive: boolean;
   artifact: string | null;
@@ -135,6 +136,7 @@ export interface Evidence {
   label: string;
   value_a: string;
   value_b: string;
+  display_value: string; // czytelna wartość, np. nazwisko osoby zamiast person:ID
   similarity: number;
   df: number; // w ilu niezależnych źródłach występuje wartość; 0 dla markerów miękkich
   corpus_n: number;
@@ -181,7 +183,7 @@ export interface Simulation {
   baseline: SimulationResult;
   simulated: SimulationResult;
   relation_changed: boolean;
-  excluded: { id: number; family: Family; kind: string; label: string; value: string; weight_bits: number; decisive: boolean }[];
+  excluded: { id: number; family: Family; kind: string; label: string; value: string; display_value: string; weight_bits: number; decisive: boolean }[];
   group_impact: { campaign: GroupImpact; operator: GroupImpact };
   warnings: string[];
 }
@@ -265,6 +267,7 @@ export interface CoreMarker {
   family: Family;
   decisive: boolean;
   value: string;
+  display_value: string; // nazwisko zamiast person:ID; dla pozostałych typów równe value
   in_group: number;
   ad_count: number;
 }

@@ -14,6 +14,7 @@ from collections import deque
 from dataclasses import dataclass
 
 from evidence.kinds import FAMILIES, KINDS
+from people.display import display_value
 from similarity import fusion
 from similarity.models import Edge, EdgeEvidence
 
@@ -207,6 +208,7 @@ def simulate(edge: Edge, exclude: list[int], edge_version: str | None = None) ->
                 "kind": row.kind,
                 "label": KINDS[row.kind].label if row.kind in KINDS else row.kind,
                 "value": row.value_a,
+                "display_value": display_value(row.kind, row.value_a),
                 "weight_bits": round(row.weight_bits, 2),
                 "decisive": row.decisive,
             }

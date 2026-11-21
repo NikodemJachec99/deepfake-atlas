@@ -188,6 +188,68 @@ export interface Simulation {
   warnings: string[];
 }
 
+export type UrlMatch = "exact" | "normalized" | "domain" | "different" | "unknown";
+
+export interface ObservationContext {
+  browser: string;
+  platform: string;
+  mobile: boolean | null;
+  accept_language: string;
+  cookies: boolean;
+  referer: boolean;
+}
+
+export interface ObservationArtifacts {
+  har: { sha256: string; download: string } | null; // tylko do pobrania
+  html: { sha256: string; download: string } | null; // tylko do pobrania, nigdy renderowania
+  page_screenshot: null; // zrzutów stron nie mamy
+  ad_creatives: { sha256: string; image: string }[]; // reklama, nie strona docelowa
+}
+
+export interface ObservationSide {
+  ad: number;
+  external_id: string;
+  title: string;
+  exact_url: string;
+  captured_at: string | null; // null: nieznane
+  time_source: string | null; // har.entries | nask.archive_info | page-capture.manifest
+  context: ObservationContext | null; // null: nieznany
+  hosts: string[];
+  sources: string[];
+  creatives: string[];
+  artifacts?: ObservationArtifacts;
+}
+
+export interface AdObservations {
+  ad: number;
+  observation: ObservationSide;
+  artifacts: ObservationArtifacts;
+  candidates: { ad: number; external_id: string; title: string; url_match: UrlMatch; url_match_label: string; captured_at: string | null }[];
+  message: string;
+}
+
+export interface ObservationComparison {
+  a: ObservationSide;
+  b: ObservationSide;
+  url_match: UrlMatch;
+  url_match_label: string;
+  seconds_between: number | null;
+  content: { page_text_minhash: number | null; dom_minhash: number | null; image_set: number | null };
+  trackers_only_a: string[];
+  trackers_only_b: string[];
+  hosts_only_a: string[];
+  hosts_only_b: string[];
+  verdict: "identical" | "similar" | "different" | "insufficient";
+  verdict_label: string;
+  differences: string[];
+  hypotheses: string[]; // tylko przy zgodnym adresie i różnej treści
+  limitations: string[];
+  edge: { id: number; relation: Relation; detail: string } | null;
+  graph: string;
+  thresholds: { same_text: number; same_dom: number; similar_text: number; similar_dom: number };
+  note: string;
+}
+
 export interface WeakestLinkGroup {
   id: string; // "kit" | "motif" | "infra" | "content" | "creative" | "template" | "kind:<typ>" | "unknown:<typ>"
   label: string;
@@ -518,6 +580,9 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ exclude, ...(edgeVersion ? { edge_version: edgeVersion } : {}) }),
     }),
+  // Dwie twarze jednego linku: obserwacja strony reklamy i strony do porównania; porównanie tylko do odczytu.
+  adObservations: (id: number) => request<AdObservations>(`/api/ads/${id}/observations`),
+  compareObservations: (a: number, b: number) => request<ObservationComparison>(`/api/observations/compare?a=${a}&b=${b}`),
   // Test najsłabszego ogniwa: najmniejsze zestawy grup śladów, których utrata zmienia relację. Niczego nie zapisuje.
   weakestLink: (id: number, params: { max_group_size?: 1 | 2; max_scenarios?: number; time_limit_ms?: number; edge_version?: string } = {}) =>
     request<WeakestLink>(`/api/edges/${id}/weakest-link`, { method: "POST", body: JSON.stringify(params) }),

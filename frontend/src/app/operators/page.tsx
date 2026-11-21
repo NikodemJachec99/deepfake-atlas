@@ -1,3 +1,5 @@
+import { GroupList } from "@/components/groups";
+
 export default function Page() {
-  return <main className="p-4"><h1 className="text-lg font-semibold">Operatorzy</h1><p>Widok w przygotowaniu.</p></main>;
+  return <GroupList kind="operators" />;
 }

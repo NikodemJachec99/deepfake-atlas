@@ -96,7 +96,7 @@ Do pilnowania:
 | Punkt | Treść | Stan |
 |---|---|---|
 | 4.3 | rozwiązania przesyła się 21.11 11:00 do 22.11 11:00 | **do zrobienia przez zespół** |
-| 4.6 | zespół do 6 osób | do potwierdzenia przez zespół |
+| 4.6 | zespół do 6 osób | zespół jednoosobowy |
 | 5.6 | etap I: ocena zgłoszeń na platformie HackTribe, 5 najlepszych zespołów do etapu II; etap II: 5 minut prezentacji i 5 minut pytań | prezentacja do przygotowania |
 | 5.9 | po terminie zakaz zmian w rozwiązaniu | po 22.11 11:00 nie ruszamy repo |
 | 6.1, 6.2 | uczestnik oświadcza, że jest twórcą swojego wkładu i że rozwiązanie nie narusza praw osób trzecich | biblioteki na licencjach otwartych, lista w [licencje.md](licencje.md); użycie asystenta AI ujawnione tamże |

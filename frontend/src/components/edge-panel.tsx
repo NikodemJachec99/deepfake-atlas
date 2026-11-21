@@ -6,6 +6,7 @@
 import { Check, ChevronDown, ChevronRight, Download, HelpCircle, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
+import { EvidenceLab } from "./evidence-lab";
 import { useState } from "react";
 
 import { api, artifactDownloadUrl, artifactImageUrl, type AdDetail, type AdSummary, type EdgeDetail, type Evidence, type Verdict } from "@/lib/api";
@@ -275,6 +276,7 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict }: { edgeId: number; onO
           {b && <AdSide ad={b} detail={adB.data} side="B" onOpenAd={onOpenAd} />}
         </div>
 
+        <EvidenceLab key={data.id + ":" + data.updated_at} edge={data} refresh={edge.reload} />
         <div className="flex h-7 items-center justify-between border-b border-line px-2">
           <span className="cap">Dowody według wkładu</span>
           <span className="text-[0.85rem] text-faint">model {data.model_version}</span>

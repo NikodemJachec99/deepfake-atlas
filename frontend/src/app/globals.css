@@ -189,3 +189,15 @@ select {
   .atlas-investigation [data-split="inv-table"] > div:first-child { min-height: 52vh; }
   .atlas-investigation [data-split="inv-filters"] > div:first-child { max-height: 15rem; }
 }
+
+@media (max-width: 767px) {
+  .atlas-table .dense tr > :first-child:not([colspan]) {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    max-width: 9rem;
+    overflow-wrap: anywhere;
+    background: var(--panel);
+    box-shadow: 3px 0 4px -3px var(--line-strong);
+  }
+}

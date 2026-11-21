@@ -13,6 +13,8 @@ const sections: Record<string, string> = {
   "/operators": "Operatorzy", "/campaigns": "Kampanie", "/ads": "Reklamy", "/alerts": "Alerty", "/weights": "Wagi markerów",
 };
 
+const compactSections: Record<string, string> = { "/hunt": "Domeny", "/weights": "Wagi" };
+
 const navigation = [
   { href: "/", Icon: Compass }, { href: "/investigation", Icon: Network },
   { href: "/hunt", Icon: ScanSearch }, { href: "/archive", Icon: Archive }, { href: "/operators", Icon: UsersRound },
@@ -58,7 +60,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <strong className="hidden px-2 py-3 text-xl tracking-tight md:block">SCAM DNA</strong>
         {navigation.map(({ href, Icon }) =>
           <Link key={href} href={href} aria-current={root === href ? "page" : undefined}
-            title={sections[href]} className="flex items-center gap-3 rounded-lg px-2 py-2.5 font-medium hover:bg-hover aria-[current=page]:bg-accent-soft aria-[current=page]:text-accent"><Icon size={16} aria-hidden /><span className="sr-only md:not-sr-only">{sections[href]}</span></Link>)}
+            aria-label={sections[href]} title={sections[href]} className="flex flex-col items-center gap-1 text-xs md:flex-row md:gap-3 md:text-base rounded-lg px-2 py-2.5 font-medium hover:bg-hover aria-[current=page]:bg-accent-soft aria-[current=page]:text-accent"><Icon size={16} aria-hidden /><span aria-hidden className="md:hidden">{compactSections[href] ?? sections[href]}</span><span className="hidden md:inline">{sections[href]}</span></Link>)}
       </nav>
       <div className="flex min-w-0 flex-1 flex-col">
         {root !== "/investigation" && <header className="border-b border-line bg-panel/95 px-4 py-2.5 font-semibold backdrop-blur">{sections[root] ?? "SCAM DNA"}{id && " › #" + id}</header>}

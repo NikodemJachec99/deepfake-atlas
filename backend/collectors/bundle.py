@@ -133,6 +133,11 @@ def _merge_nask_archive(directory: Path, page_for) -> None:
     page.sources.append(f"{directory.name}/ (archiwum NASK)")
 
 
+def _same_page(a: str, b: str) -> bool:
+    """Ten sam adres bez query i fragmentu."""
+    return a.split("#")[0].split("?")[0] == b.split("#")[0].split("?")[0]
+
+
 def discover(case_dir: Path, case: str | None = None) -> CaseCapture:
     capture = CaseCapture(case=case or case_dir.name)
     used: set[str] = set()
@@ -152,10 +157,12 @@ def discover(case_dir: Path, case: str | None = None) -> CaseCapture:
             drugi HTML z innym adresem to osobne przechwycenie i osobna strona, żeby nie zgubić wariantu."""
             key = domain or f"?{fallback}"
             for page in local.get(key, []):
-                if slot not in ("har", "html"):
-                    return page  # archiwum i page-capture uzupełniają zapis tej samej domeny, także robione później
-                taken = (slot == "har" and page.har is not None) or (slot == "html" and bool(page.html))
-                if not taken and (not url or not page.url or page.url == url):
+                if slot in ("har", "html"):
+                    taken = (slot == "har" and page.har is not None) or (slot == "html" and bool(page.html))
+                    if taken:
+                        continue
+                # archiwum i page-capture uzupełniają zapis tej samej strony, także robione później, ale tylko po tym samym adresie
+                if not url or not page.url or _same_page(page.url, url):
                     return page
             page = PageCapture(slug=unique(_slug(prefix + (domain or fallback))))
             local.setdefault(key, []).append(page)

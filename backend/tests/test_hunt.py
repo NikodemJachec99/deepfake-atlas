@@ -255,11 +255,13 @@ def test_cert_pl_list_is_a_second_source():
     WarningDomain.objects.create(domain="wiosenna-kuracja8.example", added_at=now - timedelta(days=2))
     WarningDomain.objects.create(domain="wiosenna-dawna.example", added_at=now - timedelta(days=90))
     WarningDomain.objects.create(domain="wiosenna-zdjeta.example", added_at=now - timedelta(days=2), removed_at=now)
+    WarningDomain.objects.create(domain="wiosenna-wrocila.example", added_at=now - timedelta(days=1), removed_at=now - timedelta(days=5))
     fakes.CT["wiosenna"] = [cert("wiosenna-kuracja8.example")]
     run = run_hunt(operator, crawl=False)
-    assert run.stats["cert_pl_hits"] == 1
-    candidate = HuntCandidate.objects.get()
-    assert candidate.domain == "wiosenna-kuracja8.example" and candidate.sources == ["cert_pl", "crtsh"]
+    assert run.stats["cert_pl_hits"] == 2
+    domains = {c.domain for c in HuntCandidate.objects.all()}
+    assert domains == {"wiosenna-kuracja8.example", "wiosenna-wrocila.example"}
+    assert HuntCandidate.objects.get(domain="wiosenna-kuracja8.example").sources == ["cert_pl", "crtsh"]
 
 
 def test_rerun_does_not_duplicate_candidates_or_alerts():

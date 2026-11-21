@@ -1,6 +1,9 @@
 """Potok od zgłoszenia do kampanii z dowodami, na prawdziwej bazie i bez sieci."""
 
+from datetime import timedelta
+
 import pytest
+from django.utils import timezone
 
 from ads.models import Ad, Analysis
 from enrichment.models import WarningDomain
@@ -117,6 +120,17 @@ def test_enrichment_adds_infrastructure_and_cert_label():
     assert {"ip", "asn", "nameserver", "registrar", "reg_day", "favicon_hash"} <= kinds
     assert analysis.result["enrich"]["cert_pl_listed"] is True
     assert analysis.ad.labels["cert_pl"]["domain"] == "zysk-a.example"
+
+
+def test_delisted_domain_gets_no_cert_label_but_relisted_does():
+    fakes.page("https://zysk-a.example/lp/1", LANDING_A)
+    now = timezone.now()
+    WarningDomain.objects.create(domain="zysk-a.example", added_at=now - timedelta(days=30), removed_at=now - timedelta(days=10))
+    analysis = analyze_url("https://zysk-a.example/lp/1")
+    assert analysis.result["enrich"]["cert_pl_listed"] is False and "cert_pl" not in analysis.ad.labels
+    WarningDomain.objects.update(added_at=now - timedelta(days=2))  # zablokowana ponownie po zdjęciu
+    analysis = analyze_url("https://zysk-a.example/lp/1")
+    assert analysis.result["enrich"]["cert_pl_listed"] is True
 
 
 def test_unreachable_page_does_not_fail_the_analysis():

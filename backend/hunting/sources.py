@@ -103,7 +103,7 @@ def cert_pl_hits(tokens: list[str], cutoff: datetime) -> dict[str, Hit]:
     match = Q()
     for token in tokens:
         match |= Q(domain__icontains=token)
-    rows = WarningDomain.objects.filter(match, removed_at__isnull=True, added_at__gte=cutoff).values_list("domain", "added_at")
+    rows = WarningDomain.objects.active().filter(match, added_at__gte=cutoff).values_list("domain", "added_at")
     hits: dict[str, Hit] = {}
     for name, _added in rows:
         domain = registered_domain(name.lower())

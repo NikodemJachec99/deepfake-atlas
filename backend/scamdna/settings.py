@@ -112,6 +112,9 @@ TEMPORAL_NAMESPACE = env("TEMPORAL_NAMESPACE", "default")
 TEMPORAL_TASK_QUEUE = env("TEMPORAL_TASK_QUEUE", "scamdna")
 
 CRAWLER_FETCHER = env("CRAWLER_FETCHER", "crawler.fetch.HttpFetcher")
+# Usługa crawler z Chromium (docker compose). Używana, gdy CRAWLER_FETCHER=crawler.browser.BrowserFetcher.
+CRAWLER_BROWSER_URL = env("CRAWLER_BROWSER_URL", "http://crawler:8000")
+CRAWLER_BROWSER_TIMEOUT = float(env("CRAWLER_BROWSER_TIMEOUT", "60"))
 ENRICHER = env("ENRICHER", "enrichment.providers.LiveEnricher")
 
 # Opcjonalna zewnętrzna usługa Jev. Tryb off i brak uprawnienia blokują wysyłkę.

@@ -40,7 +40,7 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | GET | `/api/export/stix` | `?operator=ID` \| `?campaign=ID` (opcjonalnie) | bundle STIX 2.1 (`application/stix+json`): operator jako `intrusion-set`, kampania jako `campaign` z `attributed-to`, wskaźniki (`indicator`) dla domen, adresów IP, numerów certyfikatów i hostów zasobów z relacją `indicates`; identyfikatory trackerów i paneli lejka w `x_scamdna_identifiers`. Tylko grupy z materiałów zgłoszonych jako podejrzane (przechwycenia, zgłoszenia ręczne), bez reklam z bibliotek, osób i tokenów. Identyfikatory deterministyczne |
 | GET | `/api/export` | `?source=capture` (opcjonalnie) | ZIP z wzbogaconym korpusem: `korpus/reklamy.jsonl` (reklamy z markerami), `korpus/krawedzie.jsonl` (krawędzie z dowodami), `korpus/grupy.csv`, `korpus/opis.json`; tokeny tylko jako skróty; nieznane źródło `400` |
 | GET | `/api/artifacts/{sha256}` | | surowy dowód jako załącznik (nigdy się nie renderuje) |
-| GET | `/api/artifacts/{sha256}/image` | | zrzut reklamy albo klatka poglądowa nagrania jako obraz (tylko artefakty obrazów) |
+| GET | `/api/artifacts/{sha256}/image` | | zrzut reklamy, zrzut strony z crawlera albo klatka poglądowa nagrania jako obraz (tylko artefakty obrazów) |
 | GET | `/api/artifacts/{sha256}/video` | nagłówek `Range` (opcjonalny) | nagranie do odtworzenia (MP4, MOV, WebM po sygnaturze bajtów), `206` dla zakresu, `416` poza plikiem |
 
 ## Oś obserwacji
@@ -158,7 +158,7 @@ data: {"seq":16,"stage":"fuse","status":"info","message":"Powiązanie z reklamą
 ```
 
 Zdarzenia `fuse/info` przychodzą po jednym na znalezione powiązanie. Graf w trybie Discovery dorysowuje krawędzie w tej kolejności.
-Zdarzenie `crawl/info` niesie łańcuch przekierowań (`payload.chain`), `extract/info` liczbę markerów per rodzina, `cluster/done` kampanię i operatora.
+Zdarzenie `crawl/info` niesie łańcuch przekierowań (`payload.chain`, `via`: `http`, `meta_refresh` albo `js`), silnik (`payload.engine`: `browser` albo `http`), skrót zrzutu strony (`payload.screenshot`, obraz pod `GET /api/artifacts/{sha}/image`, albo `null`), `payload.har` (czy był ruch z przeglądarki) i `payload.notes` (zablokowane żądania, powrót do HTTP), `extract/info` liczbę markerów per rodzina, `cluster/done` kampanię i operatora.
 
 ## Relacje
 
@@ -283,7 +283,7 @@ Porównanie dwóch przechwyconych stron, np. tego samego adresu widzianego dwa r
 
 - `context: null` i `captured_at: null` znaczą "nieznane". Reklamy zaimportowane przed tą funkcją nie mają zapisu obserwacji; ponowny import go uzupełnia.
 - `text_excerpt`: do 300 znaków widocznego tekstu z zapisanego HTML strony, jako zwykły tekst bez znaczników, z adresami po redakcji. Pola `chars` (długość całego tekstu), `source` i `artifact` (skrót zapisu HTML) mówią, skąd pochodzi. `null`, gdy przy reklamie nie ma zapisu strony.
-- `page_screenshot` jest zawsze `null`: zrzutów stron nie mamy, a zrzut reklamy (`ad_creatives`) to reklama, nie strona docelowa.
+- `page_screenshot` to zrzut wyrenderowanej strony docelowej z crawlera z przeglądarką (`{sha256, image}`), dla materiałów z przechwycenia `null`. Zrzut reklamy (`ad_creatives`) to reklama, nie strona docelowa.
 - HAR i HTML są tylko do pobrania (`/api/artifacts/{sha256}`), nigdy do renderowania. Odpowiedź nie zawiera HTML ani skryptów, adresy mają zredagowane sekrety.
 - Błędy: brak albo zły parametr `400`, ta sama reklama dwa razy `400`, nieistniejąca reklama `404`.
 

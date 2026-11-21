@@ -222,7 +222,7 @@ export interface ObservationContext {
 export interface ObservationArtifacts {
   har: { sha256: string; download: string } | null; // tylko do pobrania
   html: { sha256: string; download: string } | null; // tylko do pobrania, nigdy renderowania
-  page_screenshot: null; // zrzutów stron nie mamy
+  page_screenshot: { sha256: string; image: string } | null; // tylko z crawlera z przeglądarką (docs/crawler.md)
   ad_creatives: { sha256: string; image: string }[]; // reklama, nie strona docelowa
 }
 

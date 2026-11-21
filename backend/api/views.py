@@ -554,7 +554,7 @@ IMAGE_SIGNATURES = {b"\x89PNG": "image/png", b"\xff\xd8\xff": "image/jpeg", b"RI
 
 def artifact_image(request, sha256):
     """Zrzut reklamy do wyświetlenia. Tylko artefakty obrazów i tylko, gdy bajty faktycznie są obrazem."""
-    item = get_object_or_404(Artifact, pk=sha256, kind__in=("creative_image", "video_frame"))
+    item = get_object_or_404(Artifact, pk=sha256, kind__in=("creative_image", "video_frame", "page_screenshot"))
     data = store.get(item.sha256)
     content_type = next((mime for magic, mime in IMAGE_SIGNATURES.items() if data.startswith(magic)), None)
     if content_type is None:

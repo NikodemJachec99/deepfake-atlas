@@ -203,12 +203,15 @@ def artifacts(ad: Ad) -> dict:
     analysis = Analysis.objects.filter(ad=ad).order_by("-created_at").first()
     state = analysis.state if analysis else {}
     har = (state.get("capture") or {}).get("har")
-    html = ((state.get("pages") or {}).get("victim") or {}).get("html_sha")
+    victim = (state.get("pages") or {}).get("victim") or {}
+    html = victim.get("html_sha")
+    shot = victim.get("screenshot_sha")
     creatives = list(ad.raw.get("creatives", [])) if isinstance(ad.raw, dict) else []
     return {
         "har": {"sha256": har, "download": f"/api/artifacts/{har}"} if har else None,
         "html": {"sha256": html, "download": f"/api/artifacts/{html}"} if html else None,
-        "page_screenshot": None,  # zrzutów stron nie mamy; nie podstawiamy zrzutu reklamy
+        # Zrzut strony docelowej tylko z crawlera z przeglądarką. Zrzutu reklamy tu nie podstawiamy.
+        "page_screenshot": {"sha256": shot, "image": f"/api/artifacts/{shot}/image"} if shot else None,
         "ad_creatives": [{"sha256": sha, "image": f"/api/artifacts/{sha}/image"} for sha in creatives],
     }
 

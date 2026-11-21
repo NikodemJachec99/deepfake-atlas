@@ -18,6 +18,8 @@ Kolumna "Źródło" mówi, skąd pochodzi informacja o licencji: **pakiet** ozna
 | psycopg | 3.3.9 | LGPL-3.0-only | pakiet |
 | pgvector (klient) | 0.5.1 | MIT | pakiet |
 | redis (klient) | 7.4.1 | MIT | pakiet |
+| Playwright (usługa crawler) | 1.65.2 | Apache-2.0 | pakiet w obrazie `crawler` |
+| Chromium (usługa crawler) | z Playwright 1.65.2 | BSD-3-Clause i inne licencje otwarte | pobierany przez `playwright install` |
 | boto3 | 1.44.9 | Apache-2.0 | pakiet |
 | neo4j (sterownik) | 6.4.1 | Apache-2.0 AND Python-2.0 | pakiet |
 | opensearch-py | 3.2.0 | Apache-2.0 | pakiet |

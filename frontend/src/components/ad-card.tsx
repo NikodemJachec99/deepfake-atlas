@@ -90,8 +90,8 @@ function MaterialWorkspace({ ad }: { ad: AdDetail }) {
         <Recordings videos={ad.videos} />
         <AdText ad={ad} />
         {ad.genome.some(band => band.markers.some(marker => marker.kind === "white_dom_hash")) && <p>Cloaking: automat i odbiorca otrzymali różne wersje strony.</p>}
-        <ObservationPanel adId={ad.id} />
-        <Link href={`/investigation?ad=${ad.id}`} className="inline-block text-accent underline">Pokaż na grafie powiązań</Link>
+        {ad.landing_url?.trim() && <ObservationPanel adId={ad.id} />}
+        <Link href={`/investigation?ad=${ad.id}`} className="inline-block w-fit rounded-md border border-line bg-panel px-3 py-2 text-sm font-medium text-accent hover:underline">Pokaż na grafie powiązań</Link>
       </div>
       <aside className="min-w-0 space-y-3 border-t border-line bg-panel p-5 xl:border-t-0 xl:border-l">
         <h2 className="text-lg font-semibold">Wybrany materiał</h2>
@@ -202,9 +202,9 @@ export function EdgeRows({ edges, adId, onEdge, selected }: { edges: Edge[]; adI
 // Wersja do inspektora: jedna kolumna.
 export function AdCard({ adId, onEdge, selectedEdge, full = false }: { adId: number; onEdge: (edge: Edge) => void; selectedEdge?: number | null; full?: boolean }) {
   const ad = useApi(`ad:${adId}`, () => api.ad(adId));
-  const edges = useApi(`ad-edges:${adId}`, () => api.adEdges(adId));
+  const edges = useApi(ad.data ? `ad-edges:${adId}` : null, () => api.adEdges(adId));
   if (ad.loading) return <Loading label="Pobieranie karty reklamy" />;
-  if (ad.error) return <ErrorBox message={ad.error} onRetry={ad.reload} />;
+  if (ad.error) return <ErrorBox message={ad.error} onRetry={ad.reload} missing={ad.status === 404 ? { description: `Nie ma takiej reklamy (#${adId}).`, href: "/archive", link: "Przejdź do archiwum" } : undefined} />;
   const data = ad.data;
   if (!data) return null;
   return (

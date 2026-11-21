@@ -103,7 +103,7 @@ function EvidenceCard({ item, max, ads }: { item: Evidence; max: number; ads: [A
               <span className="block h-full" style={{ width: `${Math.min(100, (item.weight_bits / max) * 100)}%`, background: famVar(item.family) }} />
             </span>
             <Mono className="w-[3.2em] text-right">{bits(item.weight_bits)}</Mono>
-            <span className="text-faint">bit</span>
+            <span className="text-faint">bita</span>
           </span>
           <span className="text-[0.85rem] text-muted">{soft ? "marker miękki" : `w ${item.df} z ${item.corpus_n} źródeł`}</span>
         </span>
@@ -144,11 +144,11 @@ function EvidenceCard({ item, max, ads }: { item: Evidence; max: number; ads: [A
                 </div>
               ) : null}
               <p className="text-muted">
-                Wkład <Mono className="text-fg">{bits(item.weight_bits)}</Mono> bit
+                Wkład <Mono className="text-fg">{bits(item.weight_bits)}</Mono> bita
                 {discounted && (
                   <>
                     {" "}
-                    (waga surowa <Mono className="text-fg">{bits(item.raw_bits)}</Mono> bit, obniżona za korelację w rodzinie: kolejny marker tej samej rodziny liczy się połowę słabiej)
+                    (waga surowa <Mono className="text-fg">{bits(item.raw_bits)}</Mono> bita, obniżona za korelację w rodzinie: kolejny marker tej samej rodziny liczy się połowę słabiej)
                   </>
                 )}
                 . Typ markera: <Mono>{item.kind}</Mono>.
@@ -285,7 +285,7 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict }: { edgeId: number; onO
               <Meter value={data.probability} width={96} />
             </span>
             <span>
-              <span className="text-muted">suma dowodów</span> <Mono>{bits(data.bits)}</Mono> <span className="text-faint">bit</span>
+              <span className="text-muted">suma dowodów</span> <Mono>{bits(data.bits)}</Mono> <span className="text-faint">bita</span>
             </span>
             <span>
               <span className="text-muted">dowody</span> <Mono>{evidence.length}</Mono>
@@ -306,7 +306,7 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict }: { edgeId: number; onO
         <EvidenceLab open={section === "lab"} onToggle={() => toggle("lab")} key={data.id + ":" + data.updated_at} edge={data} refresh={edge.reload} />
         <div className="flex h-7 items-center justify-between border-b border-line px-2">
           <span className="cap">Dowody według wkładu</span>
-          <span className="text-[0.85rem] text-faint">model {data.model_version}</span>
+          <span className="text-[0.85rem] text-faint">wersja modelu oceny powiązań · {data.model_version}</span>
         </div>
         {evidence.length === 0 ? (
           <Empty title="Krawędź nie ma zapisanych dowodów">To nie powinno się zdarzyć: silnik nie tworzy krawędzi bez dowodów. Zgłoś identyfikator krawędzi.</Empty>

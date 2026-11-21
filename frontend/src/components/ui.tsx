@@ -127,7 +127,7 @@ export function FamilyBar({ families, legend = false, height = 8 }: { families: 
     <div className="flex min-w-0 flex-col gap-1.5">
       <div className="flex w-full overflow-hidden rounded-[1px] bg-line" style={{ height }} role="img" aria-label="Udział rodzin markerów">
         {present.map((f) => (
-          <span key={f} title={`${FAMILY_LABELS[f]}: ${bits(families[f] ?? 0)} bit`} style={{ width: `${((families[f] ?? 0) / total) * 100}%`, background: famVar(f) }} />
+          <span key={f} title={`${FAMILY_LABELS[f]}: ${bits(families[f] ?? 0)} bita`} style={{ width: `${((families[f] ?? 0) / total) * 100}%`, background: famVar(f) }} />
         ))}
       </div>
       {legend && (
@@ -220,15 +220,21 @@ export function Loading({ label = "Pobieranie danych" }: { label?: string }) {
   );
 }
 
-export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () => void }) {
+export function ErrorBox({ message, onRetry, missing }: {
+  message: string;
+  onRetry?: () => void;
+  missing?: { description: string; href: string; link: string };
+}) {
   return (
     <div className="m-2 flex items-start gap-2 rounded-sm border border-rejected p-2" role="alert">
       <AlertTriangle size={14} className="mt-0.5 shrink-0 text-rejected" />
       <div className="min-w-0 flex-1">
-        <p>Nie udało się pobrać danych.</p>
-        <p className="font-mono text-[0.85rem] break-words text-muted">{message}</p>
+        <p>{missing?.description ?? (/^API 5\d\d:|Brak połączenia z API/.test(message) ? "Backend chwilowo niedostępny." : "Nie udało się pobrać danych.")}</p>
+        {missing && <Link href={missing.href} className="text-accent underline">{missing.link}</Link>}
+        <details><summary>Szczegóły techniczne</summary>
+        <p className="font-mono text-[0.85rem] break-words text-muted">{message}</p></details>
       </div>
-      {onRetry && <Btn onClick={onRetry}>Ponów</Btn>}
+      {onRetry && !missing && <Btn onClick={onRetry}>Ponów</Btn>}
     </div>
   );
 }
@@ -240,7 +246,7 @@ export function Kbd({ children }: { children: React.ReactNode }) {
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex min-w-0 gap-2 py-0.5">
-      <dt className="w-24 shrink-0 text-muted">{label}</dt>
+      <dt className="w-28 max-w-[45%] shrink-0 [overflow-wrap:anywhere] text-muted">{label}</dt>
       <dd className="min-w-0 flex-1 break-words">{children}</dd>
     </div>
   );

@@ -3,7 +3,8 @@
 System łączy pozornie niezależne fałszywe reklamy w kampanie i operatorów na podstawie wspólnych śladów cyfrowych. Do każdego połączenia podaje dowody. Zadanie NASK "Follow the Fake".
 
 - **Metodyka** (cechy, podobieństwo, grupowanie): [docs/metodyka.md](docs/metodyka.md)
-- Wymagania zadania i zgodność z regulaminem: [docs/wymagania.md](docs/wymagania.md)
+- Wymagania zadania i zgodność z regulaminem: [docs/wymagania.md](docs/wymagania.md), regulamin zadania z wzorem umowy: [docs/zrodla/regulamin-zadania.pdf](docs/zrodla/regulamin-zadania.pdf)
+- Licencja: repozytorium celowo nie ma licencji otwartej. Zwycięzcy przenoszą autorskie prawa majątkowe na NASK-PIB (regulamin zadania §4), więc nie udzielamy licencji nikomu innemu.
 - Teksty zgłoszenia na HackTribe: [docs/zgloszenie.md](docs/zgloszenie.md)
 - Wyniki na danych organizatora: [docs/dane-organizatora.md](docs/dane-organizatora.md)
 - Kontrakt API: [docs/api.md](docs/api.md)
@@ -39,7 +40,7 @@ docker compose exec backend python manage.py collect cert_pl        # opcjonalni
 
 Wymagania: Docker z Compose, ok. 6 GB RAM na wszystkie usługi, ok. 8 GB miejsca na obrazy, dostęp do internetu przy pierwszym budowaniu obrazów i przy pierwszym użyciu OCR (pobranie modelu). Pierwsze `up --build` pobiera obrazy usług i paczki Pythona (m.in. onnxruntime, OpenCV, numpy). Sprawdzone 2026-11-21 na świeżym klonie z pustymi wolumenami: na Windowsie przy łączu ok. 100 KB/s `up --build` trwało 31 minut, import paczki `nask` (13 stron) 58 sekund; na Linuksie (Ubuntu 24.04 w WSL2, klon w systemie plików Linuksa, bash) 16 minut i 161 sekund, z tym samym wynikiem. Na macOS nie sprawdzaliśmy. CI przy każdym PR stawia cały stos na ubuntu i importuje zmyśloną sprawę (`backend/tests/smoke_compose.py`).
 
-Porty zmienisz w `.env`: `BACKEND_PORT`, `FRONTEND_PORT`, a jeśli masz zajęte porty usług pomocniczych (np. własny Postgres na 5432), także `DB_PORT`, `REDIS_PORT`, `TEMPORAL_PORT`, `S3_PORT`, `NEO4J_HTTP_PORT`, `OPENSEARCH_PORT` i pozostałe z `.env.example`. Po zmianie `FRONTEND_PORT` dopisz nowy adres interfejsu do `CORS_ALLOWED_ORIGINS`, a po zmianie `BACKEND_PORT` przebuduj interfejs (`docker compose up -d --build frontend`), bo adres API jest wkompilowany w czasie budowania.
+Porty zmienisz w `.env`: `BACKEND_PORT`, `FRONTEND_PORT`, a jeśli masz zajęte porty usług pomocniczych (np. własny Postgres na 5432), także `DB_PORT`, `TEMPORAL_PORT`, `S3_PORT`, `NEO4J_HTTP_PORT`, `OPENSEARCH_PORT` i pozostałe z `.env.example`. Po zmianie `FRONTEND_PORT` dopisz nowy adres interfejsu do `CORS_ALLOWED_ORIGINS`, a po zmianie `BACKEND_PORT` przebuduj interfejs (`docker compose up -d --build frontend`), bo adres API jest wkompilowany w czasie budowania.
 
 Windows z Git Bash: przed poleceniami z `/data/...` ustaw `export MSYS_NO_PATHCONV=1`, inaczej Git Bash zamieni ścieżkę kontenera na ścieżkę Windows i `import_bundle` nie znajdzie katalogu. W PowerShellu i cmd ten problem nie występuje. Praca nad interfejsem bez kontenera:
 
@@ -95,7 +96,7 @@ Tokeny dostępu znalezione w adresach (np. `access_token`) zapisujemy wyłączni
 | OCR i obrazy | RapidOCR z modelami PP-OCRv5 (lokalnie, ONNX), hash percepcyjny dHash (Pillow) |
 | Frontend | Next.js 16 + React 19 + TypeScript + Tailwind 4 |
 
-Usługi w compose: `db` 5432, `redis` 6380, `temporal` 7233 (UI 8233), `s3` 9000 (konsola 9001), `neo4j` 7474/7687, `opensearch` 9200, `backend` 8000, `worker`.
+Usługi w compose: `db` 5432, `temporal` 7233 (UI 8233), `s3` 9000 (konsola 9001), `neo4j` 7474/7687, `opensearch` 9200, `backend` 8000, `worker`.
 
 ## Polecenia
 

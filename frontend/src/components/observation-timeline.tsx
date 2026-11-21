@@ -3,14 +3,13 @@
 import Link from "next/link";
 import { useState } from "react";
 import { api, type TimelineEvent } from "@/lib/api";
-import { markerValue } from "@/lib/format";
+import { dateTime, markerValue } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 import { ErrorBox, Loading } from "./ui";
 
 function eventDate(event: TimelineEvent) {
   if (event.precision === "day") return event.at.slice(0, 10);
-  const date = new Date(event.at);
-  return Number.isFinite(date.getTime()) ? date.toLocaleString("pl-PL", { timeZoneName: "short" }) : "Data niedostępna";
+  return dateTime(event.at) || "Data niedostępna";
 }
 
 export function ObservationTimeline({ id, operator }: { id: number; operator: boolean }) {
@@ -44,9 +43,9 @@ export function ObservationTimeline({ id, operator }: { id: number; operator: bo
         {event.ads.map(ad => <Link key={ad} className="mr-2 text-accent underline" href={`/ads/${ad}`}>Reklama #{ad}</Link>)}
       </article>
     </> : <p>Brak datowanych zdarzeń.</p>}
-    <div><h3>Materiały bez daty</h3>
+    {(data.undated.ads.length + data.undated.links + data.undated.traces + data.undated.certificates > 0) && <div><h3>Materiały bez daty</h3>
       <p>Reklamy {data.undated.ads.length} · Ślady {data.undated.traces} · Powiązania {data.undated.links} · Certyfikaty {data.undated.certificates}</p>
       {data.undated.ads.map(ad => <Link key={ad} className="mr-2 text-accent underline" href={`/ads/${ad}`}>Reklama #{ad}</Link>)}
-    </div>
+    </div>}
   </section>;
 }

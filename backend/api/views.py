@@ -9,8 +9,8 @@ from pathlib import Path
 
 from asgiref.sync import sync_to_async
 from django.core.management import call_command
-from django.db.models import Count, Q
-from django.http import FileResponse, Http404, HttpResponse, StreamingHttpResponse
+from django.db.models import Case, Count, IntegerField, Q, Value, When
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
@@ -21,7 +21,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 
-from ads.models import Ad, Analysis
+from ads.models import Ad, Analysis, Source
 from collectors import bundle
 from evidence import store
 from evidence.kinds import BAND_KINDS, FAMILIES, KINDS
@@ -35,6 +35,7 @@ from similarity.service import assign_campaign, assign_operator
 from workflows import runner
 
 from . import serializers as s
+from .errors import BadParameter, id_param, int_param
 
 MAX_ZIP_BYTES = 2 * 1024**3
 MAX_ZIP_FILES = 5000
@@ -133,7 +134,10 @@ async def analysis_events(request, pk):
     """Strumień SSE zdarzeń analizy. Zaczyna od `?after=` (domyślnie 0) i kończy się razem z analizą."""
     if not await Analysis.objects.filter(pk=pk).aexists():
         raise Http404
-    after = int(request.GET.get("after", 0))
+    try:
+        after = int_param(request.GET, "after", 0, minimum=0, maximum=2**62)
+    except BadParameter as exc:
+        return JsonResponse({"detail": str(exc.detail)}, status=400)
 
     async def stream():
         seq = after
@@ -161,9 +165,9 @@ class AdList(generics.ListAPIView):
         params = self.request.query_params
         if source := params.get("source"):
             queryset = queryset.filter(source=source)
-        if campaign := params.get("campaign"):
+        if (campaign := id_param(params, "campaign")) is not None:
             queryset = queryset.filter(membership__campaign_id=campaign)
-        if operator := params.get("operator"):
+        if (operator := id_param(params, "operator")) is not None:
             queryset = queryset.filter(operator_membership__operator_id=operator)
         if case := params.get("case"):
             queryset = queryset.filter(labels__case=case)
@@ -183,6 +187,8 @@ class AdEdges(generics.ListAPIView):
 
     def get_queryset(self):
         pk = self.kwargs["pk"]
+        if not Ad.objects.filter(pk=pk).exists():
+            raise Http404
         return Edge.objects.filter(Q(ad_a_id=pk) | Q(ad_b_id=pk)).order_by("-probability")
 
 
@@ -220,10 +226,7 @@ def edge_assist(request, pk):
 def edge_precedents(request, pk):
     """Podobne wcześniejsze rozstrzygnięcia innych par. Doradczo, bez zmian krawędzi, wag i grup."""
     edge = get_object_or_404(Edge, pk=pk)
-    try:
-        limit = int(request.query_params.get("limit", precedents.DEFAULT_LIMIT))
-    except ValueError:
-        return Response({"detail": "limit musi być liczbą"}, status=status.HTTP_400_BAD_REQUEST)
+    limit = int_param(request.query_params, "limit", precedents.DEFAULT_LIMIT)  # za duży lub ujemny limit przycina `find`
     return Response(precedents.find(edge, limit))
 
 
@@ -484,27 +487,66 @@ def operator_timeline(request, pk):
     return Response(_timeline(get_object_or_404(Operator, pk=pk), [Edge.Relation.SAME_CAMPAIGN, Edge.Relation.SAME_OPERATOR]))
 
 
+GRAPH_DEFAULT_LIMIT = 2000
+GRAPH_MAX_LIMIT = 20000
+# Kolejność ucinania: najpierw relacje o największej wadze dla analityka, powtórne przechwycenia tej samej strony na końcu.
+GRAPH_RELATION_ORDER = (Edge.Relation.SAME_OPERATOR, Edge.Relation.SIMILAR, Edge.Relation.SAME_CAMPAIGN)
+
+
+def _graph_edges(edges, limit: int):
+    """Krawędzie w kolejności ważności: powtórne przechwycenia tej samej strony na końcu, wcześniej relacja
+    (operator, podobna, kampania), w obrębie relacji najpierw pary materiałów ze spraw, potem malejąco po pewności."""
+    both_capture = Q(ad_a__source=Source.CAPTURE, ad_b__source=Source.CAPTURE)
+    return edges.annotate(
+        _capture=Case(When(both_capture, then=Value(0)), default=Value(1), output_field=IntegerField()),
+        _relation=Case(
+            *[When(relation=r, then=Value(i)) for i, r in enumerate(GRAPH_RELATION_ORDER)],
+            default=Value(len(GRAPH_RELATION_ORDER)),
+            output_field=IntegerField(),
+        ),
+    ).order_by("duplicate", "_relation", "_capture", "-probability", "id")[:limit]
+
+
+@extend_schema(responses=dict)
 @api_view(["GET"])
 def graph(request):
-    """Graf dla Sigma.js. Filtry: `?campaign=ID`, `?operator=ID`, `?ad=ID` (reklama z sąsiadami). Bez filtra wszystkie krawędzie do limitu."""
+    """Graf dla Sigma.js. Filtry: `?campaign=ID`, `?operator=ID`, `?ad=ID` (reklama z sąsiadami), `?relation=a,b`,
+    `?source=capture` (tylko krawędzie między materiałami z tego źródła). `?limit=` (1 do 20000, domyślnie 2000) ucina
+    według ważności, a odpowiedź mówi, ile i czego zabrakło: `truncated`, `total`, `total_by_relation`, `returned_by_relation`."""
     params = request.query_params
+    campaign, operator, ad = id_param(params, "campaign"), id_param(params, "operator"), id_param(params, "ad")
+    limit = int_param(params, "limit", GRAPH_DEFAULT_LIMIT, minimum=1, maximum=GRAPH_MAX_LIMIT)
     edges = Edge.objects.all()
     focus: set[int] = set()
-    if campaign := params.get("campaign"):
+    if campaign is not None:
         focus = set(get_object_or_404(Campaign, pk=campaign).memberships.values_list("ad_id", flat=True))
-    elif operator := params.get("operator"):
+    elif operator is not None:
         focus = set(get_object_or_404(Operator, pk=operator).memberships.values_list("ad_id", flat=True))
-    elif ad := params.get("ad"):
-        focus = {int(ad)}
+    elif ad is not None:
+        get_object_or_404(Ad, pk=ad)
+        focus = {ad}
     if focus:
         edges = edges.filter(Q(ad_a_id__in=focus) | Q(ad_b_id__in=focus))
     if relation := params.get("relation"):
         edges = edges.filter(relation__in=relation.split(","))
-    edges = list(edges.order_by("-probability")[: int(params.get("limit", 2000))])
+    if source := params.get("source"):
+        sources = source.split(",")
+        edges = edges.filter(ad_a__source__in=sources, ad_b__source__in=sources)
+    total_by_relation = dict(edges.order_by().values_list("relation").annotate(n=Count("id")))
+    total = sum(total_by_relation.values())
+    edges = list(_graph_edges(edges, limit))
+    returned_by_relation: dict[str, int] = {}
+    for e in edges:
+        returned_by_relation[e.relation] = returned_by_relation.get(e.relation, 0) + 1
     node_ids = {e.ad_a_id for e in edges} | {e.ad_b_id for e in edges} | focus
     nodes = Ad.objects.filter(pk__in=node_ids).select_related(*AD_RELATED)
     return Response(
         {
+            "truncated": total > len(edges),
+            "limit": limit,
+            "total": total,
+            "total_by_relation": total_by_relation,
+            "returned_by_relation": returned_by_relation,
             "nodes": [
                 {
                     "id": n.pk,

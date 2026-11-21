@@ -4,15 +4,15 @@ import { CrawlShot } from "./crawl-shot";
 import Link from "next/link";
 import { useState } from "react";
 import { api, artifactDownloadUrl, type ObservationSide } from "@/lib/api";
+import { dateTime } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 import { ErrorBox, Loading } from "./ui";
 
 function Capture({ side }: { side: ObservationSide }) {
-  const date = side.captured_at && new Date(side.captured_at);
   return <article className="min-w-0 space-y-1 break-words border border-line p-2">
     <h4><Link href={`/ads/${side.ad}`} className="text-accent underline">Materiał #{side.ad}</Link> · {side.title || "Brak tytułu"}</h4>
     <p className="break-all font-mono">{side.exact_url || "Adres nieznany"}</p>
-    <p>{date && Number.isFinite(date.getTime()) ? date.toLocaleString("pl-PL", { timeZoneName: "short" }) : "Data nieznana"} · {side.time_source || "Źródło daty nieznane"}</p>
+    <p>{dateTime(side.captured_at) || "Data nieznana"} · {side.time_source || "Źródło daty nieznane"}</p>
     <p>Źródła obserwacji · {side.sources.join(", ") || "Brak informacji"}</p>
     <p>Kontekst · {side.context ? [side.context.browser, side.context.platform, side.context.accept_language].filter(Boolean).join(", ") || "Nieznany" : "Nieznany"}</p>
     {side.artifacts?.page_screenshot ? <CrawlShot sha={side.artifacts.page_screenshot.sha256} /> : <p>Brak zrzutu strony docelowej.</p>}
@@ -36,7 +36,7 @@ export function ObservationPanel({ adId }: { adId: number }) {
   const pair = useApi(open && partner ? `${adId}/${partner.ad}` : null, () => api.compareObservations(adId, partner!.ad));
   const result = pair.data;
   return <section className="grid gap-2 border-y border-line p-2">
-    <button className="justify-self-start text-accent underline" aria-expanded={open} onClick={() => setOpen(!open)}>Dwie twarze jednego linku</button>
+    <button className="w-fit rounded-md border border-line bg-panel px-3 py-2 text-sm font-medium text-accent hover:underline" aria-expanded={open} onClick={() => setOpen(!open)}>Dwie twarze jednego linku</button>
     {open && (observations.loading ? <Loading /> : observations.error ? <ErrorBox message={observations.error} onRetry={observations.reload} /> :
       !partner ? <><CrawlShot sha={observations.data?.artifacts?.page_screenshot?.sha256} /><p>{observations.data?.message || "Brak drugiego przechwycenia do porównania."}</p></> : <>
         <label>Porównaj z materiałem <select className="max-w-full border border-line bg-panel" value={partner.ad} onChange={event => setChosen(Number(event.target.value))}>

@@ -14,7 +14,7 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | GET | `/api/analyses/{id}/events` | `?after=<seq>` | strumień SSE zdarzeń `AnalysisEvent` |
 | GET | `/api/ads` | `?source=&campaign=&operator=&case=&q=&page=` | strona `AdSummary` |
 | GET | `/api/ads/{id}` | | `AdDetail`: genom, zrzuty reklamy, reklamodawca |
-| GET | `/api/ads/{id}/edges` | | lista `Edge` malejąco po pewności |
+| GET | `/api/ads/{id}/edges` | | lista `Edge` malejąco po pewności; nieznana reklama `404` |
 | POST | `/api/ads/{id}/recluster` | | ponowne przypisanie do kampanii i operatora |
 | GET | `/api/ads/{id}/observations` | | obserwacja strony reklamy i strony do porównania (ten sam adres albo domena w sprawie) |
 | GET | `/api/observations/compare` | `?a=ID&b=ID` | `ObservationComparison`: dwie strony obok siebie, tylko do odczytu |
@@ -39,7 +39,7 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | POST | `/api/hunt/run` | `{"operator":<id>,"days":30,"max_queries":12,"max_crawl":20,"crawl":true}` (wszystko opcjonalne) | `HuntRun` (202), przebieg w tle (`ANALYSIS_RUNNER`); `409` z danymi trwającego przebiegu, gdy poprzedni (do 2 godzin) jeszcze trwa; `400` dla złych wartości; zapis chroniony jak inne |
 | GET | `/api/hunt/runs`, `/api/hunt/runs/{id}` | | strona `HuntRun` albo jeden przebieg: status i liczby |
 | POST | `/api/hunt/{id}/analyze` | | `Analysis` (201): domena kandydata idzie do pełnego potoku jak `POST /api/analyses`; `409` z istniejącą analizą, gdy już zgłoszona |
-| GET | `/api/graph` | `?campaign=` \| `?operator=` \| `?ad=`, `?relation=a,b`, `?limit=` | `{nodes, edges}` dla Sigma.js |
+| GET | `/api/graph` | `?campaign=` \| `?operator=` \| `?ad=`, `?relation=a,b`, `?source=capture` (tylko krawędzie między materiałami z tego źródła), `?limit=` (1 do 20000, domyślnie 2000) | `Graph`: `{nodes, edges, truncated, limit, total, total_by_relation, returned_by_relation}` dla Sigma.js. Ucinanie do `limit` jest jawne i ma kolejność ważności: najpierw `same_operator`, potem `similar`, potem `same_campaign`; powtórne przechwycenia (`duplicate`) na końcu; w obrębie relacji najpierw pary materiałów ze spraw (`capture`), potem malejąco po pewności. `total` to liczba krawędzi po filtrach przed ucięciem, `truncated` mówi, czy `total` jest większe niż `edges.length`. Nieznana kampania, operator albo reklama: `404` |
 | GET | `/api/kinds` | | słownik 7 rodzin i typów markerów |
 | GET | `/api/stats` | | liczby do paska stanu, w tym `alerts_unseen` (liczba nieprzejrzanych alertów) |
 | GET | `/api/export/stix` | `?operator=ID` \| `?campaign=ID` (opcjonalnie) | bundle STIX 2.1 (`application/stix+json`): operator jako `intrusion-set`, kampania jako `campaign` z `attributed-to`, wskaźniki (`indicator`) dla domen, adresów IP, numerów certyfikatów i hostów zasobów z relacją `indicates`; identyfikatory trackerów i paneli lejka w `x_scamdna_identifiers`. Tylko grupy z materiałów zgłoszonych jako podejrzane (przechwycenia, zgłoszenia ręczne), bez reklam z bibliotek, osób i tokenów. Identyfikatory deterministyczne |
@@ -68,6 +68,15 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | `os-czasu.json` | pełna oś obserwacji (`Timeline`) |
 
 Limity: artefakt większy niż 50 MB, ponad łączny limit 1 GiB, brakujący w magazynie albo z sumą niezgodną z zapisaną (uszkodzony) nie wchodzi do pakietu i ma wpis w `pominiete` z powodem. Surowe pliki nie są redagowane, bo redakcja zmieniłaby sumę i zerwała łańcuch dowodu; wszystko, co generujemy (raport, manifest, krawędzie, STIX, oś czasu), ma adresy po `redact_url`. Pakiet nie jest podpisany elektronicznie: sumy dowodzą niezmienności po utworzeniu, nie autentyczności oryginału.
+
+## Błędy
+
+Każdy błąd API to JSON `{"detail": "..."}`, po polsku, bez śladu stosu i bez strony debug (stos demo działa z `DJANGO_DEBUG=0`).
+
+- `400`: zły parametr zapytania, np. `?limit=abc`, `?limit=-1`, `?ad=zz`, `/api/ads?campaign=abc`. Identyfikatory to liczby całkowite od 1, `limit` grafu 1 do 20000, `after` strumienia SSE od 0.
+- `404`: nieznany zasób, także `/api/ads/{id}/edges` i filtry `?campaign=`, `?operator=`, `?ad=` grafu.
+- `503`: baza chwilowo przeciążona (np. brak wolnych połączeń). Powtórz żądanie. Połączenia z bazą są zamykane po każdym żądaniu (`DB_CONN_MAX_AGE=0`).
+- `500` `{"detail": "Błąd serwera."}`: nieobsłużony błąd, szczegóły tylko w logu backendu.
 
 ## Oś obserwacji
 

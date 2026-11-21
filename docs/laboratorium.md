@@ -49,3 +49,19 @@ Główne demo z [prezentacja.md](prezentacja.md) (#15) zostaje bez zmian: nowa s
 - Rzadkość (`df`) zostaje z chwili liczenia krawędzi. Symulacja nie przelicza korpusu.
 - Gdy krawędź policzono starszą wersją modelu, wynik bazowy jest przeliczany bieżącą i odpowiedź zawiera ostrzeżenie.
 - Oś obserwacji (#53) zależy od dat w źródłach. Przechwycenia z paczek często nie mają daty, a pierwsza obserwacja to nie początek kampanii.
+
+## Pamięć sprzeciwu
+
+Decyzję analityka można uzasadnić wybranym powodem i notatką. System zachowuje historię oraz migawkę przesłanek z chwili decyzji: bieżące dowody krawędzi mogą się zmienić przy jej ponownym przeliczeniu. Przy kolejnej sprawie pokaże podobne wcześniejsze rozstrzygnięcia, powód podobieństwa i istotne różnice. Precedens jest kontekstem do oceny, nie automatycznym werdyktem; sam nie zmienia wag ani grup.
+
+Kolejność: [#67 historia i migawka](https://github.com/NikodemJachec99/deepfake-atlas/issues/67) → [#68 wyszukiwanie precedensów](https://github.com/NikodemJachec99/deepfake-atlas/issues/68) → [#69 panel analityka](https://github.com/NikodemJachec99/deepfake-atlas/issues/69). Stare decyzje bez zapisanego powodu pozostają oznaczone jako nieznane. Notatki i źródła wymagają ochrony oraz redakcji; obecne API nie ma uwierzytelniania.
+
+## Basal jako pomoc analityka
+
+[Basal](https://github.com/rkinas/basal) przyjmuje kontekst, pytanie i listę odpowiedzi; zwraca typowaną decyzję, nie generuje uzasadnienia. W planie wykorzystujemy go do wskazywania istniejących powiązań do przeglądu oraz, po osobnej ocenie, porządkowania kandydatów precedensów. Ewentualne klasyfikowanie narracji wymaga osobnej walidacji. Wyjaśnienia w interfejsie muszą pochodzić z rzeczywistych danych i reguł.
+
+Kolejność: [#70 plan i wybór modelu](https://github.com/NikodemJachec99/deepfake-atlas/issues/70) → [#71 opcjonalny lokalny adapter](https://github.com/NikodemJachec99/deepfake-atlas/issues/71) → [#72 ocena na danych projektu](https://github.com/NikodemJachec99/deepfake-atlas/issues/72) → [#73 API sugestii](https://github.com/NikodemJachec99/deepfake-atlas/issues/73) → [#74 panel analityka](https://github.com/NikodemJachec99/deepfake-atlas/issues/74). Sugestie precedensów zależą również od #68. Wspólny [scenariusz demo #75](https://github.com/NikodemJachec99/deepfake-atlas/issues/75) zależy od gotowości interfejsu i oceny.
+
+Model jest opcjonalny, lokalny i domyślnie wyłączony; awaria nie przerywa analizy. Przekazujemy minimalne, zredagowane dane, traktując treści stron jako nieufne. Wynik modelu jest sugestią, nie dowodem ani podstawą automatycznego przypisania operatora. Nie zastępuje modelu dowodowego w analizie lub symulacji. Zapisujemy wersję modelu, pytania i wariantu uruchomienia; nie interpretujemy jego wyniku jako prawdopodobieństwa winy. Jakość i progi wymagają własnej oceny na oddzielonych sprawach, bez przecieku duplikatów.
+
+Na 21.11.2026 najnowsze wydanie silnika to [basal 2.8.1](https://github.com/rkinas/basal/releases/tag/v2.8.1), a rodzina tekstowych wag to basal-2.0. Wybór konkretnego modelu i wariantu na podstawie pomiarów, wersje oraz licencje są przedmiotem #70; możliwości eksperymentalnego wariantu multimodalnego nie oznaczają wykrywania deepfake. Dokumentacja: [API basal](https://github.com/rkinas/basal/blob/main/docs/API.md) i [kalibracja](https://github.com/rkinas/basal/blob/main/docs/CALIBRATION.md).

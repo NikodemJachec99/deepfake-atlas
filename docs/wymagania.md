@@ -27,7 +27,7 @@
 | Logotypy | częściowo | podszycie pod markę po tekście; brak rozpoznawania logo na obrazie |
 | Cechy wizualne | częściowo | hash percepcyjny zrzutu reklamy i obrazów strony; brak embeddingów obrazu |
 | Domeny, przekierowania, linki, struktura stron | jest | URL, HAR, DOM |
-| Publiczne metadane domen i infrastruktury | jest | RDAP, lista CERT Polska, DNS/ASN/certyfikat dla stron na żywo |
+| Publiczne metadane domen i infrastruktury | jest | RDAP, lista CERT Polska, certyfikaty z crt.sh, DNS/ASN/certyfikat dla stron na żywo |
 | Zestaw cech do porównywania | jest | markery twarde i miękkie |
 | Duplikaty i warianty tego samego przekazu | jest | znacznik `duplicate`, relacja `same_campaign` |
 | Metoda podobieństwa i grupowania w kampanie lub grupy podobnych kampanii | jest | kampania, operator, relacja `similar` |

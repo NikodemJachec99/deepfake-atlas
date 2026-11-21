@@ -57,6 +57,7 @@ Interfejs: http://localhost:3000. Szczegóły i porty: [README.md](../README.md)
 | zgodność z wymaganiami i kryteriami | [wymagania.md](wymagania.md) |
 | prezentacja i scenariusz demo | [prezentacja.md](prezentacja.md) |
 | biblioteki, modele, usługi i licencje | [licencje.md](licencje.md) |
+| plan rozwoju na rok | [plan-roczny.md](plan-roczny.md) |
 | kontrakt API | [api.md](api.md) |
 
 ## Załączniki do zgłoszenia końcowego

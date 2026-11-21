@@ -33,9 +33,7 @@ export function Labels({ ad }: { ad: Pick<AdDetail, "labels"> }) {
   return (
     <div className="flex flex-wrap items-center gap-1">
       {topics.map((topic) => (
-        <Link key={topic} href={`/archive?topic=${encodeURIComponent(topic)}`} title="Tematyka. Kliknij, aby filtrować archiwum.">
-          <Tag tone="accent">{topic}</Tag>
-        </Link>
+        <Tag key={topic} tone="accent">{topic}</Tag>
       ))}
       {keywords.map((keyword) => (
         <Link key={keyword} href={`/archive?q=${encodeURIComponent(keyword)}`} className="rounded-sm border border-line px-1 text-[0.85rem] text-muted hover:border-line-strong hover:text-fg" title="Słowo kluczowe. Kliknij, aby szukać w archiwum.">
@@ -121,7 +119,7 @@ export function EdgeRows({ edges, adId, onEdge, selected }: { edges: Edge[]; adI
 }
 
 // Wersja do inspektora: jedna kolumna.
-export function AdCard({ adId, onEdge, selectedEdge }: { adId: number; onEdge: (edge: Edge) => void; selectedEdge?: number | null }) {
+export function AdCard({ adId, onEdge, selectedEdge, full = false }: { adId: number; onEdge: (edge: Edge) => void; selectedEdge?: number | null; full?: boolean }) {
   const ad = useApi(`ad:${adId}`, () => api.ad(adId));
   const edges = useApi(`ad-edges:${adId}`, () => api.adEdges(adId));
   if (ad.loading) return <Loading label="Pobieranie karty reklamy" />;
@@ -133,11 +131,11 @@ export function AdCard({ adId, onEdge, selectedEdge }: { adId: number; onEdge: (
       <div className="flex flex-col gap-2 border-b border-line p-2">
         <div className="flex items-center justify-between gap-2">
           <Mono className="text-muted">reklama #{data.id}</Mono>
-          <Link href={`/ads/${data.id}`} className="text-accent hover:underline">
+          {!full && <Link href={`/ads/${data.id}`} className="text-accent hover:underline">
             Pełna karta
-          </Link>
+          </Link>}
         </div>
-        <p className="text-[1.08rem] font-medium">{adTitle(data)}</p>
+        <h1 className="text-[1.08rem] font-medium">{adTitle(data)}</h1>
         <Labels ad={data} />
         <Creatives shas={data.creatives} size="h-32" />
         <AdMeta ad={data} />
@@ -149,7 +147,7 @@ export function AdCard({ adId, onEdge, selectedEdge }: { adId: number; onEdge: (
       <p className="cap flex h-7 items-center border-b border-line px-2">Powiązania</p>
       {edges.loading ? <Loading /> : edges.error ? <ErrorBox message={edges.error} onRetry={edges.reload} /> : <EdgeRows edges={edges.data ?? []} adId={adId} onEdge={onEdge} selected={selectedEdge} />}
       <p className="cap flex h-7 items-center border-y border-line px-2">Markery</p>
-      <MarkerList genome={data.genome} />
+      <MarkerList genome={data.genome} initiallyOpen={full} />
     </div>
   );
 }

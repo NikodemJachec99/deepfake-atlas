@@ -55,6 +55,7 @@ function toggle<T>(set: Set<T>, value: T, on: boolean): Set<T> {
 
 export function Investigation() {
   const { params, set, int } = useQuery();
+  const [mobileFilters, setMobileFilters] = useState(false);
   const operatorId = int("operator");
   const campaignId = int("campaign");
   const adId = int("ad");
@@ -367,7 +368,10 @@ export function Investigation() {
     <>
       <TopBar crumbs={crumbs} />
       <div className="atlas-investigation"><Split id="inv-filters" dir="row" fixed="first" initial={208} min={180} max={360}>
-        {filters}
+        <div className="flex h-full min-h-0 flex-col">
+          <button type="button" className="self-start px-3 py-2 text-accent md:hidden" aria-expanded={mobileFilters} aria-controls="investigation-filters" onClick={() => setMobileFilters(!mobileFilters)}>{mobileFilters ? "Zwiń filtry" : "Zakres i filtry"}</button>
+          <div id="investigation-filters" className={`min-h-0 overflow-auto md:block ${mobileFilters ? "block" : "hidden"}`}>{filters}</div>
+        </div>
         {edgeId === null && nodeId === null ? graphAndTable : <Split id="inv-inspector" dir="row" fixed="second" initial={380} min={280} max={820}>
           {graphAndTable}
           {inspector}

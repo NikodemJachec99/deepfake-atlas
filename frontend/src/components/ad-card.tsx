@@ -78,6 +78,7 @@ function MaterialWorkspace({ ad }: { ad: AdDetail }) {
         </div> : !ad.videos?.length && <p className="text-muted">Brak zrzutu reklamy w materiale.</p>}
         <Recordings videos={ad.videos} />
         <AdText ad={ad} />
+        {ad.genome.some(band => band.markers.some(marker => marker.kind === "white_dom_hash")) && <p>Cloaking: automat i odbiorca otrzymali różne wersje strony.</p>}
         <ObservationPanel adId={ad.id} />
         <Link href={`/investigation?ad=${ad.id}`} className="inline-block text-accent underline">Pokaż na grafie powiązań</Link>
       </div>

@@ -345,6 +345,13 @@ export interface Group {
   created_at: string;
 }
 
+// Pozycja listy kampanii albo operatorów: skład grupy według źródła reklam.
+export interface GroupListItem extends Group {
+  sources: Partial<Record<Source, number>>;
+  cases: number; // ile różnych spraw z paczek
+  cert_pl: number; // ile reklam ma domenę na Liście Ostrzeżeń CERT Polska
+}
+
 export interface CoreMarker {
   kind: string;
   label: string;
@@ -667,9 +674,10 @@ export const api = {
     request<WeakestLink>(`/api/edges/${id}/weakest-link`, { method: "POST", body: JSON.stringify(params) }),
   // Co sprawdzić dalej: wskazówki z brakujących dowodów pary, bez zapytań na zewnątrz.
   edgeSuggestions: (id: number) => request<Suggestions>(`/api/edges/${id}/suggestions`),
-  campaigns: () => request<Page<Group>>("/api/campaigns"),
+  // source: np. "capture", żeby zostawić grupy z materiałów spraw (bez samych reklam z bibliotek)
+  campaigns: (source?: string) => request<Page<GroupListItem>>(`/api/campaigns${source ? `?source=${source}` : ""}`),
   campaign: (id: number) => request<GroupDetail>(`/api/campaigns/${id}`),
-  operators: () => request<Page<Group>>("/api/operators"),
+  operators: (source?: string) => request<Page<GroupListItem>>(`/api/operators${source ? `?source=${source}` : ""}`),
   operator: (id: number) => request<OperatorDetail>(`/api/operators/${id}`),
   campaignTimeline: (id: number) => request<Timeline>(`/api/campaigns/${id}/timeline`),
   operatorTimeline: (id: number) => request<Timeline>(`/api/operators/${id}/timeline`),

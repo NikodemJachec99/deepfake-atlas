@@ -154,3 +154,26 @@ def test_simulation_has_no_side_effects(client):
     for exclude in ([], ids(e, "funnel_id"), list(e.evidence.values_list("pk", flat=True))):
         assert simulate(client, e, exclude).status_code == 200
     assert snapshot() == before
+
+
+@pytest.mark.parametrize("endpoint", ["simulate", "weakest-link"])
+def test_edge_version_compares_instants_not_strings(client, endpoint):
+    from datetime import UTC, timedelta, timezone
+
+    e = edge(ad("a"), ad("b"), [FUNNEL, *ENGINE])
+    at = e.updated_at
+    same = [
+        at.isoformat(),
+        at.astimezone(timezone(timedelta(hours=1))).isoformat(),
+        at.astimezone(UTC).isoformat().replace("+00:00", "Z"),
+    ]
+    body = {"exclude": []} if endpoint == "simulate" else {}
+    for version in same:
+        response = client.post(f"/api/edges/{e.pk}/{endpoint}", {**body, "edge_version": version}, format="json")
+        assert response.status_code == 200, (version, response.json())
+    one_microsecond_older = (at - timedelta(microseconds=1)).astimezone(timezone(timedelta(hours=1))).isoformat()
+    stale = client.post(f"/api/edges/{e.pk}/{endpoint}", {**body, "edge_version": one_microsecond_older}, format="json")
+    assert stale.status_code == 409 and stale.json()["edge_version"] == at.isoformat()
+    for bad in ("wczoraj", at.replace(tzinfo=None).isoformat()):
+        response = client.post(f"/api/edges/{e.pk}/{endpoint}", {**body, "edge_version": bad}, format="json")
+        assert response.status_code == 400

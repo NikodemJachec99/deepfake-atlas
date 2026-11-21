@@ -12,6 +12,7 @@ zostaje bez zmian).
 
 from collections import deque
 from dataclasses import dataclass
+from datetime import datetime
 
 from evidence.kinds import FAMILIES, KINDS
 from people.display import display_value
@@ -162,19 +163,32 @@ def group_impact(edge: Edge, before: str | None, after: str | None) -> dict:
     return out
 
 
+def check_version(edge: Edge, edge_version: str | None, what: str) -> str:
+    """Wersja krawędzi to chwila `updated_at`. Porównujemy chwile, nie napisy: ta sama chwila z innym
+    przesunięciem strefy (`Z`, `+00:00`, `+01:00`) to ta sama wersja, mikrosekundy się liczą."""
+    current = edge.updated_at.isoformat()
+    if not edge_version:
+        return current
+    try:
+        given = datetime.fromisoformat(edge_version.strip().replace("Z", "+00:00"))
+    except ValueError:
+        raise SimulationError("Wersja krawędzi nie jest datą ISO 8601.", edge_version=current) from None
+    if given.tzinfo is None:
+        raise SimulationError("Wersja krawędzi musi mieć strefę czasową.", edge_version=current)
+    if given != edge.updated_at:
+        raise SimulationError(
+            f"Krawędź zmieniła się od chwili, w której ją wczytano. Odśwież dowody i powtórz {what}.", status=409, edge_version=current
+        )
+    return current
+
+
 def simulate(edge: Edge, exclude: list[int], edge_version: str | None = None) -> dict:
     rows = list(edge.evidence.all())
     by_id = {row.pk: row for row in rows}
     unknown = sorted({i for i in exclude if i not in by_id})
     if unknown:
         raise SimulationError("Te dowody nie należą do tej krawędzi.", unknown=unknown)
-    current_version = edge.updated_at.isoformat()
-    if edge_version and edge_version != current_version:
-        raise SimulationError(
-            "Krawędź zmieniła się od chwili, w której ją wczytano. Odśwież dowody i powtórz symulację.",
-            status=409,
-            edge_version=current_version,
-        )
+    current_version = check_version(edge, edge_version, "symulację")
     excluded_ids = set(exclude)
     corpus_n = max((row.corpus_n for row in rows), default=0)
     base = score(rows, corpus_n)

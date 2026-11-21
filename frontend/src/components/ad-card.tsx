@@ -37,6 +37,16 @@ function AdText({ ad }: { ad: AdDetail }) {
   </figure>;
 }
 
+function Speech({ speech }: { speech: NonNullable<AdDetail["videos"][number]["speech"]> }) {
+  const [expanded, setExpanded] = useState(false);
+  return <section className="mt-2">
+    <h3 className="font-medium">Mowa z nagrania (Whisper {speech.model}, pierwsze {speech.audio_s.toLocaleString("pl-PL")} s)</h3>
+    <p className={expanded ? "whitespace-pre-wrap" : "line-clamp-3"}>{speech.text}</p>
+    <button aria-expanded={expanded} className="text-accent underline" onClick={() => setExpanded(!expanded)}>{expanded ? "Zwiń transkrypcję" : "Rozwiń transkrypcję"}</button>
+    {speech.truncated && <p className="text-muted">Transkrypcja obejmuje tylko początek nagrania.</p>}
+  </section>;
+}
+
 function Recordings({ videos = [] }: { videos?: AdDetail["videos"] }) {
   if (!videos.length) return null;
   return <section className="grid gap-3">
@@ -52,6 +62,7 @@ function Recordings({ videos = [] }: { videos?: AdDetail["videos"] }) {
           poster={video.poster ? API_URL + video.poster.url : undefined} className="max-h-80 w-full bg-black" />
         {video.poster && <p className="text-sm text-muted">Klatka poglądowa z nagrania · {video.poster.at_s.toLocaleString("pl-PL")} s</p>}
       </> : <p>Brak możliwości odtworzenia. {video.missing.join(" · ")}</p>}
+      {video.speech?.text && <Speech speech={video.speech} />}
     </figure>)}
   </section>;
 }
@@ -78,6 +89,7 @@ function MaterialWorkspace({ ad }: { ad: AdDetail }) {
         </div> : !ad.videos?.length && <p className="text-muted">Brak zrzutu reklamy w materiale.</p>}
         <Recordings videos={ad.videos} />
         <AdText ad={ad} />
+        {ad.genome.some(band => band.markers.some(marker => marker.kind === "white_dom_hash")) && <p>Cloaking: automat i odbiorca otrzymali różne wersje strony.</p>}
         <ObservationPanel adId={ad.id} />
         <Link href={`/investigation?ad=${ad.id}`} className="inline-block text-accent underline">Pokaż na grafie powiązań</Link>
       </div>

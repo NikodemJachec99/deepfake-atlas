@@ -36,7 +36,7 @@ export function ObservationPanel({ adId }: { adId: number }) {
   const pair = useApi(open && partner ? `${adId}/${partner.ad}` : null, () => api.compareObservations(adId, partner!.ad));
   const result = pair.data;
   return <section className="grid gap-2 border-y border-line p-2">
-    <button className="justify-self-start text-accent underline" aria-expanded={open} onClick={() => setOpen(!open)}>Dwie twarze jednego linku</button>
+    <button className="w-fit rounded-md border border-line bg-panel px-3 py-2 text-sm font-medium text-accent hover:underline" aria-expanded={open} onClick={() => setOpen(!open)}>Dwie twarze jednego linku</button>
     {open && (observations.loading ? <Loading /> : observations.error ? <ErrorBox message={observations.error} onRetry={observations.reload} /> :
       !partner ? <><CrawlShot sha={observations.data?.artifacts?.page_screenshot?.sha256} /><p>{observations.data?.message || "Brak drugiego przechwycenia do porównania."}</p></> : <>
         <label>Porównaj z materiałem <select className="max-w-full border border-line bg-panel" value={partner.ad} onChange={event => setChosen(Number(event.target.value))}>

@@ -90,8 +90,8 @@ function MaterialWorkspace({ ad }: { ad: AdDetail }) {
         <Recordings videos={ad.videos} />
         <AdText ad={ad} />
         {ad.genome.some(band => band.markers.some(marker => marker.kind === "white_dom_hash")) && <p>Cloaking: automat i odbiorca otrzymali różne wersje strony.</p>}
-        <ObservationPanel adId={ad.id} />
-        <Link href={`/investigation?ad=${ad.id}`} className="inline-block text-accent underline">Pokaż na grafie powiązań</Link>
+        {ad.landing_url?.trim() && <ObservationPanel adId={ad.id} />}
+        <Link href={`/investigation?ad=${ad.id}`} className="inline-block w-fit rounded-md border border-line bg-panel px-3 py-2 text-sm font-medium text-accent hover:underline">Pokaż na grafie powiązań</Link>
       </div>
       <aside className="min-w-0 space-y-3 border-t border-line bg-panel p-5 xl:border-t-0 xl:border-l">
         <h2 className="text-lg font-semibold">Wybrany materiał</h2>

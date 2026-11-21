@@ -88,6 +88,10 @@ Neo4j, OpenSearch i Redis działają jako osobne usługi. Nasz kod łączy się 
 
 Żadna z tych usług nie jest potrzebna do analizy materiałów z przechwyceń. Bez dostępu do sieci system nadal importuje sprawy i łączy je, traci tylko dane RDAP i certyfikaty z crt.sh. Do oceny nie trzeba żadnych kluczy.
 
+## Basal (plan, jeszcze nie uruchomiony)
+
+Opcjonalny lokalny model decyzji z [basal.md](basal.md): silnik basal 2.8.1 (Apache-2.0, NOTICE z listą modeli bazowych) i wagi basal-2.0 (Apache-2.0, na bazie Bielik v3 od SpeakLeash, też Apache-2.0). Nic z tego nie jest w repozytorium ani w obrazach kontenerów. Gdy zostanie uruchomiony, dopisujemy tu dokładną rewizję wag.
+
 ## Materiały organizatora
 
 Zgodnie z pkt 8 opisu wyzwania materiały wolno wykorzystywać wyłącznie na potrzeby wyzwania i nie wolno ich publicznie rozpowszechniać. Dlatego:

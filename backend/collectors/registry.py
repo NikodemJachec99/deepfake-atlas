@@ -8,14 +8,19 @@ from . import cert_pl, meta, microsoft
 
 
 def _queue(ads: list, analyze: bool) -> list[str]:
-    """Tworzy analizy dla reklam, które jeszcze żadnej nie mają."""
+    """Tworzy analizy dla reklam bez udanej (albo trwającej) analizy nowszej niż ostatnia migawka treści.
+    Nieudana analiza nie blokuje ponownej."""
     if not analyze:
         return []
-    return [
-        str(Analysis.objects.create(ad=ad, input_kind=Analysis.Kind.AD, input_value=ad.external_id).pk)
-        for ad in ads
-        if not ad.analyses.exists()
-    ]
+    queued = []
+    for ad in ads:
+        last = ad.snapshots.order_by("-observed_at").values_list("observed_at", flat=True).first()
+        current = ad.analyses.exclude(status=Analysis.Status.FAILED)
+        if last is not None:
+            current = current.filter(created_at__gte=last)
+        if not current.exists():
+            queued.append(str(Analysis.objects.create(ad=ad, input_kind=Analysis.Kind.AD, input_value=ad.external_id).pk))
+    return queued
 
 
 def run(collector: str, params: dict) -> dict:

@@ -383,3 +383,23 @@ def test_hunt_writes_need_the_api_key(client):
     assert client.post("/api/hunt/run", {}, content_type="application/json").status_code == 401
     assert client.post("/api/hunt/1/analyze").status_code == 401
     assert client.get("/api/hunt").status_code == 200
+
+
+def test_weak_and_rejected_candidates_are_rechecked_after_seven_days():
+    operator = make_operator()
+    fakes.CT["wiosenna"] = [cert("wiosenna-kuracja9.example")]
+    fakes.page("https://wiosenna-kuracja9.example/", OTHER)
+    run_hunt(operator)
+    candidate = HuntCandidate.objects.get()
+    assert candidate.status == HuntCandidate.Status.REJECTED and candidate.attempts == 1
+
+    fakes.FETCH_CALLS.clear()
+    HuntCandidate.objects.update(checked_at=timezone.now() - timedelta(days=6))
+    run_hunt(operator)
+    assert fakes.FETCH_CALLS == []  # za wcześnie
+
+    HuntCandidate.objects.update(checked_at=timezone.now() - timedelta(days=8))
+    kit_page("wiosenna-kuracja9.example")  # strona się zmieniła
+    run_hunt(operator)
+    candidate.refresh_from_db()
+    assert candidate.status == HuntCandidate.Status.CONFIRMED and candidate.attempts == 2

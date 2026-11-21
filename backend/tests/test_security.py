@@ -111,3 +111,15 @@ def test_analyses_are_rate_limited(monkeypatch):
     codes = [client.post("/api/analyses", {"kind": "text", "value": f"test {i}"}, format="json").status_code for i in range(3)]
     assert codes[:2] == [201, 201] and codes[2] == 429
     cache.clear()
+
+
+def test_zip_budget_is_shared_across_archives_in_one_request(monkeypatch):
+    monkeypatch.setattr(views, "MAX_ZIP_BYTES", 1000)
+    monkeypatch.setattr(views, "MAX_ZIP_FILES", 3)
+    client = APIClient()
+    two_big = [zipped({"a.html": b"0" * 600}), zipped({"b.html": b"0" * 600})]  # każdy osobno mieści się w limicie
+    response = client.post("/api/analyses/upload", {"files": two_big}, format="multipart")
+    assert response.status_code == 400 and "za duże" in response.json()["files"]
+    many = [zipped({"a.html": b"x", "b.html": b"x"}), zipped({"c.html": b"x", "d.html": b"x"})]
+    response = client.post("/api/analyses/upload", {"files": many}, format="multipart")
+    assert response.status_code == 400 and "za duże" in response.json()["files"]

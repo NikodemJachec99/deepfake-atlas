@@ -1,15 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import { api } from "@/lib/api";
 import { useApi } from "@/lib/hooks";
 
-export function EdgeSuggestions({ edgeId }: { edgeId: number }) {
-  const [open, setOpen] = useState(false);
+export function EdgeSuggestions({ edgeId, open, onToggle }: { edgeId: number; open: boolean; onToggle: () => void }) {
   const result = useApi(open ? String(edgeId) : null, () => api.edgeSuggestions(edgeId));
   const data = result.data;
   return <section className="min-w-0 border-b border-line p-2">
-    <button type="button" aria-expanded={open} className="text-accent underline" onClick={() => setOpen(!open)}>
+    <button type="button" aria-expanded={open} className="text-accent underline" onClick={onToggle}>
       Co sprawdzić dalej
     </button>
     {open && <div className="mt-2 grid min-w-0 gap-2 break-words" aria-live="polite">

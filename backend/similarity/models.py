@@ -193,8 +193,11 @@ class Alert(models.Model):
         JOINED_CAMPAIGN = "joined_campaign", "Nowa odsłona znanej kampanii"
         NEW_CAMPAIGN_KNOWN_OPERATOR = "new_campaign_known_operator", "Nowa kampania znanego operatora"
         JOINED_OPERATOR = "joined_operator", "Reklama połączyła grupy znanego operatora"
+        # Wczesne ostrzeżenie łowcy domen: strona jeszcze bez reklamy w korpusie, `ad` jest puste.
+        HUNT_CONFIRMED = "hunt_confirmed", "Nowa domena znanego operatora (łowca)"
 
-    ad = models.ForeignKey("ads.Ad", on_delete=models.CASCADE, related_name="alerts")
+    ad = models.ForeignKey("ads.Ad", null=True, blank=True, on_delete=models.CASCADE, related_name="alerts")
+    hunt_candidate = models.ForeignKey("hunting.HuntCandidate", null=True, blank=True, on_delete=models.CASCADE, related_name="alerts")
     kind = models.CharField(max_length=32, choices=Kind.choices)
     campaign = models.ForeignKey(Campaign, null=True, blank=True, on_delete=models.SET_NULL, related_name="alerts")
     operator = models.ForeignKey(Operator, null=True, blank=True, on_delete=models.SET_NULL, related_name="alerts")
@@ -207,5 +210,8 @@ class Alert(models.Model):
 
     class Meta:
         ordering = ["-created_at", "-id"]
-        constraints = [models.UniqueConstraint(fields=["ad", "kind"], name="alert_ad_kind")]
+        constraints = [
+            models.UniqueConstraint(fields=["ad", "kind"], name="alert_ad_kind"),
+            models.UniqueConstraint(fields=["hunt_candidate", "kind"], name="alert_hunt_kind"),
+        ]
         indexes = [models.Index(fields=["seen", "-created_at"])]

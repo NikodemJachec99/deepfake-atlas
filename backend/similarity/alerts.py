@@ -74,3 +74,24 @@ def _store(ad: Ad, kind: str, description: str, members: list[int], campaign_id:
         },
     )
     return alert
+
+
+def record_hunt(candidate) -> Alert:
+    """Wczesne ostrzeżenie łowcy: strona potwierdzonej domeny ma ślady znanego operatora, a reklamy jeszcze nie ma.
+
+    Jeden alert na kandydata. Dowody to najmocniejsze ślady wspólne ze stroną (ten sam kształt co przy reklamach).
+    """
+    evidence = [
+        {"kind": e["kind"], "label": e["label"], "family": e["family"], "bits": e["bits"], "value": e["value"]}
+        for e in sorted(candidate.evidence, key=lambda e: e["bits"], reverse=True)[:EVIDENCE_LIMIT]
+    ]
+    alert, _ = Alert.objects.get_or_create(
+        hunt_candidate=candidate,
+        kind=Alert.Kind.HUNT_CONFIRMED,
+        defaults={
+            "operator": candidate.operator,
+            "description": f"Nowa domena znanego operatora {candidate.operator.key}: {candidate.domain} ({candidate.bits} bita śladów na stronie)",
+            "evidence": evidence,
+        },
+    )
+    return alert

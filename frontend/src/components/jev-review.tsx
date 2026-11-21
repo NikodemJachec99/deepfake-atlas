@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { api, RELATION_LABELS, type AssistStatus, type EdgeDetail } from "@/lib/api";
 import { bits, dateTime } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
@@ -13,13 +12,13 @@ const statusLabel: Record<AssistStatus, string> = {
   rate_limited: "Osiągnięto limit zapytań",
 };
 
-export function JevReview({ edge }: { edge: EdgeDetail }) {
-  const [open, setOpen] = useState(false);
+export function JevReview({ edge, open, onToggle }: { edge: EdgeDetail; open: boolean; onToggle: () => void }) {
   const result = useApi(open ? JSON.stringify([edge.id, edge.updated_at, edge.verdict_at]) : null, () => api.edgeAssist(edge.id));
   const data = result.data;
   const suggestion = data?.suggestion;
   return <section className="min-w-0 border-b border-line p-2">
-    <button type="button" aria-expanded={open} className="text-accent underline" onClick={() => setOpen(!open)}>Sugestia przeglądu Jev</button>
+    <button type="button" aria-expanded={open} className="text-accent underline" onClick={onToggle}>Sugestia przeglądu Jev</button>
+    {open && <p className="text-muted">Jev to model pomocniczy. Panel odczytuje zapisaną sugestię bez uruchamiania modelu.</p>}
     {open && <div aria-live="polite" className="mt-2 grid gap-2 break-words">
       {result.loading ? "Pobieranie sugestii…" : result.error || !data ? <p>Sugestia niedostępna. <button className="text-accent underline" onClick={result.reload}>Ponów odczyt</button></p> : <>
         <strong>{statusLabel[data.status]}</strong>

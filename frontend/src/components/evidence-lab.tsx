@@ -8,15 +8,14 @@ import { api, artifactDownloadUrl, type EdgeDetail } from "@/lib/api";
 import { markerValue, utcEdgeVersion } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 
-export function EvidenceLab({ edge, refresh }: { edge: EdgeDetail; refresh: () => void }) {
-  const [open, setOpen] = useState(false);
+export function EvidenceLab({ edge, refresh, open, onToggle }: { edge: EdgeDetail; refresh: () => void; open: boolean; onToggle: () => void }) {
   const [excluded, setExcluded] = useState<number[]>([]);
   const ready = edge.updated_at && edge.evidence.length > 0 && edge.evidence.every(item => Number.isInteger(item.id));
   const query = useApi(open && ready ? JSON.stringify([edge.id, edge.updated_at, excluded]) : null,
     () => api.simulateEdge(edge.id, excluded, utcEdgeVersion(edge.updated_at)));
   const result = query.data;
   return <section className="border-b border-line p-2">
-    <button type="button" aria-expanded={open} className="text-accent underline" onClick={() => setOpen(!open)}>Laboratorium dowodów</button>
+    <button type="button" aria-expanded={open} className="text-accent underline" onClick={onToggle}>Laboratorium dowodów</button>
     {open && <div className="mt-2 grid gap-2">
       <p>Symulacja bez zapisu. Wyłącz dowody, aby sprawdzić ich wpływ.</p>
       {!ready ? <p>Brak danych wymaganych do symulacji.</p> : <>

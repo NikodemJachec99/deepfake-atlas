@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "enrichment",
     "people",
     "collectors",
+    "hunting",
 ]
 
 MIDDLEWARE = [

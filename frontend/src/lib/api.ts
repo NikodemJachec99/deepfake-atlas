@@ -456,14 +456,17 @@ export interface Stats {
   last_analysis: string | null;
 }
 
-export type AlertKind = "joined_campaign" | "new_campaign_known_operator" | "joined_operator";
+export type AlertKind = "joined_campaign" | "new_campaign_known_operator" | "joined_operator" | "hunt_confirmed";
 
 export interface Alert {
   id: number;
   kind: AlertKind;
   kind_label: string;
-  ad: number;
+  // Alert łowcy domen (hunt_confirmed) nie ma reklamy: ad to null, ad_title pusty, a domena i kandydat są w polach niżej.
+  ad: number | null;
   ad_title: string;
+  hunt_candidate: number | null;
+  domain: string | null;
   campaign: string | null;
   campaign_id: number | null;
   operator: string | null;
@@ -474,6 +477,100 @@ export interface Alert {
   seen: boolean;
   seen_at: string | null;
   created_at: string;
+}
+
+// Łowca domen: nowe domeny znanych operatorów z logów Certificate Transparency (crt.sh) i Listy CERT Polska.
+export type HuntStatus = "candidate" | "confirmed" | "rejected" | "unavailable";
+export type HuntSource = "crtsh" | "cert_pl";
+
+// Ślad wspólny ze stroną kandydata. bits to wkład w sumę (po rabacie rodziny), raw_bits przed rabatem, df liczba źródeł z tą wartością.
+export interface HuntEvidence {
+  kind: string;
+  label: string;
+  family: Family;
+  bits: number;
+  raw_bits: number;
+  decisive: boolean;
+  value: string;
+  df: number;
+  ad_ids: number[]; // reklamy operatora, z których wzięto ten ślad
+}
+
+export interface HuntCandidate {
+  id: number;
+  domain: string;
+  operator: string; // klucz, np. O-0007
+  operator_id: number;
+  sources: HuntSource[];
+  status: HuntStatus;
+  status_label: string;
+  prelim_score: number; // 0..1, bez połączenia ze stroną
+  score_parts: {
+    tokens: { token: string; match: "exact" | "part"; weight: number }[];
+    template: string | null;
+    issuer: string | null;
+  };
+  cert: { issuer: string; serial: string; not_before: string | null; crtsh_id: number | null } | null;
+  bits: number | null; // po potwierdzeniu przez crawlera
+  probability: number | null;
+  evidence: HuntEvidence[];
+  note: string;
+  final_url: string;
+  http_status: number | null;
+  crawl_error: string;
+  html_sha: string; // surowy HTML tylko do pobrania (artifactDownloadUrl), nigdy do renderowania
+  screenshot_sha: string; // zrzut strony: artifactImageUrl; pusty, gdy crawler nie dał zrzutu
+  attempts: number;
+  checked_at: string | null;
+  analysis: string | null; // id analizy, gdy domenę zgłoszono do pełnego potoku
+  ad: number | null; // reklama powstała z tej analizy
+  alert: number | null; // alert hunt_confirmed
+  run: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HuntPattern {
+  type: "name_token" | "name_template" | "cert_issuer" | "marker";
+  kind: string | null; // typ markera, gdy type == marker
+  label: string;
+  value: string;
+  role: "search" | "score" | "confirm";
+  ad_count: number;
+  ad_ids: number[]; // pochodzenie: reklamy operatora (najwyżej 20)
+  weight?: number; // tylko name_token; 0 dla zbyt pospolitego
+  domains?: string[]; // name_token i name_template: domeny, z których powstał
+  other_domains?: number; // name_token: ile obcych domen korpusu zawiera token
+  generic?: boolean;
+  share?: number;
+}
+
+export interface HuntProfile {
+  operator: { id: number; key: string; label: string };
+  ads: number;
+  domains: string[];
+  queries: string[]; // tokeny, po których pytamy crt.sh
+  patterns: HuntPattern[];
+  candidates: Partial<Record<HuntStatus, number>>;
+}
+
+export interface HuntRun {
+  id: string;
+  operator: string | null;
+  params: { operator?: number | null; days?: number; max_queries?: number; max_crawl?: number; crawl?: boolean };
+  status: "queued" | "running" | "done" | "failed";
+  // Po przebiegu: queries_made, queries[{token, ok, certs, domains}], candidates_new, crawled, confirmed, rejected, unavailable, aborted...
+  stats: Record<string, unknown>;
+  error: string;
+  created_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+}
+
+export interface HuntFilter {
+  operator?: number | string;
+  status?: HuntStatus[];
+  source?: HuntSource;
 }
 
 export interface Kinds {
@@ -788,6 +885,23 @@ export const api = {
   alerts: (unseenOnly = false) => request<Page<Alert>>(`/api/alerts${unseenOnly ? "?unseen=1" : ""}`),
   markAlertSeen: (id: number, seen = true) =>
     request<Alert>(`/api/alerts/${id}/seen`, { method: "POST", body: JSON.stringify({ seen }) }),
+  // Łowca domen. Lista: potwierdzeni pierwsi, potem po wyniku wstępnym.
+  hunt: (filter: HuntFilter = {}) => {
+    const query = new URLSearchParams();
+    if (filter.operator !== undefined) query.set("operator", String(filter.operator));
+    if (filter.status?.length) query.set("status", filter.status.join(","));
+    if (filter.source) query.set("source", filter.source);
+    const text = query.toString();
+    return request<Page<HuntCandidate>>(`/api/hunt${text ? `?${text}` : ""}`);
+  },
+  huntProfile: (operatorId: number) => request<HuntProfile>(`/api/operators/${operatorId}/hunt-profile`),
+  // Start przebiegu w tle; 409 (z danymi trwającego przebiegu w treści błędu), gdy poprzedni jeszcze trwa.
+  huntRun: (options: { operator?: number | null; days?: number; max_queries?: number; max_crawl?: number; crawl?: boolean } = {}) =>
+    request<HuntRun>("/api/hunt/run", { method: "POST", body: JSON.stringify(options) }),
+  huntRuns: () => request<Page<HuntRun>>("/api/hunt/runs"),
+  huntRunStatus: (id: string) => request<HuntRun>(`/api/hunt/runs/${id}`),
+  // Zgłoszenie domeny do pełnej analizy (potok jak przy createAnalysis); 409, gdy już zgłoszona.
+  analyzeHuntCandidate: (id: number) => request<Analysis>(`/api/hunt/${id}/analyze`, { method: "POST" }),
 };
 
 // Strumień postępu analizy. Zdarzenia przychodzą w kolejności, w jakiej backend je zapisał.

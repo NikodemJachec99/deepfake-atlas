@@ -64,7 +64,11 @@ export function Investigation() {
 
   const overview = !all && [operatorId, campaignId, adId, edgeId, nodeId].every(id => id === null);
   const operators = useApi(overview ? null : "operators", api.operators);
-  const campaigns = useApi("campaigns", api.campaigns);
+  const [allGroups, setAllGroups] = useState(false);
+  const captureOnly = overview && !allGroups;
+  const campaigns = useApi("campaigns:" + captureOnly, () => api.campaigns(captureOnly ? "capture" : undefined));
+  const stats = useApi(all ? "graph-stats" : null, api.stats);
+  const totalEdges = stats.data ? Object.values(stats.data.edges).reduce((sum, n) => sum + n, 0) : null;
   const scopeOperator = operatorId;
   const query = campaignId !== null ? `?campaign=${campaignId}` : scopeOperator !== null ? `?operator=${scopeOperator}` : adId !== null ? `?ad=${adId}` : "";
   const graph = useApi<Graph>(overview ? null : `graph:${query}`, () => api.graph(query));
@@ -121,8 +125,9 @@ export function Investigation() {
       <h1 className="atlas-title">Kampanie</h1>
       <Link href="/investigation?scope=all" className="rounded-md border border-line-strong px-3 py-2 text-accent hover:bg-panel">Cały graf</Link>
     </header>
+    <label><input type="checkbox" checked={allGroups} onChange={event => setAllGroups(event.target.checked)} /> Wszystkie grupy (również z bibliotek reklam)</label>
     {campaigns.loading ? <Loading label="Pobieranie kampanii" /> : campaigns.error ?
-      <ErrorBox message={campaigns.error} onRetry={campaigns.reload} /> : campaigns.data?.results.length ? <CampaignTree groups={campaigns.data.results} /> : <Empty title="Brak kampanii">Wszystkie dostępne reklamy znajdziesz w całym grafie.</Empty>}
+      <ErrorBox message={campaigns.error} onRetry={campaigns.reload} /> : campaigns.data?.results.length ? <CampaignTree groups={[...campaigns.data.results].sort((a,b) => Number(b.cases > 0) - Number(a.cases > 0))} /> : <Empty title="Brak kampanii">Wszystkie dostępne reklamy znajdziesz w całym grafie.</Empty>}
   </main>;
 
   const filters = (
@@ -162,7 +167,7 @@ export function Investigation() {
           {RELATIONS.map((relation) => (
             <Check key={relation} checked={relations.has(relation)} onChange={(on) => setRelations(toggle(relations, relation, on))} title={RELATION_HINT[relation]}>
               <RelationLine relation={relation} />
-              <span className="flex-1">{RELATION_LABELS[relation]}</span>
+              <span className="min-w-0 flex-1 truncate" title={RELATION_LABELS[relation]}>{RELATION_LABELS[relation]}</span>
               <Mono className="text-muted">{edges.filter((e) => e.relation === relation).length}</Mono>
             </Check>
           ))}
@@ -173,7 +178,7 @@ export function Investigation() {
           {FAMILIES.map((family) => (
             <Check key={family} checked={families.has(family)} onChange={(on) => setFamilies(toggle(families, family, on))}>
               <FamilyDot family={family} />
-              <span className="flex-1">{FAMILY_LABELS[family]}</span>
+              <span className="min-w-0 flex-1 truncate" title={FAMILY_LABELS[family]}>{FAMILY_LABELS[family]}</span>
               <Mono className="text-muted">{edges.filter((e) => (e.families[family] ?? 0) > 0).length}</Mono>
             </Check>
           ))}
@@ -239,13 +244,13 @@ export function Investigation() {
         value={table}
         onChange={setTable}
         items={[
-          { id: "edges", label: `Krawędzie ${visible.length}/${edges.length}` },
+          { id: "edges", label: `Krawędzie · pokazano ${visible.length} z ${totalEdges ?? edges.length}` },
           { id: "ads", label: `Reklamy ${nodes.length}` },
         ]}
       />
       <div className="min-h-0 flex-1 overflow-auto">
         {table === "edges" ? (
-          <table className="dense">
+          <table className="dense min-w-max">
             <thead>
               <tr>
                 <th>A</th>

@@ -128,6 +128,7 @@ ARTIFACT_DIR = Path(env("ARTIFACT_DIR", str(BASE_DIR.parent / "data" / "artifact
 # Modele pobierane przy pierwszym użyciu (twarze: YuNet i SFace). Katalog poza gitem.
 MODELS_DIR = Path(env("MODELS_DIR", str(BASE_DIR.parent / "data" / "models")))
 FACE_MODELS_DOWNLOAD = env("FACE_MODELS_DOWNLOAD", "1") == "1"
+EMBEDDINGS_DOWNLOAD = env("EMBEDDINGS_DOWNLOAD", "1") == "1"
 S3_ENDPOINT_URL = env("S3_ENDPOINT_URL", "http://localhost:9000")
 S3_ACCESS_KEY = env("S3_ACCESS_KEY", "scamdna")
 S3_SECRET_KEY = env("S3_SECRET_KEY", "scamdna-secret")
@@ -143,4 +144,4 @@ OPENSEARCH_INDEX = env("OPENSEARCH_INDEX", "ads")
 # --- Źródła danych ---------------------------------------------------------
 META_AD_LIBRARY_TOKEN = env("META_AD_LIBRARY_TOKEN")
 META_GRAPH_VERSION = env("META_GRAPH_VERSION", "v23.0")
-TEXT_EMBEDDING_DIM = 1024
+TEXT_EMBEDDING_DIM = 384  # paraphrase-multilingual-MiniLM-L12-v2, extractors/embedding.py

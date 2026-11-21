@@ -26,7 +26,7 @@ from evidence import services as markers
 from evidence import store
 from evidence.kinds import FAMILIES, KINDS
 from evidence.models import Artifact
-from extractors import Observation
+from extractors import Observation, embedding
 from extractors.html import extract_page
 from extractors.keywords import keywords, topics
 from extractors.text import extract_text
@@ -188,6 +188,12 @@ def stage_extract(analysis: Analysis) -> dict:
         counts["crea"] = counts.get("crea", 0) + len(capture["image_hashes"])
 
     full_text = f"{ad_text} {page_text}"
+    # Wektor znaczenia z treści strony (artykuł jest na początku, formularz lejka zwykle na końcu), a bez strony z tekstu reklamy.
+    vector = embedding.embed(page_text.strip() or ad_text)
+    ad.text_embedding = vector
+    ad.save(update_fields=["text_embedding"])
+    if vector:
+        counts["narr"] = counts.get("narr", 0) + 1
     ad.labels["keywords"] = keywords(full_text)
     ad.labels["topics"] = topics(full_text)
     ad.save(update_fields=["labels"])

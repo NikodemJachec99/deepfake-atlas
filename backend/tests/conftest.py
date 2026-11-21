@@ -14,3 +14,4 @@ def _clean_fakes():
 def _no_model_downloads(settings):
     # Testy nie pobierają modeli z sieci. Kanał twarzy bez modelu po prostu nic nie zwraca.
     settings.FACE_MODELS_DOWNLOAD = False
+    settings.EMBEDDINGS_DOWNLOAD = False

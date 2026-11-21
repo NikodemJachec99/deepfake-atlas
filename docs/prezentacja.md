@@ -63,39 +63,41 @@ Cel: pokazać pełny proces na nowym materiale i dołączenie do znanego operato
 
 ### Przygotowanie (przed wejściem na scenę)
 
-Korpus bez spraw p3 i p4 z drugiej paczki, obie spakowane do ZIP-ów:
+Korpus bez spraw p3, p4 i p11 z drugiej paczki, wszystkie trzy spakowane do ZIP-ów:
 
 ```bash
 docker compose exec backend python manage.py reset_corpus --yes
 docker compose exec backend python manage.py import_bundle /data/raw/nask --name nask
 mkdir -p data/raw/demo data/raw/demo-na-zywo
 cp -r data/raw/nask-backup/. data/raw/demo/
-mv data/raw/demo/p3 data/raw/demo/p4 data/raw/demo-na-zywo/
+mv data/raw/demo/p3 data/raw/demo/p4 data/raw/demo/p11 data/raw/demo-na-zywo/
 docker compose exec backend python manage.py import_bundle /data/raw/demo --name nask-backup
-cd data/raw/demo-na-zywo && zip -r ../p3.zip p3 && zip -r ../p4.zip p4 && cd -
+cd data/raw/demo-na-zywo && for c in p3 p4 p11; do zip -qr ../$c.zip $c; done && cd -
 ```
 
-Na Windowsie bez `zip`: `Compress-Archive data/raw/demo-na-zywo/p3 data/raw/p3.zip` (tak samo p4). Na Git Bash przed poleceniami z `/data/...` ustaw `MSYS_NO_PATHCONV=1`.
+Na Windowsie bez `zip`: `Compress-Archive data/raw/demo-na-zywo/p3 data/raw/p3.zip` (tak samo p4 i p11). Na Git Bash przed poleceniami z `/data/...` ustaw `MSYS_NO_PATHCONV=1`.
 
-Po imporcie operator A ma 6 stron na 5 domenach i jedną kampanię.
+Po imporcie `GET /api/stats` daje 25 reklam, 3 kampanie i 3 operatorów, a operator O-0001 ma 6 stron na 5 domenach w jednej kampanii.
+
+Próba 2026-11-21 na świeżym klonie (`main` po #16, crt.sh włączony): przygotowanie ok. 2 min, analiza `p3.zip` ok. 5 s, `p11.zip` ok. 25 s, bo etap Infrastruktura czeka na crt.sh. Jeśli crt.sh nie odpowiada, etap czeka do 25 s i idzie dalej.
 
 ### Przebieg
 
 | Czas | Co robimy | Co ma być widać |
 |---|---|---|
-| 0:00 | Ekran Discovery, przeciągamy `p3.zip` | lista plików sprawy, start analizy |
-| 0:10 | Patrzymy na oś etapów | sześć etapów po kolei: przyjęcie, strona, ekstrakcja, wzbogacanie, łączenie, grupowanie; liczba markerów per rodzina |
-| 0:30 | Graf dorysowuje krawędzie | krawędzie do stron operatora A pojawiają się jedna po drugiej |
-| 0:45 | Wynik | ocena "nowa kampania znanego operatora" i klucz operatora A |
-| 1:00 | Klik w najsilniejszą krawędź | panel dowodów: identyfikator strony w panelu lejka (18 bitów, rozstrzygający), piksel Meta, ścieżki zaplecza, zestaw parametrów z `utm_visit`; przy każdym liczba źródeł i wkład w bitach |
-| 1:30 | Karta operatora | 7 stron, 6 domen, nowa strona obok kampanii z narracją A |
+| 0:00 | Ekran Discovery, przeciągamy `p3.zip` na pole plików | przycisk "Analiza trwa" |
+| 0:10 | Przebieg analizy | siedem kroków "zakończono" i dziennik zdarzeń: łańcuch adresu, liczba markerów w każdej rodzinie, wzbogacanie, powiązania |
+| 0:25 | Wynik po prawej | "Nowa kampania znanego operatora", Operator O-0001, najsilniejsze dowody: Meta Pixel i identyfikator strony w panelu lejka po 18 bitów |
+| 0:40 | Przewijamy niżej | graf: nowa reklama w środku, krawędzie do 6 stron operatora |
+| 0:55 | Klik w krawędź z listy powiązań | panel "Ten sam operator": pewność 1,00, suma ok. 56 bitów, znacznik "marker rozstrzygający", pasek rodzin, obie reklamy ze zrzutami, dowody według wkładu z liczbą źródeł (np. "w 2 z 19 źródeł") |
+| 1:25 | Operatorzy, O-0001 | kampania K-0001, 7 reklam (nowa bez kampanii), markery rdzeniowe: zestaw parametrów z `utm_visit`, identyfikatory w panelu lejka, ścieżki zaplecza; "Otwórz graf grupy" |
 | 1:50 | Jedno zdanie | "Nowa domena, inny artykuł, inna osoba. System wie, kto za nią stoi, i pokazuje dlaczego." |
 
 ### Plan B
 
 - Gdy Discovery nie zadziała: `curl -X POST localhost:8000/api/analyses/upload -F "files=@data/raw/p3.zip"` i karta reklamy w archiwum.
 - Gdy jest czas albo pytają o warianty: wrzucić `p4.zip`. Wynik: nowa odsłona znanej kampanii, bo p4 to ten sam szablon artykułu co p3 z podmienioną osobą.
-- Gdy pytają o fałszywe połączenia: wrzucić p11 tak samo jak p3. Wynik: tylko podobieństwo. Ten sam silnik lejka, ale bez śladu konta operatora, więc system nie dopisuje jej do operatora A.
+- Gdy pytają o fałszywe połączenia: wrzucić `p11.zip`. Wynik: "Podobna koncepcja, brak dowodu wspólnego źródła", dowody to tylko ścieżki zaplecza strony. Ten sam silnik lejka, ale bez śladu konta operatora, więc system nie dopisuje jej do operatora A. W dzienniku etapu Infrastruktura widać trop z crt.sh: certyfikat `sfuxd.com` obejmuje też `zixips.com`.
 
 ## Pytania, których się spodziewamy
 

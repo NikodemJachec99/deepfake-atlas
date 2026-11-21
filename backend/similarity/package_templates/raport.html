@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'">
+<title>Pakiet dowodowy SCAM DNA {{ key }}</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { font: 11pt/1.45 "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #111; background: #fff; margin: 0 auto; max-width: 190mm; padding: 14mm 8mm; }
+  h1 { font-size: 20pt; margin: 0 0 2mm; }
+  h2 { font-size: 14pt; margin: 9mm 0 2mm; padding-bottom: 1mm; border-bottom: 1.5px solid #111; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 5mm 0 1.5mm; page-break-after: avoid; }
+  p { margin: 1.5mm 0; }
+  .meta { color: #444; font-size: 10pt; }
+  .note { border: 1px solid #999; border-left: 4px solid #555; background: #f6f6f6; padding: 2mm 3mm; margin: 3mm 0; font-size: 10pt; }
+  .warn { border-left-color: #a40000; background: #fdf3f3; }
+  table { border-collapse: collapse; width: 100%; font-size: 9pt; margin: 2mm 0; }
+  th, td { border: 1px solid #bbb; padding: 1.2mm 1.8mm; text-align: left; vertical-align: top; }
+  th { background: #ececec; }
+  thead { display: table-header-group; }
+  tr { page-break-inside: avoid; }
+  td.n, th.n { text-align: right; white-space: nowrap; }
+  code, .mono { font-family: Consolas, "DejaVu Sans Mono", monospace; font-size: 8.5pt; word-break: break-all; }
+  ul { margin: 1.5mm 0 1.5mm 5mm; padding: 0; }
+  figure { margin: 3mm 0; page-break-inside: avoid; border: 1px solid #ccc; padding: 2mm; }
+  figure img { max-width: 100%; max-height: 120mm; display: block; margin: 0 auto 2mm; }
+  figcaption { font-size: 8.5pt; color: #333; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3mm; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; margin: 3mm 0; }
+  .stat { border: 1px solid #bbb; padding: 2mm 3mm; }
+  .stat b { display: block; font-size: 16pt; }
+  .stat span { font-size: 8.5pt; color: #444; }
+  .tag { display: inline-block; border: 1px solid #555; border-radius: 3px; padding: 0 1.2mm; font-size: 8pt; }
+  pre { background: #f3f3f3; border: 1px solid #ccc; padding: 2mm 3mm; font-size: 9pt; white-space: pre-wrap; }
+  @page { size: A4; margin: 12mm; }
+  @media print { body { padding: 0; max-width: none; font-size: 10pt; } a { color: inherit; text-decoration: none; } }
+  @media (max-width: 700px) { .stats { grid-template-columns: repeat(2, 1fr); } .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<h1>Pakiet dowodowy: {{ kind_word }} {{ key }}</h1>
+<p class="meta">SCAM DNA (NASK, HackNation) | wygenerowano {{ generated }} | wersja modelu podobieństwa {{ model_version }} | katalog pakietu <code>{{ root }}</code></p>
+<div class="note warn">
+  <b>Co to jest, a czego nie.</b> To hipoteza analityczna: reklamy łączy wspólny ślad techniczny (domena, identyfikator konta, plik, treść), a każde powiązanie ma dowód wskazany niżej.
+  Raport nie wskazuje osoby ani firmy. Imię i nazwisko w tabelach to osoba, pod którą podszywają się reklamy, a nie podejrzany.
+  Raport nie zawiera treści stron oszustów: strony i ruch sieciowy są tylko plikami w katalogu <code>dowody/surowe</code>.
+</div>
+
+<h2>1. Streszczenie</h2>
+<div class="stats">
+  <div class="stat"><b>{{ summary.ads }}</b><span>reklam w grupie</span></div>
+  {% if kind == "operator" %}<div class="stat"><b>{{ summary.campaigns|length }}</b><span>kampanii operatora</span></div>{% else %}<div class="stat"><b>{{ summary.cases }}</b><span>spraw (paczek) z materiałem</span></div>{% endif %}
+  <div class="stat"><b>{{ summary.domains_total }}</b><span>domen</span></div>
+  <div class="stat"><b>{{ edges_count }}</b><span>powiązań (krawędzi) między reklamami</span></div>
+</div>
+<ul>
+  <li><b>Okres obserwacji:</b>
+    {% if summary.period_from %}od {{ summary.period_from }} do {{ summary.period_to }} ({{ summary.dated }} reklam z datą{% if summary.undated %}, {{ summary.undated }} bez daty{% endif %}). To chwile, w których materiał zobaczył analityk albo nasze narzędzie, a nie początek ani koniec działalności: oszust mógł działać wcześniej i później.
+    {% else %}brak reklam z datą obserwacji ({{ summary.undated }} bez daty).{% endif %}
+  </li>
+  <li><b>Źródła materiału:</b> {% for s in summary.sources %}{{ s.label }}: {{ s.n }}{% if not forloop.last %}; {% endif %}{% endfor %}.</li>
+  {% if kind == "operator" and summary.campaigns %}<li><b>Kampanie operatora:</b> {% for c in summary.campaigns %}{{ c.key }} ({{ c.ads }} reklam){% if not forloop.last %}, {% endif %}{% endfor %}.</li>{% endif %}
+  {% if summary.cert_pl %}<li><b>Lista Ostrzeżeń CERT Polska:</b> {{ summary.cert_pl }} reklam z tej grupy ma domenę na liście.</li>{% endif %}
+  <li><b>Powiązania:</b> {% for r in relation_counts %}{{ r.label }}: {{ r.n }}{% if not forloop.last %}; {% endif %}{% endfor %}{% if edges_rejected %}; odrzucone przez analityka: {{ edges_rejected }} (są w <code>krawedzie.jsonl</code> z werdyktem <code>rejected</code>, nie liczą się jako dowód){% endif %}.</li>
+</ul>
+
+<h3>Domeny{% if summary.domains_total > summary.domains|length %} (pierwsze {{ summary.domains|length }} z {{ summary.domains_total }}){% endif %}</h3>
+{% if summary.domains %}
+<table>
+  <thead><tr><th>Domena</th><th class="n">Reklam</th><th>Rejestracja (RDAP)</th><th>CERT Polska</th></tr></thead>
+  <tbody>{% for d in summary.domains %}<tr><td class="mono">{{ d.domain }}</td><td class="n">{{ d.ads }}</td><td>{{ d.registered|default:"brak danych" }}</td><td>{{ d.cert_pl }}</td></tr>{% endfor %}</tbody>
+</table>
+{% else %}<p>Brak domen zapisanych jako ślady tych reklam.</p>{% endif %}
+
+<h3>Reklamodawcy</h3>
+{% if summary.advertisers %}
+<table>
+  <thead><tr><th>Nazwa podana w reklamie</th><th>Płatnik</th><th class="n">Reklam</th></tr></thead>
+  <tbody>{% for a in summary.advertisers %}<tr><td>{{ a.name }}</td><td>{{ a.payer }}</td><td class="n">{{ a.ads }}</td></tr>{% endfor %}</tbody>
+</table>
+{% else %}<p>Brak nazwy reklamodawcy w materiale tej grupy.</p>{% endif %}
+
+<h3>Osoby i marki, pod które podszywają się reklamy</h3>
+{% if summary.people %}
+<table>
+  <thead><tr><th>Osoba albo marka</th><th>Jak wykryto</th><th class="n">Reklam</th></tr></thead>
+  <tbody>{% for p in summary.people %}<tr><td>{{ p.name }}</td><td>{{ p.how }}</td><td class="n">{{ p.ads }}</td></tr>{% endfor %}</tbody>
+</table>
+<p class="meta">Wzmianka i twarz z bazy referencyjnej to motyw: różni operatorzy używają tych samych nazwisk, więc motyw sam nie dowodzi wspólnego źródła.</p>
+{% else %}<p>Nie wykryto osób ani marek.</p>{% endif %}
+
+<h2>2. Dlaczego to jedna grupa: najmocniejsze dowody</h2>
+<p>Każdy dowód to ślad wspólny dla co najmniej dwóch reklam grupy. <b>Bity</b> mówią, o ile bardziej prawdopodobne jest, że dwie reklamy dzielą ten ślad dlatego, że mają wspólne źródło, niż przez przypadek (im rzadszy ślad w korpusie, tym więcej bitów; dla jednego śladu jest górna granica). <b>Pewność pary</b> to prawdopodobieństwo wspólnego źródła najlepszej pary, w której ten ślad występuje, po zsumowaniu wszystkich jej dowodów. Tabela zbiera najmocniejszy wkład każdego śladu w całej grupie.</p>
+{% if evidence %}
+<table>
+  <thead><tr><th>Ślad</th><th>Wartość</th><th class="n">Bity</th><th class="n">Pewność pary</th><th class="n">Pary / reklamy</th><th class="n">W korpusie</th><th>Uwagi, pliki</th></tr></thead>
+  <tbody>{% for e in evidence %}<tr>
+    <td>{{ e.label }}<br><span class="meta">{{ e.family }}</span></td>
+    <td class="mono">{{ e.value }}{% if e.similarity %}<br><span class="meta">podobieństwo {{ e.similarity }}%</span>{% endif %}</td>
+    <td class="n">{{ e.bits }}</td>
+    <td class="n">{{ e.probability }}</td>
+    <td class="n">{{ e.pairs }} / {{ e.ads }}</td>
+    <td class="n">{% if e.df %}{{ e.df }} z {{ e.corpus_n }}{% endif %}</td>
+    <td>{% if e.decisive %}<span class="tag">rozstrzygający</span> {% endif %}{{ e.note }}{% for f in e.files %}<br><code>{{ f }}</code>{% endfor %}</td>
+  </tr>{% endfor %}</tbody>
+</table>
+<p class="meta">Kolumna "W korpusie": w ilu niezależnych źródłach (kampania albo reklama bez kampanii) z korpusu SCAM DNA występuje ta wartość. Mało znaczy rzadko, czyli mocny dowód. "Rozstrzygający" to typ śladu, który wystarcza do uznania wspólnego źródła, gdy jest rzadki.</p>
+{% else %}<p>Grupa nie ma jeszcze powiązań z zapisanymi dowodami.</p>{% endif %}
+
+{% if top_edges %}
+<h3>Najmocniejsze pary reklam</h3>
+{% for e in top_edges %}
+<p><b>Krawędź {{ e.id }}: reklama #{{ e.ad_a }} i #{{ e.ad_b }}</b> ({{ e.ext_a }} | {{ e.ext_b }})<br>
+{{ e.relation }}, pewność {{ e.probability }}, suma {{ e.bits }} bita, decyzja analityka: {{ e.verdict }}, wersja modelu {{ e.model_version }}.</p>
+<table>
+  <thead><tr><th>Ślad</th><th>Wartość</th><th class="n">Bity</th><th class="n">W korpusie</th><th>Pliki</th></tr></thead>
+  <tbody>{% for ev in e.evidence %}<tr><td>{{ ev.label }}<br><span class="meta">{{ ev.family }}</span></td><td class="mono">{{ ev.value }}</td><td class="n">{{ ev.bits }}</td><td class="n">{% if ev.df %}{{ ev.df }} z {{ ev.corpus_n }}{% endif %}</td><td>{% if ev.decisive %}<span class="tag">rozstrzygający</span> {% endif %}{% for f in ev.files %}<code>{{ f }}</code> {% endfor %}</td></tr>{% endfor %}</tbody>
+</table>
+{% if e.more %}<p class="meta">Jeszcze {{ e.more }} słabszych dowodów tej pary w <code>krawedzie.jsonl</code>.</p>{% endif %}
+{% endfor %}
+{% endif %}
+
+<h2>3. Najsłabszy punkt</h2>
+<p>Test pyta: co by się stało z tym powiązaniem, gdyby wybranych śladów nie dało się zaobserwować (np. oszust zmienił domenę albo usunął identyfikator). To symulacja na bieżącym modelu, a nie przewidywanie działań oszusta ani wniosek o całej grupie. Sprawdzone są najmocniejsze pary grupy oraz jej najsłabsze powiązania (łącznie {{ weakest|length }}): pojedyncze grupy śladów i ich pary. Najsłabsze powiązanie to miejsce, w którym zarzut wspólnego źródła trzyma się najmniej.</p>
+{% for w in weakest %}
+<div class="note">
+  <b>Para {{ w.pair }} (krawędź {{ w.edge }}), {{ w.role }}.</b> Dziś: {{ w.baseline.relation }}, pewność {{ w.baseline.probability }}, {{ w.baseline.bits }} bita.<br>
+  {{ w.message }}
+  {% if w.solutions %}<ul>{% for s in w.solutions %}<li>Bez: {{ s.labels|join:" oraz " }}: {{ s.change }} (pewność {{ s.probability }}, {{ s.bits }} bita).</li>{% endfor %}</ul>
+  {% if w.more %}<p class="meta">Jeszcze {{ w.more }} takich zestawów.</p>{% endif %}{% endif %}
+  {% if not w.complete %}<p class="meta">Przeszukiwanie niepełne (sprawdzono {{ w.checked }} scenariuszy), więc to nie jest dowód, że nie ma mniejszego zestawu.</p>{% endif %}
+</div>
+{% empty %}
+<p>Nie policzono: grupa nie ma jeszcze par z dowodami albo krawędzie zmieniły się w trakcie tworzenia pakietu.</p>
+{% endfor %}
+
+<h2>4. Oś czasu</h2>
+<p>{{ timeline_total }} zdarzeń{% if timeline_total > timeline|length %}, poniżej pierwsze {{ timeline|length }} (komplet w <code>os-czasu.json</code>){% endif %}. Rodzaj czasu: <i>zaobserwowano</i> to chwila, w której materiał zobaczył analityk albo narzędzie; <i>podane przez źródło</i> to data z zewnętrznego rejestru (RDAP, crt.sh, CERT Polska) albo start emisji z biblioteki reklam. Oś pokazuje kolejność obserwacji i nic ponad to: nie wnioskujemy z niej o zamiarach operatora.
+Bez daty, więc poza osią: {{ timeline_undated.ads|length }} reklam, {{ timeline_undated.traces }} śladów, {{ timeline_undated.links }} powiązań, {{ timeline_undated.certificates }} certyfikatów.</p>
+{% if timeline %}
+<table>
+  <thead><tr><th>Czas</th><th>Zdarzenie</th><th>Wartość</th><th>Rodzaj czasu, źródło</th><th>Reklamy</th></tr></thead>
+  <tbody>{% for t in timeline %}<tr><td class="mono">{{ t.at }}</td><td>{{ t.label }}{% if t.detail %}<br><span class="meta">{{ t.detail }}</span>{% endif %}</td><td class="mono">{{ t.value }}</td><td>{{ t.time_kind }}, {{ t.source }}{% if t.precision %} ({{ t.precision }}){% endif %}</td><td>{{ t.ads }}</td></tr>{% endfor %}</tbody>
+</table>
+{% endif %}
+
+<h2>5. Reklamy</h2>
+<p>{{ ads_total }} reklam. Adresy po redakcji tokenów (wartości parametrów rozpoznanych jako tokeny dostępu zastąpione skrótem). Kolumna "Dowody" to pierwsze 12 znaków SHA-256 pliku w <code>dowody/</code>; pełne sumy są w <code>manifest.json</code>.</p>
+<table>
+  <thead><tr><th class="n">ID</th><th>Identyfikator</th><th>Źródło</th><th>Tytuł lub tekst</th><th>Adres</th><th>Kampania</th><th>Pierwsza obserwacja</th><th>Dowody</th></tr></thead>
+  <tbody>{% for a in ads %}<tr>
+    <td class="n">{{ a.id }}</td><td class="mono">{{ a.external_id }}</td><td>{{ a.source }}</td>
+    <td>{{ a.title }}{% if a.advertiser %}<br><span class="meta">reklamodawca: {{ a.advertiser }}</span>{% endif %}</td>
+    <td class="mono">{{ a.url }}</td><td>{{ a.campaign }}</td><td>{{ a.first_seen }}</td>
+    <td>{% for f in a.files %}{{ f.role }} <code>{{ f.sha }}</code>{% if not f.stored %} (nie w pakiecie){% endif %}<br>{% endfor %}</td>
+  </tr>{% endfor %}</tbody>
+</table>
+{% if ads_total > ads|length %}<p class="meta">Pokazano {{ ads|length }} z {{ ads_total }} reklam. Komplet jest w <code>manifest.json</code> (sekcja "reklamy").</p>{% endif %}
+
+<h2>6. Zrzuty reklam i stron</h2>
+<p>Zrzuty reklam, klatki nagrań i zrzuty stron wykonane przez przeglądarkę. Obrazy w raporcie to miniatury (JPEG, do 900 px); oryginał bajt w bajt leży pod podaną ścieżką i ma podaną sumę. {% if images_total > images|length %}Pokazano {{ images|length }} z {{ images_total }} obrazów, resztę znajdziesz w <code>dowody/obrazy</code>.{% endif %}</p>
+{% if images %}
+<div class="grid">{% for g in images %}
+<figure>
+  <img src="{{ g.thumb }}" alt="{{ g.role }}, reklamy {{ g.ads }}">
+  <figcaption><b>{{ g.role }}</b>, reklamy {{ g.ads }}<br>
+  plik: <code>{{ g.path }}</code> ({{ g.size }})<br>
+  SHA-256: <code>{{ g.sha }}</code><br>
+  pozyskano w systemie: {{ g.acquired }}{% if g.source %}<br>źródło: {{ g.source }}{% endif %}</figcaption>
+</figure>{% endfor %}</div>
+{% else %}<p>Grupa nie ma obrazów do pokazania.</p>{% endif %}
+
+<h2>7. Łańcuch dowodu i weryfikacja</h2>
+<p>W pakiecie jest {{ files_total }} plików dowodowych ({{ files_size }}) w katalogu <code>dowody/</code>. Każdy zapisany jest pod swoim SHA-256, więc zmiana jednego bajtu zmienia sumę, której nie da się pogodzić z nazwą pliku, <code>manifest.json</code> ani <code>SHA256SUMS</code>. Dla każdego pliku manifest podaje sumę, rozmiar, rodzaj, źródło (adres po redakcji), czas pozyskania do systemu SCAM DNA (to chwila zapisu w magazynie dowodów, nie moment publikacji materiału przez oszusta) i reklamy, z których pochodzi.</p>
+<p>Pliki w <code>dowody/surowe</code> są surowe: HTML i HAR dokładnie takie, jak przechwycone, więc niezredagowane i mogą zawierać tokeny dostępu z przechwycenia. Nie otwieraj ich w przeglądarce. {% if not include_raw %}<b>Ten pakiet powstał z opcją pominięcia plików surowych (HAR i HTML), więc ich nie zawiera.</b>{% endif %}</p>
+<p><b>Jak sprawdzić.</b> Rozpakuj archiwum do pustego katalogu i uruchom (wymaga samego Pythona 3.8 lub nowszego, bez instalowania czegokolwiek):</p>
+<pre>python weryfikuj.py</pre>
+<p>Skrypt porównuje sumy z <code>SHA256SUMS</code> i <code>manifest.json</code> i zgłasza brakujące, zmienione oraz nadmiarowe pliki. Wynik <i>ZGODNE</i> oznacza, że zawartość jest taka, jak w chwili utworzenia pakietu. Alternatywy bez Pythona: <code>sha256sum -c SHA256SUMS</code> (macOS: <code>shasum -a 256 -c SHA256SUMS</code>) albo w PowerShell <code>Get-FileHash -Algorithm SHA256 plik</code> i porównanie z wpisem. Te sumy dowodzą, że plik nie zmienił się po utworzeniu pakietu. Nie dowodzą, kiedy powstał oryginał ani kto go wytworzył: do tego służy podpis albo znacznik czasu zewnętrznego urzędu, którego ten pakiet nie zawiera.</p>
+{% if skipped %}
+<h3>Pliki pominięte w pakiecie</h3>
+<table>
+  <thead><tr><th>SHA-256</th><th>Rodzaj</th><th>Powód</th></tr></thead>
+  <tbody>{% for s in skipped %}<tr><td class="mono">{{ s.sha }}</td><td>{{ s.role }}</td><td>{{ s.reason }}</td></tr>{% endfor %}</tbody>
+</table>
+{% endif %}
+<h3>Pozostałe pliki pakietu</h3>
+<ul>
+  <li><code>stix.json</code>: wymiana wskaźników w formacie STIX 2.1 ({{ stix_objects }} obiektów; operator jako intrusion-set, kampanie, domeny, adresy IP i certyfikaty jako wskaźniki). Zawiera tylko grupy z materiałów zgłoszonych jako podejrzane. Bez osób i tokenów.</li>
+  <li><code>krawedzie.jsonl</code>: jedna krawędź w wierszu: relacja, pewność, bity i lista dowodów z wkładem każdego, wartościami po obu stronach i odnośnikiem do pliku w <code>dowody/</code>.</li>
+  <li><code>os-czasu.json</code>: pełna oś obserwacji z rodzajem i źródłem czasu każdego zdarzenia.</li>
+  <li><code>manifest.json</code>, <code>SHA256SUMS</code>, <code>weryfikuj.py</code>: opis łańcucha dowodu i jego sprawdzenie.</li>
+</ul>
+
+<h2>8. Metoda i wersja modelu</h2>
+<p>Z każdej reklamy wyciągamy cechy (markery) w siedmiu rodzinach: infrastruktura, tracking i lejek, szablon strony, kreacja, narracja, osoby i marki, zachowanie. Dla pary reklam model Fellegi-Sunter liczy dla każdego wspólnego śladu wkład w bitach: <code>log2(m / f)</code>, gdzie <code>m</code> to szansa zgodności przy wspólnym źródle, a <code>f</code> częstość śladu wśród niezależnych źródeł w korpusie, z górną granicą zaufania do jednego śladu. Ślady jednej rodziny, które zwykle idą w parze (ta sama domena i jej adres), liczą się z rabatem. Suma bitów i szansa wstępna 1 do 10 000 dają pewność. Relację ("ta sama kampania", "ten sam operator") nadają dopiero reguły: wysoka pewność nie wystarcza, potrzebny jest rzadki ślad rozstrzygający albo dwa niezależne silne potwierdzenia, z których co najmniej jedno dotyczy zaplecza. Wspólny motyw (osoba, marka, tematyka) ani silnik lejka nie potwierdzają wspólnego źródła.</p>
+<p>Wersja modelu: <b>{{ model_version }}</b> (fs-5: wagi eksperckie, fs-6: wagi uczone z danych bez etykiet). Pełny opis w <code>docs/metodyka.md</code> repozytorium SCAM DNA. Test najsłabszego punktu liczy tym samym silnikiem co laboratorium dowodów i niczego nie zapisuje.</p>
+
+<h2>9. Ograniczenia</h2>
+<ul>
+  <li><b>To hipoteza, nie dowód winy.</b> Wspólny ślad techniczny oznacza wspólne zaplecze, a nie tożsamość człowieka. Narzędzie nie identyfikuje osób.</li>
+  <li><b>Wagi są eksperckie albo uczone na małym korpusie.</b> Nie mamy zbioru z oznaczonymi kampaniami, więc nie podajemy precyzji ani czułości. Pewność to wynik modelu, nie wartość wykalibrowana na prawdziwych sprawach.</li>
+  <li><b>Daty to obserwacje.</b> Okres obserwacji i oś czasu mówią, kiedy zobaczyliśmy materiał, a nie kiedy oszust zaczął lub skończył. Rzeczy bez daty nie są na osi.</li>
+  <li><b>Tylko to, co przechwycono.</b> Treść strony mogła wyglądać inaczej dla innego odbiorcy (moderacja, ofiara). Różnica treści pod jednym adresem to obserwacja, nie dowód cloakingu.</li>
+  <li><b>Test najsłabszego punktu</b> dotyczy pojedynczych par, nie spójności całej grupy, i jest ograniczony liczbą scenariuszy i czasem.</li>
+  <li><b>Sumy kontrolne dowodzą niezmienności po utworzeniu pakietu</b>, nie autentyczności oryginału ani czasu jego powstania. Czas pozyskania to czas zapisu w SCAM DNA. Pakiet nie jest podpisany elektronicznie.</li>
+  <li><b>Pliki surowe nie są redagowane</b> i mogą zawierać dane z przechwycenia, w tym tokeny dostępu. Raport, manifest, krawędzie, STIX i oś czasu mają adresy po redakcji.</li>
+  <li>Raport nie zastępuje opinii biegłego ani analizy analityka. Odrzucone przez analityka powiązania nie są w nim dowodem.</li>
+</ul>
+
+</body>
+</html>

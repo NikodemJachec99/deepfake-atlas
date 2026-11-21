@@ -160,3 +160,4 @@ OPENSEARCH_INDEX = env("OPENSEARCH_INDEX", "ads")
 META_AD_LIBRARY_TOKEN = env("META_AD_LIBRARY_TOKEN")
 META_GRAPH_VERSION = env("META_GRAPH_VERSION", "v23.0")
 TEXT_EMBEDDING_DIM = 384  # paraphrase-multilingual-MiniLM-L12-v2, extractors/embedding.py
+IMAGE_EMBEDDING_DIM = 512  # CLIP ViT-B/32, extractors/image_embedding.py

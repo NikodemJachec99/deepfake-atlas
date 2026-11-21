@@ -25,7 +25,7 @@
 | Tekst, słowa kluczowe, tematyka | jest | treść strony, OCR reklamy, `extractors/keywords.py` |
 | Wizerunki osób | jest, w zakresie bazy | wzmianka w tekście z odmianą (30 osób) i twarz na zrzucie reklamy porównana z bazą referencyjną ze zdjęć na wolnej licencji (`people/faces.py`); także na klatkach nagrań; głosu nie analizujemy |
 | Logotypy | częściowo | podszycie pod markę po tekście; brak rozpoznawania logo na obrazie |
-| Cechy wizualne | częściowo | hash percepcyjny zrzutu reklamy i obrazów strony; brak embeddingów obrazu |
+| Cechy wizualne | częściowo | hash percepcyjny zrzutu reklamy i obrazów strony, wektor obrazu CLIP (podobne ujęcie); bez rozpoznawania logo |
 | Domeny, przekierowania, linki, struktura stron | jest | URL, HAR, DOM |
 | Publiczne metadane domen i infrastruktury | jest | RDAP, lista CERT Polska, certyfikaty z crt.sh, DNS/ASN/certyfikat dla stron na żywo |
 | Zestaw cech do porównywania | jest | markery twarde i miękkie |

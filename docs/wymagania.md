@@ -9,26 +9,27 @@ Nie robimy idealnego detektora pojedynczej fałszywej reklamy. Robimy narzędzie
 
 ## Co musi być
 
-- [ ] **Demonstrator**: prosta strona (Streamlit, Gradio albo coś innego). Wygląd się nie liczy, ocena 0/1: jest albo nie ma.
-- [ ] Wejście: URL, screenshot z linkiem, nazwa produktu albo plik z podejrzaną reklamą. Uruchamia analizę.
-- [ ] **Pozyskanie reklam**: dostęp do bibliotek reklam (social media, portale rozrywkowe).
-- [ ] **Analiza materiału**, zakres dowolny, oceniana jest przydatność mechanizmów. Przykłady z opisu:
-  - [ ] słowa kluczowe z tekstu, narracja, motyw przewodni
-  - [ ] najważniejsze elementy wizualne, szablon produkcji
-  - [ ] domena, przekierowania, odnośniki, metadane stron (domeny żyją krótko, ale dzielą metadane)
-  - [ ] wizerunki osób
-- [ ] **Podobieństwo i klastrowanie** (kluczowy element). Metoda dowolna: ważone podobieństwo, mały model albo silnik klastrujący. Sygnały: wizualne, semantyczne, konceptualne, wspólna domena, te same osoby, ten sam szablon, drobne sygnały, które razem wskazują jedno źródło.
-- [ ] **Identyfikacja osób**: metoda dowolna. Sugestia: mała baza referencyjna kilku najczęściej występujących osób. Wielkość bazy nie ma znaczenia, ma pokazać, że narzędzie działa.
-- [ ] **Reprezentacja powiązań**: dowolna, organizator podsuwa Neo4j.
+- [x] **Demonstrator**: Next.js, ekran Discovery (`frontend/src/components/discovery.tsx`). Wygląd się nie liczy, ocena 0/1.
+- [ ] Wejście: URL i tekst (nazwa produktu) działają. Zrzut ekranu z linkiem i plik z reklamą jeszcze nie.
+- [ ] **Pozyskanie reklam**: Microsoft Ad Library działa na żywo, Meta ma konektor bez sprawdzenia na tokenie, portale rozrywkowe (sieci natywne) jeszcze nie.
+- [ ] **Analiza materiału**:
+  - [x] narracja: kontakty, prawie identyczne teksty (MinHash). Słowa kluczowe i rama narracyjna z modelu językowego jeszcze nie.
+  - [ ] elementy wizualne, szablon produkcji kreacji: brak. Szablon strony docelowej jest.
+  - [x] domena, przekierowania, odnośniki, metadane stron: domena, łańcuch, IP, ASN, NS, certyfikat, favicon, RDAP, identyfikatory śledzące, endpoint formularza.
+  - [ ] wizerunki osób: tylko wzmianka w tekście.
+- [x] **Podobieństwo i klastrowanie**: model dowodowy par z ważeniem rzadkością, relacje `same_campaign` i `similar`, kampanie.
+- [ ] **Identyfikacja osób**: baza `people.Person` i dopasowanie po nazwie. Twarz i głos jeszcze nie.
+- [x] **Reprezentacja powiązań**: krawędzie z dowodami w Postgresie, projekcja do Neo4j.
 
 ## Bonus
 
-- [ ] Wbudowany scheduler, który sam skanuje znane biblioteki reklam, znajduje podejrzane i je analizuje.
-- [ ] Wykrywanie nowych odsłon tej samej kampanii na podstawie znanych wzorców.
+- [x] Scheduler: harmonogramy Temporal (`manage.py ensure_schedules`) skanują źródła i zlecają analizy.
+- [x] Nowe odsłony tej samej kampanii: nowa reklama dołącza do istniejącej kampanii.
 
 ## Do ustalenia z platformy
 
 - [ ] wymagania formalne zgłoszenia (repo, README, prezentacja, film?)
 - [ ] kryteria oceny i wagi
+- [ ] zasady użycia gotowych bibliotek, modeli i danych
 - [ ] sposób udostępnienia repo jury
-- [ ] czy repo ma zostać prywatne do końca wydarzenia (u KOWR tak, tu zakładamy to samo)
+- [ ] czy organizator daje próbkę danych

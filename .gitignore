@@ -9,3 +9,6 @@ node_modules/
 data/raw/*
 !data/raw/.gitkeep
 .DS_Store
+data/artifacts/
+staticfiles/
+.superpowers/

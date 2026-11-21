@@ -1,9 +1,29 @@
-fastapi==0.115.6
-uvicorn[standard]==0.32.1
-pydantic-settings==2.6.1
-sqlalchemy==2.0.36
-psycopg[binary]==3.2.3
-redis==5.2.1
-httpx==0.28.1
-pytest==8.3.4
-ruff==0.8.4
+# web
+django>=5.2,<5.3
+djangorestframework>=3.16,<4
+drf-spectacular>=0.28,<1
+django-cors-headers>=4.6,<5
+uvicorn[standard]>=0.32,<1
+dj-database-url>=2.3,<4
+
+# dane
+psycopg[binary]>=3.2,<4
+pgvector>=0.3.6,<1
+redis>=5.2,<8
+boto3>=1.35,<2
+neo4j>=5.26,<7
+opensearch-py>=2.8,<4
+
+# orkiestracja
+temporalio>=1.9,<2
+
+# kolekcja i ekstrakcja
+httpx>=0.28,<1
+tldextract>=5.1,<6
+dnspython>=2.7,<3
+mmh3>=5.0,<6
+
+# testy i jakość
+pytest>=8.3,<10
+pytest-django>=4.9,<5
+ruff>=0.8,<1

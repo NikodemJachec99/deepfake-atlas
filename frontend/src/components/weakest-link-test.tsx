@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { api, artifactDownloadUrl, type EdgeDetail } from "@/lib/api";
+import { utcEdgeVersion } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 
 export function WeakestLinkTest({ edge, apply, refresh }: { edge: EdgeDetail; apply: (ids: number[]) => void; refresh: () => void }) {
   const [run, setRun] = useState(0);
   const request = useApi(run ? JSON.stringify([edge.id, edge.updated_at, run]) : null,
-    () => api.weakestLink(edge.id, { edge_version: edge.updated_at }));
+    () => api.weakestLink(edge.id, { edge_version: utcEdgeVersion(edge.updated_at) }));
   const result = request.data;
   return <section className="grid gap-2 border-y border-line py-2">
     <button className="justify-self-start text-accent underline disabled:opacity-50" disabled={!!run && request.loading}

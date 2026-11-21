@@ -15,3 +15,5 @@ urlpatterns = [
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema")),
     path("api/", include("api.urls")),
 ]
+
+handler500 = "api.errors.server_error"

@@ -99,6 +99,25 @@ Sprawdzone 2026-11-21 dla 23 domen z obu paczek. crt.sh odpowiedział dla 18, dl
 
 Analiza wypisuje takie domeny w zdarzeniu etapu `enrich`. Domeny `abundancecaller.com` i `glowpixel.org` mają ponad 50 certyfikatów, bierzemy 50 najnowszych.
 
+### Odporność na brak materiału
+
+Obie paczki zaimportowaliśmy od zera w czterech wariantach, na osobnym stosie (2026-11-21, `scripts/odpornosc.py`): pełny, bez plików HAR (także `network.har` z archiwów NASK), bez zapisów stron z przeglądarki (HTML i katalogi `_files`) i bez zrzutów reklam. Liczymy połączenia wspólnego źródła (`same_campaign`, `same_operator`) między stronami z pełnego importu, których jest 33.
+
+| Wariant | Stron | Zostało | Zniknęło razem ze stroną | Zniknęło przez utratę śladów | Nowe połączenia wspólnego źródła |
+|---|---|---|---|---|---|
+| bez HAR | 27 z 28 | 19 | 2 | 12 | 0 |
+| bez zapisu strony | 26 z 28 | 30 | 3 | 0 | 0 |
+| bez zrzutów reklam | 28 z 28 | 32 | 0 | 1 | 0 |
+
+Co z tego wynika:
+
+- **Brak materiału nie tworzy fałszywych połączeń.** W żadnym wariancie nie powstało połączenie wspólnego źródła, którego nie było w pełnym imporcie. Mniej danych daje mniej powiązań, a nie złe powiązania.
+- **HAR niesie ślady operatora.** Identyfikatory strony w panelu lejka i hosty zasobów są tylko w ruchu sieciowym, więc bez HAR odpada 12 połączeń operatora A między kampaniami. Zostają połączenia, które stoją na treści, pikselu z kodu strony i domenie. Strona `healthlinkq.pro` z drugiego HAR w sprawie 2 znika w całości, bo była tylko w HAR.
+- **Zapis strony jest zastępowalny.** Gdy brakuje HTML z przeglądarki, dokument strony jest w HAR, więc żadne połączenie nie ginie przez utratę śladów. Giną tylko strony, które miały wyłącznie zapis HTML.
+- **Zrzut reklamy rzadko rozstrzyga.** Bez zrzutów znika jedno połączenie między stronami sprawy 61, spięte zrzutem reklamy i nazwą reklamodawcy z OCR.
+
+Odtworzenie (czyści korpus, więc tylko na osobnym stosie): `python scripts/odpornosc.py --paczki data/raw/nask data/raw/nask-backup`.
+
 ### Ślad językowy
 
 W sprawach nask/14, nask/47 i backup/p9 nazwy zestawów reklam w parametrach adresu zawierają litery cyrylicy wmieszane w łaciński tekst (np. `сс`, `С4`). To słaby marker (`lang_trace`), ale spójny z tym, co o operatorach takich kampanii piszą raporty branżowe.

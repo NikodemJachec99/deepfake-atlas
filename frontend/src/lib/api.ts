@@ -632,8 +632,15 @@ export interface Page<T> {
   results: T[];
 }
 
+// Opcjonalny klucz zapisu (API_WRITE_KEY w backendzie). Trafia do kodu strony, więc chroni przed zapisem
+// z obcych stron i skryptów w sieci, a nie przed kimś, kto ma dostęp do samego interfejsu.
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY ?? "";
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const headers = init?.body instanceof FormData ? init.headers : { "Content-Type": "application/json", ...init?.headers };
+  const keyHeader: Record<string, string> = API_KEY && init?.method && init.method !== "GET" ? { "X-API-Key": API_KEY } : {};
+  const headers = init?.body instanceof FormData
+    ? { ...keyHeader, ...(init.headers as Record<string, string> | undefined) }
+    : { "Content-Type": "application/json", ...keyHeader, ...(init?.headers as Record<string, string> | undefined) };
   const response = await fetch(`${API_URL}${path}`, { ...init, headers });
   if (!response.ok) {
     const body = await response.text();

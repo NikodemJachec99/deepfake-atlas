@@ -77,11 +77,19 @@ class LiveEnricher:
             return ""
 
     def tls_fingerprint(self, host: str, port: int = 443) -> str:
+        """Odcisk certyfikatu. Łączymy się tylko z publicznym adresem sprawdzonym tak jak w crawlerze,
+        z nazwą w SNI, żeby podmiana DNS nie skierowała połączenia do sieci wewnętrznej."""
+        from crawler.fetch import BlockedUrl, resolve_public
+
+        try:
+            ip = resolve_public(f"https://{host}:{port}/")
+        except BlockedUrl:
+            return ""
         try:
             context = ssl.create_default_context()
             context.check_hostname = False
             context.verify_mode = ssl.CERT_NONE
-            with socket.create_connection((host, port), timeout=self.timeout) as sock:
+            with socket.create_connection((ip, port), timeout=self.timeout) as sock:
                 with context.wrap_socket(sock, server_hostname=host) as tls:
                     der = tls.getpeercert(binary_form=True)
             return hashlib.sha256(der).hexdigest() if der else ""

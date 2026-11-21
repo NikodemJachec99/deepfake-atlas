@@ -15,9 +15,10 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
-from rest_framework.decorators import api_view, parser_classes
+from rest_framework.decorators import api_view, parser_classes, throttle_classes
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
+from rest_framework.throttling import UserRateThrottle
 
 from ads.models import Ad, Analysis
 from collectors import bundle
@@ -36,11 +37,18 @@ from . import serializers as s
 
 MAX_ZIP_BYTES = 2 * 1024**3
 MAX_ZIP_FILES = 5000
+class AnalysesThrottle(UserRateThrottle):
+    """Limit nowych analiz na klienta (adres IP bez logowania). Każda analiza to pobieranie stron i wzbogacanie."""
+
+    scope = "analyses"
+
+
 AD_RELATED = ("membership__campaign", "operator_membership__operator")
 
 
 @extend_schema(request=s.AnalysisCreateSerializer, responses={201: s.AnalysisSerializer})
 @api_view(["POST"])
+@throttle_classes([AnalysesThrottle])
 def analysis_create(request):
     """Tryb Discovery: przyjmuje URL albo tekst i uruchamia analizę. Postęp idzie strumieniem `events_url`."""
     payload = s.AnalysisCreateSerializer(data=request.data)
@@ -73,6 +81,7 @@ def _safe_extract(upload, target: Path) -> None:
 )
 @api_view(["POST"])
 @parser_classes([MultiPartParser])
+@throttle_classes([AnalysesThrottle])
 def analysis_upload(request):
     """Tryb Discovery dla plików: zrzut ekranu reklamy, zapisana strona, HAR albo ZIP z całą sprawą.
 
@@ -87,7 +96,9 @@ def analysis_upload(request):
         case_root.mkdir()
         try:
             for upload in files:
-                filename = Path(upload.name).name
+                filename = Path(upload.name or "").name
+                if filename in ("", ".", "..") or filename.startswith("."):
+                    raise ValueError("Niedozwolona nazwa pliku")
                 if filename.lower().endswith(".zip"):
                     _safe_extract(upload, case_root)
                 else:

@@ -76,6 +76,8 @@ services:
       args:
         # Adres API widziany z przeglądarki, wkompilowany w czasie budowania.
         NEXT_PUBLIC_API_URL: http://localhost:${BACKEND_PORT:-8000}
+        # Opcjonalny klucz zapisu, ten sam co API_WRITE_KEY backendu. Pusty: wyłączony.
+        NEXT_PUBLIC_API_KEY: ${NEXT_PUBLIC_API_KEY:-}
         # Źródło obrazu Node. Domyślnie lustro ECR; CI przełącza na Docker Hub, gdy ECR odmawia.
         NODE_IMAGE: ${NODE_IMAGE:-public.ecr.aws/docker/library/node:24-alpine}
     ports: ["${FRONTEND_PORT:-3000}:3000"]

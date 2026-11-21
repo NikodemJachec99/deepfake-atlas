@@ -14,7 +14,11 @@ function Capture({ side }: { side: ObservationSide }) {
     <p>{date && Number.isFinite(date.getTime()) ? date.toLocaleString("pl-PL", { timeZoneName: "short" }) : "Data nieznana"} · {side.time_source || "Źródło daty nieznane"}</p>
     <p>Źródła obserwacji · {side.sources.join(", ") || "Brak informacji"}</p>
     <p>Kontekst · {side.context ? [side.context.browser, side.context.platform, side.context.accept_language].filter(Boolean).join(", ") || "Nieznany" : "Nieznany"}</p>
-    <p>Brak zrzutu strony docelowej. Fragment tekstu strony niedostępny.</p>
+    <p>Brak zrzutu strony docelowej.</p>
+    {side.text_excerpt?.text ? <figure>
+      <figcaption className="text-muted">Fragment tekstu strony · {side.text_excerpt.source}</figcaption>
+      <blockquote className="whitespace-pre-wrap border-l border-line pl-2">{side.text_excerpt.text}</blockquote>
+    </figure> : <p>Fragment tekstu strony niedostępny.</p>}
     {(["har", "html"] as const).map(kind => {
       const file = side.artifacts?.[kind];
       return file && <a key={kind} className="mr-3 text-accent underline" href={artifactDownloadUrl(file.sha256)} download>Pobierz {kind.toUpperCase()}</a>;

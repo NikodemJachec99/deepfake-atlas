@@ -41,8 +41,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
             className="rounded-sm px-2 py-2 hover:bg-hover aria-[current=page]:bg-raised">{label}</Link>)}
       </nav>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="border-b border-line bg-panel px-4 py-2">{sections[root] ?? "SCAM DNA"}{id && " › #" + id}</header>
-        <div className="min-h-0 overflow-auto">{children}</div>
+        {root !== "/investigation" && <header className="border-b border-line bg-panel px-4 py-2">{sections[root] ?? "SCAM DNA"}{id && " › #" + id}</header>}
+        <div className="flex min-h-0 flex-1 flex-col overflow-auto">{children}</div>
       </div>
     </div>
     <footer aria-label="Stan korpusu" className="flex shrink-0 gap-5 overflow-x-auto whitespace-nowrap border-t border-line bg-panel px-3 py-1 font-mono">
@@ -53,4 +53,17 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </>}
     </footer>
   </div>;
+}
+
+export interface Crumb {
+  label: React.ReactNode;
+  href?: string;
+}
+
+export function TopBar({ crumbs }: { crumbs: Crumb[] }) {
+  return <nav aria-label="Ścieżka śledztwa" className="flex shrink-0 gap-2 border-b border-line px-3 py-2">
+    {crumbs.map((crumb, index) => <span key={index}>{index > 0 && " › "}
+      {crumb.href ? <Link href={crumb.href}>{crumb.label}</Link> : crumb.label}
+    </span>)}
+  </nav>;
 }

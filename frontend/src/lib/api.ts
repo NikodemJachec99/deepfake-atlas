@@ -430,6 +430,14 @@ export interface Timeline {
 }
 
 export interface Graph {
+  /** Czy `edges` to ucięty wynik: `total` jest większe niż liczba zwróconych krawędzi. */
+  truncated: boolean;
+  /** Użyty limit krawędzi (`?limit=`, domyślnie 2000, najwyżej 20000). */
+  limit: number;
+  /** Liczba krawędzi po filtrach, przed ucięciem. Do wyświetlenia "N z M". */
+  total: number;
+  total_by_relation: Partial<Record<Relation, number>>;
+  returned_by_relation: Partial<Record<Relation, number>>;
   nodes: { id: number; label: string; source: Source; campaign: string | null; operator: string | null; case: string | null; listed: boolean }[];
   edges: {
     id: number;

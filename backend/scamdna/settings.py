@@ -35,7 +35,11 @@ INSTALLED_APPS = [
     "hunting",
 ]
 
+# Najwyżej tyle żądań API naraz (każde ma własne połączenie z bazą), reszta czeka. Zob. api/errors.py.
+API_MAX_CONCURRENCY = int(env("API_MAX_CONCURRENCY", "24"))
+
 MIDDLEWARE = [
+    "api.errors.ConcurrencyLimitMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     # Pochodzenie zapisu, opcjonalny klucz i limit rozmiaru żądania (api/security.py, docs/bezpieczenstwo.md).
@@ -73,7 +77,11 @@ TEMPLATES = [
 
 DATABASES = {
     "default": dj_database_url.parse(
-        env("DATABASE_URL", "postgres://hack:hack@localhost:5432/deepfake_atlas"), conn_max_age=60
+        env("DATABASE_URL", "postgres://hack:hack@localhost:5432/deepfake_atlas"),
+        # 0: połączenie zamykane po żądaniu. Przy ASGI i wątkach (analizy, worker) conn_max_age=60 trzymało
+        # po jednym połączeniu na wątek i przy równoległych kartach kończyło się "too many clients" (max 100).
+        conn_max_age=int(env("DB_CONN_MAX_AGE", "0")),
+        conn_health_checks=True,
     )
 }
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -89,6 +97,7 @@ CORS_ALLOWED_ORIGINS = [o for o in env("CORS_ALLOWED_ORIGINS", "http://localhost
 
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "api.errors.handler",
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 50,
     # Na start API jest otwarte w sieci lokalnej. Role i klucze instytucji wchodzą w M10 do M12.

@@ -7,6 +7,7 @@ System łączy pozornie niezależne fałszywe reklamy w kampanie i operatorów n
 - Wyniki na danych organizatora: [docs/dane-organizatora.md](docs/dane-organizatora.md)
 - Kontrakt API: [docs/api.md](docs/api.md)
 - Laboratorium dowodów (co zostaje z połączenia po wyłączeniu śladów): [docs/laboratorium.md](docs/laboratorium.md)
+- Dwie strony pod jednym adresem w sprawie 61, audyt przechwyceń: [docs/dwie-twarze.md](docs/dwie-twarze.md)
 - Prompt do designu interfejsu: [docs/design-prompt.md](docs/design-prompt.md)
 - Biblioteki, modele, usługi, dane i ich licencje: [docs/licencje.md](docs/licencje.md)
 - Plan roczny, pełny inwentarz danych i modeli: https://claude.ai/artifact/LJNbSpF3byJLrYPdA8haFt

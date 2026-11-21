@@ -78,9 +78,9 @@ Do 2026-11-21 te sprawy wisiały przy operatorze A (13 stron, 3 kampanie). Przeg
 
 HAR sprawy 3 leżał w katalogu sprawy 2. Silnik połączył je po domenie i treści. Sprawę p5 z drugiej paczki dołączył po wspólnym hoście zasobów (`crimsonbase.pro`), który jest własną domeną operatora, a nie publicznym CDN-em. Ścieżka zaplecza `/include/events-stat.js` i zestaw parametrów `clickid, key, pixel_fb` to drugie, niezależne potwierdzenie. Krawędź do p5 ma tylko strona z HAR-em (drugi HAR w katalogu sprawy 2). Strona z samego zapisu HTML w sprawie 3 ma z p5 relację `similar` i trafia do operatora przez duplikat.
 
-### Cloaking w sprawie 61
+### Dwie strony pod jednym adresem w sprawie 61
 
-Domena `glowpixel.org` zwraca dwie różne strony pod tym samym adresem: "portal analiz" dla moderacji (strona 3) i ofertę dla ofiary (strona 2). Nazwa reklamodawcy na zrzucie reklamy to `Glowpixel`, czyli nazwa domeny białej strony. OCR zrzutu i nazwa domeny dają ten sam marker `page_name`.
+Ten sam pełny adres na `glowpixel.org` (z tym samym tokenem `utm_visit`) dał w odstępie 2 min 41 s dwie różne strony: ofertę z pikselem konwersji Google Ads (strona 2) i neutralny "portal analiz" bez trackerów (strona 3). Najprostsze wyjaśnienia to cloaking albo jednorazowy token wizyty. Kto i skąd przechwytywał, nie wiemy, więc nie twierdzimy, że strona 3 jest "dla moderacji". Szczegóły: [dwie-twarze.md](dwie-twarze.md). Nazwa reklamodawcy na zrzucie reklamy to `Glowpixel`, czyli nazwa domeny białej strony. OCR zrzutu i nazwa domeny dają ten sam marker `page_name`.
 
 ### Lista Ostrzeżeń CERT Polska
 

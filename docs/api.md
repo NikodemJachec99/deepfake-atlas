@@ -35,6 +35,7 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | GET | `/api/graph` | `?campaign=` \| `?operator=` \| `?ad=`, `?relation=a,b`, `?limit=` | `{nodes, edges}` dla Sigma.js |
 | GET | `/api/kinds` | | słownik 7 rodzin i typów markerów |
 | GET | `/api/stats` | | liczby do paska stanu |
+| GET | `/api/export/stix` | `?operator=ID` \| `?campaign=ID` (opcjonalnie) | bundle STIX 2.1 (`application/stix+json`): operator jako `intrusion-set`, kampania jako `campaign` z `attributed-to`, wskaźniki (`indicator`) dla domen, adresów IP, numerów certyfikatów i hostów zasobów z relacją `indicates`; identyfikatory trackerów i paneli lejka w `x_scamdna_identifiers`. Tylko grupy z materiałów zgłoszonych jako podejrzane (przechwycenia, zgłoszenia ręczne), bez reklam z bibliotek, osób i tokenów. Identyfikatory deterministyczne |
 | GET | `/api/export` | `?source=capture` (opcjonalnie) | ZIP z wzbogaconym korpusem: `korpus/reklamy.jsonl` (reklamy z markerami), `korpus/krawedzie.jsonl` (krawędzie z dowodami), `korpus/grupy.csv`, `korpus/opis.json`; tokeny tylko jako skróty; nieznane źródło `400` |
 | GET | `/api/artifacts/{sha256}` | | surowy dowód jako załącznik (nigdy się nie renderuje) |
 | GET | `/api/artifacts/{sha256}/image` | | zrzut reklamy albo klatka poglądowa nagrania jako obraz (tylko artefakty obrazów) |

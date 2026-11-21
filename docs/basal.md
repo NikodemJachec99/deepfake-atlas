@@ -1,5 +1,3 @@
-> **Archiwum:** decyzją użytkownika basal zastępuje Jev. Aktualny kierunek i zadania są w [planie laboratorium](laboratorium.md#jev-jako-pomoc-analityka) oraz [#116](https://github.com/NikodemJachec99/deepfake-atlas/issues/116). Poniższy dokument opisuje poprzedni wariant, nie instrukcję bieżącego wdrożenia.
-
 # Basal: plan zastosowań, wersje i sprzęt
 
 Plan do [#70](https://github.com/NikodemJachec99/deepfake-atlas/issues/70). Uzupełnia sekcję "Basal jako pomoc analityka" w [laboratorium.md](laboratorium.md) i niczego w niej nie zmienia. Stan na 21.11.2026.

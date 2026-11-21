@@ -97,16 +97,18 @@ Sama wysoka suma nie wystarcza. Reguły:
 
 | Relacja | Warunek |
 |---|---|
-| wspólne źródło | pewność co najmniej 0,9 **oraz** rzadki marker rozstrzygający albo dwie silne rodziny, z których co najmniej jedna dotyczy zaplecza |
+| wspólne źródło | pewność co najmniej 0,9 **oraz** rzadki marker rozstrzygający albo dwa niezależne silne potwierdzenia, z których co najmniej jedno dotyczy zaplecza |
 | `same_campaign` | wspólne źródło i ta sama opowieść: zgodna treść, obrazy albo kontakt |
 | `same_operator` | wspólne źródło, inna opowieść |
-| `similar` | brak dowodu wspólnego źródła, ale zgodna treść lub obrazy, albo kilka zgodnych motywów naraz (osoba, marka, tematyka) |
+| `similar` | brak dowodu wspólnego źródła, ale zgodna treść lub obrazy, kilka zgodnych motywów naraz (osoba, marka, tematyka) albo te same ścieżki zaplecza bez śladu operatora |
 | duplikat | `same_campaign` oraz treść i struktura zgodne w co najmniej 97% |
 
 Dlaczego tak:
 
 - **Treść i obrazy da się skopiować.** Dwie strony z tym samym artykułem na różnych zapleczach to `similar`, nie wspólne źródło.
 - **Wspólny motyw to nie wspólna opowieść.** Różni operatorzy używają tych samych nazwisk i udają te same redakcje, więc osoba, marka i tematyka nie robią z operatora kampanii.
+- **Silnik lejka to program, nie operator.** Ścieżki zaplecza, szablon ścieżki i zestaw parametrów ustawia ten sam silnik, więc przy liczeniu niezależnych potwierdzeń są jednym, choć należą do dwóch rodzin. Silnik mógł kupić każdy. Operatora wskazuje dopiero ślad jego konta albo infrastruktury: identyfikator w panelu, piksel, konto reklamowe, własny host zasobów, adres, certyfikat.
+- **Motyw nie potwierdza źródła.** Wzmianka o osobie, podszycie pod markę i tematyka dodają bity, ale nie liczą się jako niezależne potwierdzenie, nawet kilka naraz.
 - **Huby.** Marker obecny w ponad 1% źródeł (minimum 100) nie służy do szukania kandydatów, a jego waga i tak jest bliska zera.
 
 ## 7. Grupowanie
@@ -146,7 +148,7 @@ Każda krawędź ma w bazie listę dowodów (`EdgeEvidence`): rodzina, typ, wart
 
 ## 11. Wynik na danych organizatora
 
-Szczegóły: [dane-organizatora.md](dane-organizatora.md). W skrócie: 28 stron z 25 spraw, 13 stron na 10 domenach przypisanych do jednego operatora w 3 kampaniach, drugi operator z 3 stronami na 2 domenach, 12 stron bez grupy (jedna z nich ma relację `similar`).
+Szczegóły: [dane-organizatora.md](dane-organizatora.md). W skrócie: 28 stron z 25 spraw. Operator A: 8 stron na 7 domenach w 2 kampaniach, spięte identyfikatorami z panelu lejka i pikselem. Operator B: 3 strony na 2 domenach. Sprawa 61: jedna kampania na 3 stronach. 14 stron bez operatora, w tym sprawy 48 i p11, które dzielą z operatorem A tylko silnik lejka i mają z nim relację `similar`.
 
 ## 12. Ograniczenia
 

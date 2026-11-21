@@ -43,6 +43,12 @@ class Kind:
     lo: float = 0.0  # podobieństwo, od którego marker miękki zaczyna być dowodem
     hi: float = 1.0  # podobieństwo, przy którym osiąga pełną wagę
     story: bool = False  # dowodzi tej samej treści (tekst, obraz, kontakt), a nie tylko tego samego motywu
+    # Ślad oprogramowania lejka albo trackera. Ścieżki zaplecza, szablon ścieżki i zestaw parametrów
+    # ustawia ten sam silnik, więc przy liczeniu niezależnych rodzin są jednym potwierdzeniem.
+    kit: bool = False
+    # Wspólny motyw (osoba, marka, tematyka). Różni operatorzy grają na tych samych, więc motyw
+    # nie potwierdza wspólnego źródła, nawet gdy jest ich kilka naraz.
+    motif: bool = False
 
 
 _KINDS = [
@@ -57,8 +63,8 @@ _KINDS = [
     Kind("favicon_hash", "infra", "Hash favicony", m=0.8, f0=1e-4, cap=8),
     Kind("registrar", "infra", "Rejestrator", m=0.5, f0=0.05, cap=1, candidate=False),
     Kind("reg_day", "infra", "Dzień rejestracji domeny", m=0.4, f0=0.003, cap=2, candidate=False),
-    Kind("url_path_tpl", "infra", "Szablon ścieżki URL", m=0.6, f0=1e-3, cap=4),
-    Kind("url_param_keys", "infra", "Zestaw parametrów URL", m=0.6, f0=1e-3, cap=4),
+    Kind("url_path_tpl", "infra", "Szablon ścieżki URL", m=0.6, f0=1e-3, cap=4, kit=True),
+    Kind("url_param_keys", "infra", "Zestaw parametrów URL", m=0.6, f0=1e-3, cap=4, kit=True),
     Kind("cdn", "infra", "Sieć CDN", m=0.5, f0=0.3, cap=0.5, candidate=False),
     Kind("server_sig", "infra", "Sygnatura serwera", m=0.5, f0=0.05, cap=1.5, candidate=False),
     # Tracking i lejek
@@ -78,7 +84,7 @@ _KINDS = [
     # Szablon strony
     Kind("dom_hash", "tmpl", "Hash struktury DOM", m=0.9, f0=1e-5, cap=10),
     Kind("white_dom_hash", "tmpl", "Hash białej strony cloakingu", m=0.8, f0=1e-5, cap=8),
-    Kind("kit_path", "tmpl", "Ścieżka zaplecza strony", m=0.7, f0=1e-4, cap=8),
+    Kind("kit_path", "tmpl", "Ścieżka zaplecza strony", m=0.7, f0=1e-4, cap=8, kit=True),
     Kind("dom_band", "tmpl", "Pasmo LSH szablonu", m=0.0, f0=1.0, cap=0),
     Kind("dom_minhash", "tmpl", "Podobieństwo szablonu", m=0.0, f0=1.0, cap=7, soft=True, lo=0.5, hi=0.9, candidate=False),
     # Kreacja
@@ -97,16 +103,16 @@ _KINDS = [
     Kind("page_title", "narr", "Tytuł strony", m=0.7, f0=1e-4, cap=7, story=True),
     Kind("page_text_band", "narr", "Pasmo LSH treści strony", m=0.0, f0=1.0, cap=0),
     Kind("page_text_minhash", "narr", "Podobieństwo treści strony", m=0.0, f0=1.0, cap=8, soft=True, lo=0.5, hi=0.9, candidate=False, story=True),
-    Kind("topic", "narr", "Tematyka", m=0.6, f0=0.15, cap=1.5, candidate=False),
+    Kind("topic", "narr", "Tematyka", m=0.6, f0=0.15, cap=1.5, candidate=False, motif=True),
     Kind("text_band", "narr", "Pasmo LSH tekstu", m=0.0, f0=1.0, cap=0),
     Kind("text_minhash", "narr", "Podobieństwo tekstu", m=0.0, f0=1.0, cap=6, soft=True, lo=0.5, hi=0.85, candidate=False, story=True),
     # Osoby i marki
     Kind("advertiser_id", "pers", "Strona reklamodawcy", m=0.9, f0=1e-6, cap=18, decisive=True),
     Kind("payer", "pers", "Płatnik reklamy", m=0.8, f0=1e-5, cap=9),
-    Kind("person_mention", "pers", "Wzmianka o osobie", m=0.8, f0=0.01, cap=2.5, candidate=False),
+    Kind("person_mention", "pers", "Wzmianka o osobie", m=0.8, f0=0.01, cap=2.5, candidate=False, motif=True),
     Kind("meta_ad_ref", "pers", "Identyfikator reklamy lub kampanii Meta", m=0.9, f0=1e-6, cap=18, decisive=True),
     Kind("page_name", "pers", "Nazwa strony lub reklamodawcy", m=0.5, f0=1e-4, cap=8),
-    Kind("brand_impersonated", "pers", "Podszycie pod markę", m=0.7, f0=0.02, cap=3, candidate=False),
+    Kind("brand_impersonated", "pers", "Podszycie pod markę", m=0.7, f0=0.02, cap=3, candidate=False, motif=True),
     # Zachowanie
     Kind("ad_naming", "beh", "Nazewnictwo reklam i zestawów", m=0.5, f0=1e-5, cap=8),
     Kind("lang_trace", "beh", "Ślad językowy operatora", m=0.5, f0=0.05, cap=1.5, candidate=False),

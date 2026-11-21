@@ -1,3 +1,15 @@
+"use client";
+
+import { useParams, useRouter } from "next/navigation";
+import { AdCard } from "@/components/ad-card";
+
 export default function Page() {
-  return <main className="p-4"><h1 className="text-lg font-semibold">Karta reklamy</h1><p>Widok w przygotowaniu.</p></main>;
+  const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  if (!/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id))) {
+    return <p className="p-4">Nieprawidłowy identyfikator reklamy.</p>;
+  }
+  return <main className="mx-auto w-full max-w-5xl p-4">
+    <AdCard adId={Number(id)} full onEdge={edge => router.push(`/investigation?ad=${id}&edge=${edge.id}`)} />
+  </main>;
 }

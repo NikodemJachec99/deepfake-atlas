@@ -53,6 +53,17 @@ Zmiana z 21.11.2026 wieczorem, decyzja użytkownika: GitHub Actions jest wyłąc
 
 Commit i opis PR pisz krótko i rzeczowo: po co zmiana, co sprawdzono, czego nie. Bez dopisków o autorstwie.
 
+## Regulamin zadania
+
+Regulamin zadania "Kolekcjoner fejków" z wzorem umowy przeniesienia praw leży w `docs/zrodla/regulamin-zadania.pdf`, tabela zgodności w `docs/wymagania.md`. Każda zmiana ma być z nim zgodna:
+
+- **Bez pliku licencji.** Nie dodawaj LICENSE, nagłówków licencyjnych ani zgód dla osób trzecich. Zwycięzcy przenoszą wyłączne autorskie prawa majątkowe na NASK-PIB (§4), a wcześniejsza licencja byłaby obciążeniem.
+- **Zależności tylko na licencjach otwartych**, bez warunków niekomercyjnych i bez licencji typu RSAL/SSPL/BSL. Każdą nową bibliotekę, model, obraz Dockera, dane i usługę zewnętrzną wpisz do `docs/licencje.md` z licencją i źródłem w tym samym PR.
+- **Bez cudzego kodu i treści.** Nie kopiuj kodu z innych projektów, materiałów chronionych (zdjęcia, fonty, logo) ani tekstów. Zdjęć osób nie trzymamy w repo, tylko wektory z plików na wolnej licencji z autorem.
+- **Kod i dokumentacja kompletne.** Nabywca ma móc uruchomić, zmienić i wdrożyć rozwiązanie bez nas: instalacja przez `scripts/start.py`, opis w `README.md` i `docs/`.
+- **Bez oznaczeń autorstwa wymaganych w produkcie** (umowa §6 ust. 3) i bez dopisków o autorstwie w commitach.
+- Po 22.11.2026 godz. 11:00 nie zmieniamy repozytorium (regulamin wydarzenia 5.9).
+
 ## Czego nie wolno
 
 - **Danych organizatora w gicie.** Paczki leżą tylko w `data/raw/` (poza gitem). W testach, przykładach i dokumentach używaj zmyślonych wartości. Wyjątek to `docs/dane-organizatora.md`, przez który repo musi zostać prywatne.

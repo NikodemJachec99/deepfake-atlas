@@ -17,7 +17,6 @@ Kolumna "Źródło" mówi, skąd pochodzi informacja o licencji: **pakiet** ozna
 | dj-database-url | 3.1.2 | BSD-3-Clause | pakiet |
 | psycopg | 3.3.9 | LGPL-3.0-only | pakiet |
 | pgvector (klient) | 0.5.1 | MIT | pakiet |
-| redis (klient) | 7.4.1 | MIT | pakiet |
 | Playwright (usługa crawler) | 1.65.2 | Apache-2.0 | pakiet w obrazie `crawler` |
 | Chromium (usługa crawler) | z Playwright 1.65.2 | BSD-3-Clause i inne licencje otwarte | pobierany przez `playwright install` |
 | boto3 | 1.44.9 | Apache-2.0 | pakiet |
@@ -80,9 +79,8 @@ Porównujemy wyłącznie z tą bazą osób publicznych, jak dopuszcza opis wyzwa
 | RustFS | magazyn S3 | Apache-2.0 | projekt |
 | Neo4j Community 5 | projekcja grafu | GPL-3.0 | projekt |
 | OpenSearch 2 | pełny tekst | Apache-2.0 | projekt |
-| Redis 7 | cache | RSALv2 / SSPLv1 od wersji 7.4 | projekt |
 
-Neo4j, OpenSearch i Redis działają jako osobne usługi. Nasz kod łączy się z nimi przez sieć i nie zawiera ich kodu. Rdzeń (analiza, łączenie, API) potrzebuje tylko PostgreSQL, Temporala i magazynu S3. Redis można zastąpić Valkey (BSD).
+Neo4j i OpenSearch działają jako osobne usługi. Nasz kod łączy się z nimi przez sieć i nie zawiera ich kodu. Rdzeń (analiza, łączenie, API) potrzebuje tylko PostgreSQL, Temporala i magazynu S3. Redisa nie używamy: obraz od wersji 7.4 ma licencję RSALv2/SSPLv1, która nie jest licencją otwartą, a kod go nie potrzebował, więc usunęliśmy go z compose 22.11.
 
 ## Zewnętrzne usługi i dane
 

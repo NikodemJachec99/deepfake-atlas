@@ -3,6 +3,7 @@
 // Minimalny ekran Discovery. Dowodzi, że API działa od wejścia do dowodów.
 // Docelowy interfejs (trzy tryby, graf, panel dowodów) powstaje według docs/design-prompt.md.
 
+import { GroupLink } from "./ui";
 import { LiveGraph } from "./live-graph";
 import { EdgePanel } from "./edge-panel";
 import { markerValue } from "@/lib/format";
@@ -233,15 +234,14 @@ export function Discovery() {
 
         <section className="flex min-w-0 flex-col gap-2">
           <h2 className="font-semibold">{cluster?.assessment_label || assessment || "Powiązania"}</h2>
-          {cluster && <p>Kampania {cluster.campaign ?? "brak"} · Operator {cluster.operator ?? "brak"}</p>}
+          {(ad || cluster) && <p aria-label="Przypisanie do grup">
+            Kampania <GroupLink group={ad ? ad.campaign : cluster?.campaign} /> · Operator <GroupLink group={ad ? ad.operator : cluster?.operator} />
+          </p>}
           {strongest.length > 0 && <section><h3>Najsilniejsze dowody</h3><ol>{strongest.map(({ best, edges }) => (
             <li key={JSON.stringify([best.kind, best.value])}><FamilyDot family={best.family} /> {best.label} · {markerValue(best.value, ad?.genome?.find(band => band.family === best.family)?.markers.find(marker => marker.kind === best.kind && marker.value === best.value)?.display_value)} · {best.bits} bitów · liczba powiązań: {edges.size}</li>
           ))}</ol></section>}
           {ad && (
             <p>
-              Reklama #{ad.id}
-              {ad.campaign ? <> należy do kampanii <b>{ad.campaign}</b>.</> : <> nie należy do żadnej kampanii.</>}
-              {ad.operator && <> Operator: <b>{ad.operator}</b>.</>}
               {ad.labels.topics && ad.labels.topics.length > 0 && <span className="block opacity-70">Tematyka: {ad.labels.topics.join(", ")}</span>}
               {ad.labels.keywords && ad.labels.keywords.length > 0 && (
                 <span className="block opacity-70">Słowa kluczowe: {ad.labels.keywords.slice(0, 8).join(", ")}</span>

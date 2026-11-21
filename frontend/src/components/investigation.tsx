@@ -2,6 +2,8 @@
 
 // Tryb Investigation: graf z GET /api/graph, filtry, inspektor (panel dowodów albo karta reklamy), tabela krawędzi.
 
+import Link from "next/link";
+import { CampaignTree } from "./campaign-tree";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -60,15 +62,12 @@ export function Investigation() {
   const edgeId = int("edge");
   const nodeId = int("node");
 
-  const operators = useApi("operators", api.operators);
+  const overview = !all && [operatorId, campaignId, adId, edgeId, nodeId].every(id => id === null);
+  const operators = useApi(overview ? null : "operators", api.operators);
   const campaigns = useApi("campaigns", api.campaigns);
-
-  // Bez wskazanego zakresu otwieramy największego operatora: to główna historia w danych.
-  const defaultOperator = operatorId === null && campaignId === null && adId === null && !all ? (operators.data?.results[0]?.id ?? null) : null;
-  const waitingForDefault = operatorId === null && campaignId === null && adId === null && !all && operators.loading;
-  const scopeOperator = operatorId ?? defaultOperator;
+  const scopeOperator = operatorId;
   const query = campaignId !== null ? `?campaign=${campaignId}` : scopeOperator !== null ? `?operator=${scopeOperator}` : adId !== null ? `?ad=${adId}` : "";
-  const graph = useApi<Graph>(waitingForDefault ? null : `graph:${query}`, () => api.graph(query));
+  const graph = useApi<Graph>(overview ? null : `graph:${query}`, () => api.graph(query));
 
   const [relations, setRelations] = useState<Set<Relation>>(new Set(RELATIONS));
   const [families, setFamilies] = useState<Set<Family>>(new Set(FAMILIES));
@@ -93,7 +92,7 @@ export function Investigation() {
   const campaignKey = campaigns.data?.results.find((g) => g.id === campaignId)?.key;
   const campaignOperator = campaignKey ? nodes.find((n) => n.campaign === campaignKey)?.operator : undefined;
 
-  const crumbs: Crumb[] = [{ label: "Investigation", href: "/investigation?scope=all" }];
+  const crumbs: Crumb[] = [{ label: "Kampanie", href: "/investigation" }];
   if (campaignId !== null) {
     if (campaignOperator) crumbs.push({ label: <Mono>{campaignOperator}</Mono>, href: `/investigation?operator=${groupId(campaignOperator)}` });
     crumbs.push({ label: <Mono>{campaignKey ?? `kampania ${campaignId}`}</Mono> });
@@ -116,6 +115,15 @@ export function Investigation() {
   useHotkey((event) => {
     if (event.key === "Escape" && !isTyping(event) && (edgeId !== null || nodeId !== null)) set({ edge: null, node: null });
   });
+
+  if (overview) return <main className="flex min-h-full flex-col gap-3 p-4">
+    <header className="flex flex-wrap items-center justify-between gap-3">
+      <h1 className="atlas-title">Kampanie</h1>
+      <Link href="/investigation?scope=all" className="rounded-md border border-line-strong px-3 py-2 text-accent hover:bg-panel">Cały graf</Link>
+    </header>
+    {campaigns.loading ? <Loading label="Pobieranie kampanii" /> : campaigns.error ?
+      <ErrorBox message={campaigns.error} onRetry={campaigns.reload} /> : campaigns.data?.results.length ? <CampaignTree groups={campaigns.data.results} /> : <Empty title="Brak kampanii">Wszystkie dostępne reklamy znajdziesz w całym grafie.</Empty>}
+  </main>;
 
   const filters = (
     <Panel title="Zakres i filtry" className="w-full">
@@ -205,7 +213,7 @@ export function Investigation() {
     </Panel>
   );
 
-  const canvas = graph.loading || waitingForDefault ? (
+  const canvas = graph.loading ? (
     <Loading label="Pobieranie grafu" />
   ) : graph.error ? (
     <ErrorBox message={graph.error} onRetry={graph.reload} />
@@ -343,18 +351,22 @@ export function Investigation() {
     </Panel>
   );
 
+  const graphAndTable = (
+    <Split id="inv-table" dir="col" fixed="second" initial={236} min={90} max={560}>
+            <div className="flex min-h-0 min-w-0 flex-1">{canvas}</div>
+            {bottom}
+          </Split>
+  );
+
   return (
     <>
       <TopBar crumbs={crumbs} />
       <div className="atlas-investigation"><Split id="inv-filters" dir="row" fixed="first" initial={208} min={180} max={360}>
         {filters}
-        <Split id="inv-inspector" dir="row" fixed="second" initial={380} min={280} max={820}>
-          <Split id="inv-table" dir="col" fixed="second" initial={236} min={90} max={560}>
-            <div className="flex min-h-0 min-w-0 flex-1">{canvas}</div>
-            {bottom}
-          </Split>
+        {edgeId === null && nodeId === null ? graphAndTable : <Split id="inv-inspector" dir="row" fixed="second" initial={380} min={280} max={820}>
+          {graphAndTable}
           {inspector}
-        </Split>
+        </Split>}
       </Split></div>
     </>
   );

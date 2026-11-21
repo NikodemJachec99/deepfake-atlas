@@ -13,6 +13,7 @@ urlpatterns = [
     path("ads/<int:pk>/recluster", views.ad_recluster),
     path("edges/<int:pk>", views.EdgeDetail.as_view()),
     path("edges/<int:pk>/verdict", views.edge_verdict),
+    path("edges/<int:pk>/decisions", views.edge_decisions),
     path("edges/<int:pk>/simulate", views.edge_simulate),
     path("edges/<int:pk>/suggestions", views.edge_suggestions),
     path("edges/<int:pk>/weakest-link", views.edge_weakest_link),

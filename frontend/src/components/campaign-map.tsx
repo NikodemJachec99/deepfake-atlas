@@ -1,0 +1,91 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { api, type Group, type Graph } from "@/lib/api";
+import { useApi } from "@/lib/hooks";
+
+function CampaignNode({ group, x, y, expanded, toggle }: {
+  group: Group; x: number; y: number; expanded: boolean; toggle: () => void;
+}) {
+  const result = useApi(expanded ? String(group.id) : null, () => api.graph(`?campaign=${group.id}`));
+  const [all, setAll] = useState(false);
+  const layout = useMemo(() => {
+    const nodes = result.data?.nodes ?? [];
+    const positions = new Map(nodes.map((n, i) => {
+      const angle = i * 2.399963;
+      const radius = 28 + 49 * Math.sqrt((i + 1) / nodes.length);
+      return [n.id, { x: radius * Math.cos(angle), y: radius * Math.sin(angle) }];
+    }));
+    const edges = result.data?.edges ?? [];
+    const strongest = new Map<number, Graph["edges"][number]>();
+    for (const e of edges) for (const id of [e.source, e.target]) {
+      const old = strongest.get(id);
+      if (!old || old.probability < e.probability) strongest.set(id, e);
+    }
+    return { nodes, positions, edges: all ? edges : [...new Set(strongest.values())], total: edges.length };
+  }, [result.data, all]);
+  return <g transform={`translate(${x} ${y})`}>
+    {expanded && <>
+      <circle r="84" fill="var(--accent-soft)" stroke="var(--line)" />
+      {layout.edges.map(e => {
+        const a = layout.positions.get(e.source), b = layout.positions.get(e.target);
+        return a && b && <Link key={e.id} href={`/investigation?campaign=${group.id}&edge=${e.id}`} prefetch={false}>
+          <title>Dowody powiązania #{e.id}</title>
+          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="var(--accent)" strokeOpacity=".35" strokeWidth=".9" />
+        </Link>;
+      })}
+      {layout.nodes.map(n => <Link key={n.id} href={`/ads/${n.id}`} prefetch={false} aria-label={`Reklama #${n.id}`}>
+        <title>#{n.id} · {n.label}</title><circle {...{cx:layout.positions.get(n.id)?.x, cy:layout.positions.get(n.id)?.y}} r="4" fill="var(--accent)" stroke="white" />
+      </Link>)}
+    </>}
+    <g role="button" tabIndex={0} aria-label={`Kampania ${group.key}, liczba reklam ${group.size}`} aria-expanded={expanded}
+      className="cursor-pointer" onClick={toggle} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } }}>
+      <title>{group.label || group.key} · {group.size} reklam</title>
+      <circle r="20" fill={expanded ? "var(--accent)" : "var(--raised)"} stroke="var(--accent)" strokeWidth="2" />
+      <text textAnchor="middle" dy="5" fill={expanded ? "white" : "var(--accent)"} fontSize="14" fontWeight="600">{group.size}</text>
+      <text textAnchor="middle" y={expanded ? -88 : 38} fill="var(--fg)" fontSize="13">{group.key}</text>
+    </g>
+    {expanded && <foreignObject x="-92" y="84" width="184" height="35">
+      <div className="text-center text-xs">{result.loading ? "Pobieranie reklam…" : result.error ? <button onClick={result.reload}>Ponów pobranie</button> :
+        <button onClick={() => setAll(!all)} className="text-accent underline">{all ? "Najsilniejsze połączenia" : `Wszystkie połączenia (${layout.total})`}</button>}</div>
+    </foreignObject>}
+  </g>;
+}
+
+export function CampaignMap({ groups }: { groups: Group[] }) {
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [scale, setScale] = useState(1);
+  const [angle, setAngle] = useState(0);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const surface = useRef<SVGSVGElement>(null);
+  const drag = useRef<{x:number; y:number} | null>(null);
+  const columns = Math.ceil(Math.sqrt(groups.length * 1.5));
+  const rows = Math.ceil(groups.length / columns);
+  const width = columns * 195 + 100, height = rows * 215 + 70;
+  useEffect(() => {
+    const svg = surface.current;
+    if (!svg) return;
+    function wheel(e: WheelEvent) { e.preventDefault(); setAngle(value => value + Math.sign(e.deltaY) * 4); }
+    svg.addEventListener("wheel", wheel, { passive: false });
+    return () => svg.removeEventListener("wheel", wheel);
+  }, []);
+  return <section className="flex min-h-[55vh] flex-1 flex-col rounded-lg border border-line">
+    <div className="flex flex-wrap items-center gap-3 border-b border-line p-2">
+      <span className="flex-1">Kliknij węzeł kampanii, aby rozwinąć lub zwinąć jej reklamy.</span>
+      <button aria-label="Oddal" onClick={() => setScale(v => Math.max(.4,v/1.4))}>−</button>
+      <button aria-label="Przybliż" onClick={() => setScale(v => Math.min(8,v*1.4))}>＋</button>
+      <button onClick={() => {setScale(1);setAngle(0);setOffset({x:0,y:0});}}>Dopasuj</button>
+    </div>
+    <svg ref={surface} className="min-h-[48vh] w-full flex-1 touch-none cursor-grab" viewBox={`0 0 ${width} ${height}`} aria-label="Graf kampanii"
+      onPointerDown={e => { if ((e.target as Element).closest('a,button,[role="button"]')) return; drag.current={x:e.clientX,y:e.clientY};e.currentTarget.setPointerCapture(e.pointerId); }}
+      onPointerMove={e => { const prev=drag.current, matrix=e.currentTarget.getScreenCTM(); if (!prev || !matrix) return;
+        const dx=(e.clientX-prev.x)/matrix.a, dy=(e.clientY-prev.y)/matrix.d; drag.current={x:e.clientX,y:e.clientY}; setOffset(v=>({x:v.x+dx,y:v.y+dy})); }}
+      onLostPointerCapture={()=>{drag.current=null;}}>
+      <g transform={`translate(${width/2+offset.x} ${height/2+offset.y}) rotate(${angle}) scale(${scale}) translate(${-width/2} ${-height/2})`}>
+        {groups.map((group,i) => <CampaignNode key={group.id} group={group} x={100+(i%columns)*195+(Math.floor(i/columns)%2)*75} y={115+Math.floor(i/columns)*215}
+          expanded={expanded.has(group.id)} toggle={() => setExpanded(old => {const next=new Set(old);if(next.has(group.id)) next.delete(group.id);else next.add(group.id);return next;})} />)}
+      </g>
+    </svg>
+  </section>;
+}

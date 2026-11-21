@@ -8,7 +8,7 @@ import Graph from "graphology";
 import forceAtlas2 from "graphology-layout-forceatlas2";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Maximize2, Minus, Plus } from "lucide-react";
 import { animate } from "motion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Sigma from "sigma";
 import { layerDashed } from "sigma/rendering";
 
@@ -177,7 +177,7 @@ function createSigma(graph: Graph, container: HTMLElement) {
       enableEdgeEvents: true,
       renderEdgeLabels: true,
       edgePickingPadding: 4,
-      labelDensity: 0.6,
+      labelDensity: 0.28,
       labelRenderedSizeThreshold: 5,
       stagePadding: 48,
       minCameraRatio: 0.05,
@@ -194,6 +194,23 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
   const layoutKey = useRef("");
   const targets = useRef(new Map<number, { x: number; y: number }>());
   const reduced = useReducedMotion();
+  const [showAll, setShowAll] = useState(false);
+  const available = useMemo(() => edges.filter(edge => !edge.hidden), [edges]);
+  const dense = layout === "force" && available.length > Math.max(35, nodes.length * 2);
+  const drawn = useMemo(() => {
+    if (!dense || showAll) return new Set(available.map(edge => edge.id));
+    const strongest = new Map<number, GEdge>();
+    const ids = new Set<number>();
+    for (const edge of available) {
+      for (const node of [edge.source, edge.target]) {
+        const prior = strongest.get(node);
+        if (!prior || edge.probability > prior.probability || (edge.probability === prior.probability && edge.id < prior.id)) strongest.set(node, edge);
+      }
+      if (edge.id === selectedEdge || edge.source === selectedNode || edge.target === selectedNode) ids.add(edge.id);
+    }
+    for (const edge of strongest.values()) ids.add(edge.id);
+    return ids;
+  }, [available, dense, showAll, selectedEdge, selectedNode]);
   const [hover, setHover] = useState<{ kind: "node" | "edge"; id: number } | null>(null);
   const [failed, setFailed] = useState("");
   const handlers = useRef({ onEdge, onNode, onClear });
@@ -291,9 +308,9 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
       const fill = dim ? alpha(base, 0.35) : base;
       const ring = isSelected ? accent : node.listed ? listed : node.focus ? fg : null;
       const attributes = {
-        size: node.focus ? 12 : 8,
+        size: node.focus ? 10 : dense ? 4 : 7,
         color: fill,
-        label: node.case ? `${node.case} · ${title}` : title,
+        label: dense ? `#${node.id}` : node.case ? `${node.case} · ${title}` : title,
         labelColor: dim ? faint : fg,
         labelFont: font,
         backdropColor: raised,
@@ -338,14 +355,14 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
         gapColor: edge.relation === "similar" ? "#00000000" : color,
         label: edge.duplicate ? "duplikat" : edge.verdict === "confirmed" ? "potwierdzone" : edge.verdict === "rejected" ? "odrzucone" : "",
         labelColor: muted,
-        visibility: edge.hidden ? "hidden" : "visible",
+        visibility: !drawn.has(edge.id) ? "hidden" : "visible",
         zIndex: isSelected ? 3 : edge.relation === "same_campaign" ? 2 : edge.relation === "same_operator" ? 1 : 0,
       };
       if (g.hasEdge(edge.id)) g.mergeEdgeAttributes(edge.id, attributes);
       else if (!g.hasEdge(edge.source, edge.target)) g.addEdgeWithKey(edge.id, edge.source, edge.target, attributes);
     }
     s.scheduleRefresh();
-  }, [nodes, edges, colorBy, layout, selectedEdge, selectedNode, reduced]);
+  }, [nodes, edges, colorBy, layout, selectedEdge, selectedNode, reduced, dense, drawn]);
 
   const directions = [
     { key: "ArrowLeft", label: "w lewo", dx: -1, dy: 0, Icon: ArrowLeft },
@@ -397,8 +414,12 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
         ))}
       </div>
 
+      {dense && <label className="absolute top-12 left-2 flex items-center gap-2 rounded-md border border-line bg-raised px-2 py-1 text-sm">
+        <input type="checkbox" checked={showAll} onChange={event => setShowAll(event.target.checked)} />
+        Wszystkie połączenia
+      </label>}
       {legend && (
-        <div className="pointer-events-none absolute bottom-8 left-2 flex flex-col gap-1 rounded-sm border border-line bg-panel/95 p-2 text-[0.85rem] text-muted">
+        <details className="absolute bottom-8 left-2 rounded-md border border-line bg-panel p-2 text-[0.85rem] text-muted"><summary>Legenda</summary>
           {RELATIONS.map((relation) => (
             <span key={relation} className="flex items-center gap-2">
               <RelationLine relation={relation} />
@@ -423,7 +444,7 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
               ))}
             </span>
           )}
-        </div>
+        </details>
       )}
 
       <div className={cx("absolute inset-x-0 bottom-0 flex h-6 items-center gap-3 border-t border-line bg-panel/95 px-2 text-[0.85rem]", !hover && "text-faint")}>
@@ -456,7 +477,7 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
           </>
         ) : (
           <span>
-            {nodes.length} węzłów · {edges.filter((e) => !e.hidden).length} z {edges.length} krawędzi · kółko obraca graf · krawędź otwiera dowody, węzeł kartę reklamy
+            {nodes.length} węzłów · {drawn.size} z {edges.length} krawędzi{dense && !showAll && " · najsilniejsze dla każdego węzła"} · kółko obraca graf · krawędź otwiera dowody, węzeł kartę reklamy
           </span>
         )}
       </div>

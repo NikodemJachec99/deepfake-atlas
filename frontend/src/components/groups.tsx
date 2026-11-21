@@ -36,7 +36,10 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
   const result = useApi(valid ? kind + id : null, () => operator ? api.operator(Number(id)) : api.campaign(Number(id)));
   if (!valid) return <p>Nieprawidłowy identyfikator grupy.</p>;
   if (result.loading) return <Loading />;
-  if (result.error) return <ErrorBox message={result.error} onRetry={result.reload} />;
+  if (result.error) return <ErrorBox message={result.error} onRetry={result.reload} missing={result.status === 404 ? {
+    description: operator ? `Nie ma takiego operatora (#${id}).` : `Nie ma takiej kampanii (#${id}).`,
+    href: `/${kind}`, link: operator ? "Lista operatorów" : "Lista kampanii",
+  } : undefined} />;
   const group = result.data;
   if (!group) return null;
   const metrics = [

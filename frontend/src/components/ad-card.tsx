@@ -202,9 +202,9 @@ export function EdgeRows({ edges, adId, onEdge, selected }: { edges: Edge[]; adI
 // Wersja do inspektora: jedna kolumna.
 export function AdCard({ adId, onEdge, selectedEdge, full = false }: { adId: number; onEdge: (edge: Edge) => void; selectedEdge?: number | null; full?: boolean }) {
   const ad = useApi(`ad:${adId}`, () => api.ad(adId));
-  const edges = useApi(`ad-edges:${adId}`, () => api.adEdges(adId));
+  const edges = useApi(ad.data ? `ad-edges:${adId}` : null, () => api.adEdges(adId));
   if (ad.loading) return <Loading label="Pobieranie karty reklamy" />;
-  if (ad.error) return <ErrorBox message={ad.error} onRetry={ad.reload} />;
+  if (ad.error) return <ErrorBox message={ad.error} onRetry={ad.reload} missing={ad.status === 404 ? { description: `Nie ma takiej reklamy (#${adId}).`, href: "/archive", link: "Przejdź do archiwum" } : undefined} />;
   const data = ad.data;
   if (!data) return null;
   return (

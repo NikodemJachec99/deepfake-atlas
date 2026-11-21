@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
+import { ApiError } from "./api";
 import { errorText } from "./format";
 
 interface ApiState<T> {
   key: string | null;
   data?: T;
   error?: string;
+  status?: number;
 }
 
 // Pobranie z API ze stanami: ładowanie, błąd, dane. `key` identyfikuje zapytanie; null wyłącza pobieranie.
@@ -23,7 +25,7 @@ export function useApi<T>(key: string | null, fetcher: () => Promise<T>) {
     let live = true;
     latest.current().then(
       (data) => live && setState({ key, data }),
-      (reason) => live && setState({ key, error: errorText(reason) }),
+      (reason) => live && setState({ key, error: errorText(reason), status: reason instanceof ApiError ? reason.status : undefined }),
     );
     return () => {
       live = false;
@@ -34,6 +36,7 @@ export function useApi<T>(key: string | null, fetcher: () => Promise<T>) {
   const set = useCallback((data: T) => setState((s) => ({ ...s, data })), []);
   return {
     data: fresh ? state.data : undefined,
+    status: fresh ? state.status : undefined,
     error: fresh ? state.error : undefined,
     loading: key !== null && !fresh,
     reload,

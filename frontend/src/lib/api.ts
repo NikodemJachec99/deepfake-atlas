@@ -809,6 +809,12 @@ export interface Page<T> {
 // z obcych stron i skryptów w sieci, a nie przed kimś, kto ma dostęp do samego interfejsu.
 const API_KEY = process.env.NEXT_PUBLIC_API_KEY ?? "";
 
+export class ApiError extends Error {
+  constructor(readonly status: number, detail: string) {
+    super(`API ${status}: ${detail}`);
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const keyHeader: Record<string, string> = API_KEY && init?.method && init.method !== "GET" ? { "X-API-Key": API_KEY } : {};
   const headers = init?.body instanceof FormData
@@ -817,7 +823,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, { ...init, headers });
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(`API ${response.status}: ${body.slice(0, 300)}`);
+    throw new ApiError(response.status, body.slice(0, 300));
   }
   return response.json() as Promise<T>;
 }

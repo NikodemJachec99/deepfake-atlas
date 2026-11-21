@@ -3,7 +3,6 @@ import { num } from "@/lib/format";
 const explanations: Record<string, string> = {
   text_embedding: "Teksty mają podobne znaczenie, nawet gdy użyto innych słów. Samo podobieństwo treści nie dowodzi wspólnego zaplecza.",
   video_frames: "W nagraniach znaleziono podobne klatki, także po ponownym zakodowaniu filmu. Wspólny materiał nie dowodzi wspólnego zaplecza.",
-  image_embedding: "Obrazy reklam pokazują to samo ujęcie w innej wersji (przycięcie, inny rozmiar). Wspólne ujęcie nie dowodzi wspólnego zaplecza.",
 };
 
 export function ContentSimilarity({ kind, similarity }: { kind: string; similarity: number }) {

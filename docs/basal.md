@@ -50,7 +50,7 @@ Budżet pamięci na głównym, z rozmiarów plików wag:
 | basal-2.0-mini bf16, `--mode eager` | 3,19 GB | tak | kontekst 8 192 tokenów, wg twórcy słabsza od basal-1.5-mini na polskich decyzjach |
 | basal-2.0-mini-GGUF Q8_0 na CPU | 1,7 GB | bez GPU | wariant awaryjny |
 
-**Pomiaru na tym komputerze nie wykonano.** Instalacja silnika z GitHuba 21.11.2026 została zablokowana przez ustawienia uprawnień sesji. Wiersze "możliwe" to wnioski z rozmiarów i dokumentacji, nie wynik. Kolejność prób w [#71](https://github.com/NikodemJachec99/deepfake-atlas/issues/71): (1) basal-2.0-4.5B-FP8 w `--mode fast` w kontenerze Linux z GPU, (2) basal-2.0-mini bf16 w `--mode eager` na Windowsie, (3) basal-2.0-mini-GGUF Q8_0 na CPU. Wybieramy wariant, który się uruchamia i ma najwyższą zgodność na naszym zbiorze walidacyjnym z [#72](https://github.com/NikodemJachec99/deepfake-atlas/issues/72), przy opóźnieniu poniżej 2 s na decyzję.
+**Pomiar 21.11.2026 na tym komputerze**, basal 2.8.1, torch 2.11.0+cu128, Windows 11: basal-2.0-mini bf16 (rewizja `1fb226f`, `model_files` `768ccc5231d6e363`) w `--mode eager` wstaje w 63 s i zajmuje 3,4 GB VRAM. Na 44 krawędziach z kopii bazy po imporcie paczek pytanie `edge-review-v1` trwa 62 ms w medianie, 765 ms najdłużej. Model odpowiedział `przeglad` dla wszystkich 44, także dla 19 krawędzi `same_campaign` z kilkoma niezależnymi grupami śladów, więc w tej postaci nic nie rozróżnia. To wynik dla jednego modelu i jednego sformułowania pytania. Pozostałych wariantów (4.5B-FP8, GGUF) nie mierzyłem. Wiersze "możliwe" wyżej to wnioski z rozmiarów i dokumentacji. Kolejność prób w [#71](https://github.com/NikodemJachec99/deepfake-atlas/issues/71): (1) basal-2.0-4.5B-FP8 w `--mode fast` w kontenerze Linux z GPU, (2) basal-2.0-mini bf16 w `--mode eager` na Windowsie, (3) basal-2.0-mini-GGUF Q8_0 na CPU. Wybieramy wariant, który się uruchamia i ma najwyższą zgodność na naszym zbiorze walidacyjnym z [#72](https://github.com/NikodemJachec99/deepfake-atlas/issues/72), przy opóźnieniu poniżej 2 s na decyzję.
 
 ## Zastosowania
 
@@ -78,6 +78,31 @@ Np. tematyka tekstu reklamy z zamkniętej listy. Tekst reklamy jest niezaufany: 
 - Wyniki trafiają do osobnej tabeli sugestii: model, rewizja, kwantyzacja, wersja pytania i opcji, data, skrót SHA-256 stanu, rozkład odpowiedzi, status (`ok`, `abstain`, `disabled`, `unavailable`, `error`, `timeout`). Nic nie trafia do `EdgeEvidence`, grup ani decyzji analityka.
 - Tryby: wyłączony (domyślnie), `shadow` (liczy i zapisuje, interfejs nie pokazuje), `on` (interfejs pokazuje z etykietą "sugestia modelu"). Limit czasu, rozmiaru stanu i liczby zapytań. Brak modelu albo błąd nie przerywa analizy.
 - Interfejs pokazuje obok sugestii tylko rzeczywiste przesłanki: dowody, reguły i zapisane decyzje. Żadnego generowanego tekstu.
+
+## Uruchomienie adaptera ([#71](https://github.com/NikodemJachec99/deepfake-atlas/issues/71))
+
+Silnik i wagi nie są częścią repozytorium ani obrazów kontenerów. Instalacja w osobnym środowisku, poza repo:
+
+```bash
+uv venv --python 3.12 .venv
+uv pip install --python .venv/Scripts/python.exe torch==2.11.0 --index-url https://download.pytorch.org/whl/cu128
+uv pip install --python .venv/Scripts/python.exe "basal @ https://github.com/rkinas/basal/archive/refs/tags/v2.8.1.tar.gz"
+.venv/Scripts/basal-serve --model Remek/basal-2.0-mini --revision 1fb226f19c9ba9f2053991081e6c4dfc7890de64     --mode eager --host 127.0.0.1 --port 8090
+```
+
+Backend (zmienne w `.env`, wszystkie domyślnie puste albo `off`):
+
+| Zmienna | Znaczenie |
+|---|---|
+| `BASAL_MODE` | `off` (domyślnie), `shadow` (zapisuje, interfejs nie pokazuje), `on` |
+| `BASAL_URL` | np. `http://127.0.0.1:8090`; z kontenera `http://host.docker.internal:8090` |
+| `BASAL_MODEL`, `BASAL_REVISION`, `BASAL_VARIANT` | przypięty model, rewizja HF i wariant (np. `eager-bf16`); bez `BASAL_MODEL` adapter się nie uruchomi |
+| `BASAL_API_KEY` | klucz, gdy serwer działa z `--api-keys` (wysyłany jako `Authorization: Bearer`) |
+| `BASAL_TIMEOUT` | sekundy na jedną decyzję, domyślnie 20 |
+| `BASAL_MAX_ERROR` | np. `0.05`: poniżej progu model się wstrzymuje; pusty: bez wstrzymywania |
+| `BASAL_ALLOWED_HOSTS` | hosty, do których adapter w ogóle wyśle zapytanie; domyślnie tylko lokalne i `basal` |
+
+`python manage.py basal_review [--edge N] [--relation same_operator] [--limit 100]` zapisuje sugestie do `AssistSuggestion` ze statusem `ok`, `abstain`, `unavailable`, `timeout` albo `error`. Po trzech zapytaniach bez odpowiedzi przerywa. Niepoprawna odpowiedź (odpowiedź spoza listy, rozkład spoza zakresu, przekierowanie, za duża treść) jest błędem, nigdy zgadywanym wynikiem. Pytanie ma wersję `edge-review-v1`, stan jego skrót SHA-256.
 
 ## Prywatność
 

@@ -77,7 +77,7 @@ export function Investigation() {
   const [table, setTable] = useState<"edges" | "ads">("edges");
 
   const nodes = useMemo(() => graph.data?.nodes ?? [], [graph.data]);
-  const edges = useMemo<(GEdge & { bits: number; families: Graph["edges"][number]["families"] })[]>(
+  const edges = useMemo<(GEdge & Graph["edges"][number])[]>(
     () =>
       (graph.data?.edges ?? []).map((edge) => ({
         ...edge,

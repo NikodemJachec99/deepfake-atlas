@@ -53,8 +53,11 @@ function CampaignNode({ group, x, y, expanded, toggle }: {
   </g>;
 }
 
-export function CampaignMap({ groups }: { groups: Group[] }) {
-  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+export function CampaignMap({ groups, expanded, onToggle }: {
+  groups: Group[];
+  expanded: ReadonlySet<number>;
+  onToggle: (id: number) => void;
+}) {
   const [scale, setScale] = useState(1);
   const [angle, setAngle] = useState(0);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -84,7 +87,7 @@ export function CampaignMap({ groups }: { groups: Group[] }) {
       onLostPointerCapture={()=>{drag.current=null;}}>
       <g transform={`translate(${width/2+offset.x} ${height/2+offset.y}) rotate(${angle}) scale(${scale}) translate(${-width/2} ${-height/2})`}>
         {groups.map((group,i) => <CampaignNode key={group.id} group={group} x={100+(i%columns)*195+(Math.floor(i/columns)%2)*75} y={115+Math.floor(i/columns)*215}
-          expanded={expanded.has(group.id)} toggle={() => setExpanded(old => {const next=new Set(old);if(next.has(group.id)) next.delete(group.id);else next.add(group.id);return next;})} />)}
+          expanded={expanded.has(group.id)} toggle={() => onToggle(group.id)} />)}
       </g>
     </svg>
   </section>;

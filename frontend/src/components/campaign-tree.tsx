@@ -48,6 +48,14 @@ export function CampaignTree({ groups }: { groups: Group[] }) {
   const [map, setMap] = useState(false);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [query, setQuery] = useState("");
+  function toggleCampaign(id: number) {
+    setExpanded(current => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
   const visible = groups.filter(g => (g.key + " " + g.label).toLocaleLowerCase("pl").includes(query.trim().toLocaleLowerCase("pl")));
   return <>
     <div className="flex flex-wrap items-center justify-between gap-3 border-y border-line py-3">
@@ -56,17 +64,13 @@ export function CampaignTree({ groups }: { groups: Group[] }) {
           onClick={() => setMap(Boolean(i))}>{name}</button>)}</div>
       {!map && <input type="search" aria-label="Szukaj kampanii" placeholder="Szukaj kampanii…" value={query} onChange={e=>setQuery(e.target.value)} className="max-w-full rounded-md border border-line-strong px-3 py-2" />}
     </div>
-    {map ? <CampaignMap groups={groups} /> : <section aria-label="Drzewo kampanii">
+    {map ? <CampaignMap groups={groups} expanded={expanded} onToggle={toggleCampaign} /> : <section aria-label="Drzewo kampanii">
       {!visible.length && <p>Brak kampanii odpowiadających wyszukiwaniu.</p>}
       {visible.map(group => {
         const open = expanded.has(group.id);
         const Icon = open ? ChevronDown : ChevronRight;
         return <div key={group.id} className="border-b border-line">
-          <button aria-expanded={open} onClick={() => setExpanded(old => {
-            const next = new Set(old);
-            if (open) next.delete(group.id); else next.add(group.id);
-            return next;
-          })} className="flex w-full items-center gap-3 px-2 py-3 text-left hover:bg-panel">
+          <button aria-expanded={open} onClick={() => toggleCampaign(group.id)} className="flex w-full items-center gap-3 px-2 py-3 text-left hover:bg-panel">
             <Icon size={18}/><Network size={20} className="text-accent"/><strong className="text-lg">{group.key}</strong>
             <span className="min-w-0 flex-1 truncate">{group.label}</span><span className="text-muted">Reklamy · {group.size}</span>
           </button>

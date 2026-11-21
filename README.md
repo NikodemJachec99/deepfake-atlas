@@ -4,6 +4,7 @@ System łączy pozornie niezależne fałszywe reklamy w kampanie i operatorów n
 
 - **Metodyka** (cechy, podobieństwo, grupowanie): [docs/metodyka.md](docs/metodyka.md)
 - Wymagania zadania i zgodność z regulaminem: [docs/wymagania.md](docs/wymagania.md)
+- Teksty zgłoszenia na HackTribe: [docs/zgloszenie.md](docs/zgloszenie.md)
 - Wyniki na danych organizatora: [docs/dane-organizatora.md](docs/dane-organizatora.md)
 - Kontrakt API: [docs/api.md](docs/api.md)
 - Laboratorium dowodów (co zostaje z połączenia po wyłączeniu śladów): [docs/laboratorium.md](docs/laboratorium.md)
@@ -27,7 +28,7 @@ docker compose exec backend python manage.py import_bundle /data/raw/nask --name
 
 Interfejs: http://localhost:3000 (kontener `frontend`).
 
-Wymagania: Docker z Compose, ok. 6 GB RAM na wszystkie usługi, ok. 8 GB miejsca na obrazy, dostęp do internetu przy pierwszym budowaniu obrazów i przy pierwszym użyciu OCR (pobranie modelu). Pierwsze `up --build` pobiera obrazy usług i paczki Pythona (m.in. onnxruntime, OpenCV, numpy). Sprawdzone 2026-11-21 na świeżym klonie z pustymi wolumenami: przy łączu ok. 100 KB/s trwało 31 minut, import paczki `nask` (13 stron) 58 sekund.
+Wymagania: Docker z Compose, ok. 6 GB RAM na wszystkie usługi, ok. 8 GB miejsca na obrazy, dostęp do internetu przy pierwszym budowaniu obrazów i przy pierwszym użyciu OCR (pobranie modelu). Pierwsze `up --build` pobiera obrazy usług i paczki Pythona (m.in. onnxruntime, OpenCV, numpy). Sprawdzone 2026-11-21 na świeżym klonie z pustymi wolumenami: na Windowsie przy łączu ok. 100 KB/s `up --build` trwało 31 minut, import paczki `nask` (13 stron) 58 sekund; na Linuksie (Ubuntu 24.04 w WSL2, klon w systemie plików Linuksa, bash) 16 minut i 161 sekund, z tym samym wynikiem. Na macOS nie sprawdzaliśmy. CI przy każdym PR stawia cały stos na ubuntu i importuje zmyśloną sprawę (`backend/tests/smoke_compose.py`).
 
 Porty zmienisz w `.env`: `BACKEND_PORT`, `FRONTEND_PORT`, a jeśli masz zajęte porty usług pomocniczych (np. własny Postgres na 5432), także `DB_PORT`, `REDIS_PORT`, `TEMPORAL_PORT`, `S3_PORT`, `NEO4J_HTTP_PORT`, `OPENSEARCH_PORT` i pozostałe z `.env.example`. Po zmianie `FRONTEND_PORT` dopisz nowy adres interfejsu do `CORS_ALLOWED_ORIGINS`, a po zmianie `BACKEND_PORT` przebuduj interfejs (`docker compose up -d --build frontend`), bo adres API jest wkompilowany w czasie budowania.
 
@@ -111,8 +112,10 @@ cd backend
 uv venv --python 3.12 .venv && uv pip install --python .venv -r requirements.txt
 docker compose up -d db
 .venv/Scripts/python -m pytest -q     # Linux/macOS: .venv/bin/python
-.venv/Scripts/ruff check .
+.venv/Scripts/ruff check .            # Linux/macOS: .venv/bin/ruff
 ```
+
+Bez `uv` (np. czyste Ubuntu): `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`. W Ubuntu potrzebny jest pakiet `python3-venv`. Testy łączą się z Postgresem na `localhost:5432`; przy innym `DB_PORT` ustaw `DATABASE_URL`.
 
 Testy potoku i API działają na prawdziwym Postgresie z pgvector. Sieć zastępują podstawki z `tests/fakes.py`. Dane w testach są zmyślone, formaty pochodzą z prawdziwych przechwyceń.
 

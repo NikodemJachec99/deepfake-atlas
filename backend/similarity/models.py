@@ -140,7 +140,7 @@ class EdgeDecision(models.Model):
 
 
 class AssistSuggestion(models.Model):
-    """Sugestia lokalnego modelu decyzji (basal) o krawędzi. Doradcza i oddzielna od dowodów.
+    """Sugestia modelu decyzji (Jev, wcześniej lokalny basal) o krawędzi. Doradcza i oddzielna od dowodów.
 
     Nie wpływa na krawędź, wagi, dowody, grupy ani decyzje analityka. Zapisujemy wersję modelu,
     pytania i skrót stanu, żeby wynik dało się odtworzyć i porównać między wersjami.
@@ -152,6 +152,9 @@ class AssistSuggestion(models.Model):
         UNAVAILABLE = "unavailable", "Usługa niedostępna"
         TIMEOUT = "timeout", "Przekroczony czas"
         ERROR = "error", "Błąd albo niepoprawna odpowiedź"
+        UNAUTHORIZED = "unauthorized", "Brak albo zły klucz API"
+        PAYMENT = "payment", "Brak środków na koncie usługi"
+        RATE_LIMITED = "rate_limited", "Przekroczony limit zapytań albo usługa przeciążona"
 
     edge = models.ForeignKey(Edge, null=True, blank=True, on_delete=models.SET_NULL, related_name="suggestions")
     ad_a = models.ForeignKey("ads.Ad", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
@@ -162,7 +165,7 @@ class AssistSuggestion(models.Model):
     answer = models.CharField(max_length=32, blank=True)
     probabilities = models.JSONField(default=dict, blank=True)
     confidence = models.FloatField(null=True, blank=True)
-    model = models.CharField(max_length=128, blank=True)  # skonfigurowany, np. Remek/basal-2.0-mini
+    model = models.CharField(max_length=128, blank=True)  # skonfigurowany, np. jev-1.14.0 (stare wpisy: Remek/basal-2.0-mini)
     revision = models.CharField(max_length=64, blank=True)
     variant = models.CharField(max_length=64, blank=True)  # tryb i kwantyzacja, np. eager-bf16
     served_model = models.CharField(max_length=128, blank=True)  # co podał serwer w odpowiedzi
@@ -170,6 +173,7 @@ class AssistSuggestion(models.Model):
     state_fingerprint = models.CharField(max_length=64)
     edge_version = models.CharField(max_length=40, blank=True)
     latency_ms = models.PositiveIntegerField(null=True, blank=True)
+    input_tokens = models.PositiveIntegerField(null=True, blank=True)  # z odpowiedzi usługi, podstawa kosztu
     error = models.CharField(max_length=300, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

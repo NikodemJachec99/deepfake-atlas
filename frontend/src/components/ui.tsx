@@ -26,10 +26,10 @@ export function Panel({
   bodyClassName?: string;
 }) {
   return (
-    <section className={cx("flex min-h-0 min-w-0 flex-col bg-panel", className)}>
+    <section className={cx("flex min-h-0 min-w-0 flex-col bg-raised", className)}>
       {title !== undefined && (
-        <header className="flex h-7 shrink-0 items-center justify-between gap-2 border-b border-line px-2">
-          <h2 className="cap truncate">{title}</h2>
+        <header className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-line bg-panel px-3">
+          <h2 className="truncate font-semibold">{title}</h2>
           {actions && <div className="flex items-center gap-1">{actions}</div>}
         </header>
       )}

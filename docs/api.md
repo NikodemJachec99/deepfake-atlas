@@ -22,6 +22,7 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | POST | `/api/edges/{id}/verdict` | `{"verdict":"confirmed"\|"rejected"\|"unsure","reason":"...","note":""}` | `EdgeDetail`; wpis w historii decyzji z migawką i w dzienniku audytu |
 | GET | `/api/edges/{id}/decisions` | | `EdgeDecisions`: historia decyzji od najnowszej (opis niżej) |
 | GET | `/api/edges/{id}/precedents` | `?limit=` (domyślnie 5, najwyżej 20) | `Precedents`: podobne wcześniejsze rozstrzygnięcia innych par (opis niżej) |
+| GET | `/api/edges/{id}/assist` | | `EdgeAssist`: stan adaptera Jev i ostatnia zapisana sugestia przeglądu (opis niżej); nie wywołuje Jev |
 | POST | `/api/edges/{id}/simulate` | `{"exclude":[<id dowodu>],"edge_version":"<Edge.updated_at>"}` | `Simulation`: krawędź przed i po wyłączeniu dowodów, nic nie zapisuje |
 | GET | `/api/edges/{id}/suggestions` | | `Suggestions`: co sprawdzić dalej, z brakujących dowodów tej pary |
 | POST | `/api/edges/{id}/weakest-link` | `{"max_group_size":2,"max_scenarios":500,"time_limit_ms":3000,"edge_version":"..."}` | `WeakestLink`: najmniejsze zestawy grup śladów, których utrata zmienia relację |
@@ -35,7 +36,8 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | GET | `/api/kinds` | | słownik 7 rodzin i typów markerów |
 | GET | `/api/stats` | | liczby do paska stanu |
 | GET | `/api/artifacts/{sha256}` | | surowy dowód jako załącznik (nigdy się nie renderuje) |
-| GET | `/api/artifacts/{sha256}/image` | | zrzut reklamy jako obraz (tylko artefakty obrazów) |
+| GET | `/api/artifacts/{sha256}/image` | | zrzut reklamy albo klatka poglądowa nagrania jako obraz (tylko artefakty obrazów) |
+| GET | `/api/artifacts/{sha256}/video` | nagłówek `Range` (opcjonalny) | nagranie do odtworzenia (MP4, MOV, WebM po sygnaturze bajtów), `206` dla zakresu, `416` poza plikiem |
 
 ## Oś obserwacji
 
@@ -77,6 +79,33 @@ Powody (`reason`, lista z etykietami w `GET /api/kinds` jako `verdict_reasons`):
 `GET /api/edges/{id}/decisions` zwraca `{"edge": 12, "current": "rejected", "decisions": [EdgeDecision]}`. `EdgeDecision`: `id`, `edge` (null, gdy krawędź zniknęła przy przeliczeniu), `ad_a`, `ad_b`, `verdict`, `previous_verdict`, `reason`, `reason_label`, `note`, `legacy`, `user`, `created_at`, `has_snapshot`, `snapshot`.
 
 `snapshot` to stan z chwili decyzji, bo dowody krawędzi są przebudowywane przy każdym przeliczeniu: `relation`, `bits`, `probability`, `decisive`, `duplicate`, `families`, `model_version`, `edge_version` (wersja dowodów, ta sama co w Laboratorium dowodów), `evidence` (rodzaj, rodzina, wartości po redakcji do 300 znaków, podobieństwo, `df`, `corpus_n`, wkład w bitach, `decisive`, `kit`, `motif`), `groups` (kampania i operator obu reklam), `ads` (źródło, sprawa, adres po redakcji).
+
+#### Nagrania w karcie reklamy
+
+`AdDetail.videos` to lista `VideoMaterial`: `sha256`, `name`, `size`, `playable`, `url` (`/api/artifacts/{sha}/video`, gdy plik jest w magazynie), `duration_s`, `fps`, `frames`, `width`, `height`, `poster`, `original`, `missing`.
+
+- `poster`: klatka poglądowa z pierwszej sekundy (dla krótszych nagrań 10% długości). `at_s` to sekunda według dekodera, bo przewijanie trafia w najbliższą klatkę kluczową. `position` to `at_s / duration_s`, `url` prowadzi do obrazu.
+- `original`: `duration_s` to długość oryginału z metadanych pobrania (`.info.json` z yt-dlp), jeśli tam jest. `clip` mówi, czy plik jest krótszym wycinkiem oryginału. `null` oznacza, że nie wiadomo.
+- `missing`: powody braków po polsku, np. plik ponad limit 60 MB magazynu (`playable: false`), brak długości oryginału w metadanych albo nagranie zaimportowane przed odczytem metadanych.
+- Nagrań nie analizujemy treściowo. Odczytujemy tylko metadane kontenera i jedną klatkę. Uzupełnienie dla zaimportowanych spraw: `python manage.py probe_videos --root /data/raw`.
+
+## Sugestia Jev
+
+`GET /api/edges/{id}/assist` tylko czyta: nie wywołuje Jev i niczego nie zapisuje. Sugestie liczy polecenie `jev_review` ([jev.md](jev.md)).
+
+`EdgeAssist`: `edge`, `mode` (`off`, `shadow`, `on`), `model`, `question_version`, `question` (treść pytania), `case_data_allowed`, `visible`, `status`, `suggestion`, `premises`, `analyst`, `precedent_ranking`, `notice`.
+
+| Sytuacja | `status` | `suggestion` | `visible` |
+|---|---|---|---|
+| `JEV_MODE=off` | `disabled` | `null` | `false` |
+| tryb `shadow` i jest zapisana sugestia | `shadow` (plus `shadow.recorded_at`, `shadow.status` bez odpowiedzi) | `null` | `false` |
+| brak zapisanej sugestii | `none` | `null` | `false` |
+| tryb `on`, odpowiedź | `ok` albo `abstain` | odpowiedź | `true` |
+| tryb `on`, błąd usługi | `unavailable`, `timeout`, `error`, `unauthorized`, `payment`, `rate_limited` | metadane bez odpowiedzi | `false` |
+
+`suggestion`: `status`, `answer` (`przeglad` albo `spojne`, `null` bez odpowiedzi), `label`, `probabilities`, `confidence`, `uncertain` (`abstain` albo `confidence` poniżej 0,7), `model`, `served_model`, `question_version`, `created_at`, `stale` (od wysłania zmieniły się dowody albo przesłanki), `error` (sam kod, bez treści odpowiedzi usługi).
+
+`premises` to bieżąca struktura przesłanek w tym samym kształcie, który trafia do modelu: relacja, bity, grupy śladów, bez wartości. `analyst` to werdykt, powód i data ostatniej decyzji z pamięci sprzeciwu. Rozumowania modelu nie ma i interfejs go nie wymyśla. `precedent_ranking` ma wartość `not_validated`, bo kolejności precedensów model nie ustala ([ewaluacja #72](jev.md#ewaluacja-72-21112026)). Wynik nie zmienia krawędzi, grup, decyzji ani zwykłego potoku analizy.
 
 ### Precedensy
 

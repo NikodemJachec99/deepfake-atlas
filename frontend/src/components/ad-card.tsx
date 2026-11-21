@@ -4,6 +4,7 @@
 // Adres strony pokazujemy jako tekst. Strona oszusta nigdy nie otwiera się z interfejsu.
 
 import Link from "next/link";
+import { useState } from "react";
 
 import { api, artifactImageUrl, type AdDetail, type Edge } from "@/lib/api";
 import { SOURCE_LABELS, adTitle, dateTime, day, hostOf } from "@/lib/format";
@@ -25,6 +26,43 @@ export function Creatives({ shas, size = "h-40" }: { shas: string[]; size?: stri
       ))}
     </div>
   );
+}
+
+function MaterialWorkspace({ ad }: { ad: AdDetail }) {
+  const [selected, setSelected] = useState(0);
+  const image = ad.creatives[selected] ?? ad.creatives[0];
+  return <section className="border-b border-line">
+    <header className="border-b border-line px-5 py-4">
+      <p className="text-muted">Reklama #{ad.id}{ad.case && ` · Sprawa ${ad.case}`}</p>
+      <h1 className="my-1 text-2xl font-semibold tracking-tight">{adTitle(ad)}</h1>
+      <Labels ad={ad} />
+    </header>
+    <div className="grid xl:grid-cols-[minmax(0,1fr)_minmax(22rem,32%)]">
+      <div className="min-w-0 space-y-4 p-5">
+        <h2 className="text-lg font-semibold">Zrzuty reklamy</h2>
+        {ad.creatives.length ? <div className="flex flex-wrap gap-3">
+          {ad.creatives.map((sha, i) => <button key={sha} type="button" onClick={() => setSelected(i)}
+            aria-pressed={image === sha} className="max-w-full rounded-md border border-line bg-panel p-1 text-left aria-pressed:outline-2 aria-pressed:outline-accent">
+            {/* eslint-disable-next-line @next/next/no-img-element -- obraz dowodowy z API */}
+            <img className="h-36 max-w-full object-contain" alt="" src={artifactImageUrl(sha)} />
+            <span className="block px-1 py-1">Zrzut {i + 1}</span>
+          </button>)}
+        </div> : <p className="text-muted">Brak zrzutu reklamy w materiale.</p>}
+        {ad.text && <blockquote className="border-l-2 border-line-strong pl-3 whitespace-pre-wrap">{ad.text}</blockquote>}
+        <ObservationPanel adId={ad.id} />
+        <Link href={`/investigation?ad=${ad.id}`} className="inline-block text-accent underline">Pokaż na grafie powiązań</Link>
+      </div>
+      <aside className="min-w-0 space-y-3 border-t border-line bg-panel p-5 xl:border-t-0 xl:border-l">
+        <h2 className="text-lg font-semibold">Wybrany materiał</h2>
+        {image && <a className="block text-accent underline" href={artifactImageUrl(image)} target="_blank" rel="noreferrer">
+          {/* eslint-disable-next-line @next/next/no-img-element -- obraz dowodowy z API */}
+          <img className="mb-2 max-h-56 w-full object-contain" src={artifactImageUrl(image)} alt={`Podgląd zrzutu ${ad.creatives.indexOf(image) + 1}`} />
+          Otwórz zrzut w pełnym rozmiarze
+        </a>}
+        <AdMeta ad={ad} />
+      </aside>
+    </div>
+  </section>;
 }
 
 export function Labels({ ad }: { ad: Pick<AdDetail, "labels"> }) {
@@ -78,9 +116,8 @@ export function AdMeta({ ad }: { ad: AdDetail }) {
       <Field label="Źródło">
         {SOURCE_LABELS[ad.source] ?? ad.source} <Mono className="text-muted">{ad.external_id}</Mono>
       </Field>
-      <Field label="Widziana">
-        <Mono>{dateTime(ad.first_seen) || "?"}</Mono> <span className="text-faint">do</span> <Mono>{dateTime(ad.last_seen) || "?"}</Mono>
-      </Field>
+      <Field label="Pierwsza obserwacja"><Mono>{dateTime(ad.first_seen) || "brak daty"}</Mono></Field>
+      <Field label="Ostatnia obserwacja"><Mono>{dateTime(ad.last_seen) || "brak daty"}</Mono></Field>
     </dl>
   );
 }
@@ -131,20 +168,19 @@ export function AdCard({ adId, onEdge, selectedEdge, full = false }: { adId: num
   if (!data) return null;
   return (
     <div className="flex flex-col">
-      <div className="flex flex-col gap-2 border-b border-line p-2">
+      {full ? <MaterialWorkspace key={adId} ad={data} /> : <div className="flex flex-col gap-2 border-b border-line p-2">
         <div className="flex items-center justify-between gap-2">
           <Mono className="text-muted">reklama #{data.id}</Mono>
-          {!full && <Link href={`/ads/${data.id}`} className="text-accent hover:underline">
+          <Link href={`/ads/${data.id}`} className="text-accent hover:underline">
             Pełna karta
-          </Link>}
+          </Link>
         </div>
         <h1 className="text-[1.08rem] font-medium">{adTitle(data)}</h1>
         <Labels ad={data} />
         <Creatives shas={data.creatives} size="h-32" />
         <AdMeta ad={data} />
-        {full && <ObservationPanel key={adId} adId={adId} />}
         {data.text && <p className="max-h-24 overflow-auto border-l border-line-strong pl-2 whitespace-pre-wrap text-muted">{data.text}</p>}
-      </div>
+      </div>}
       <div className="border-b border-line p-2">
         <GenomeBands genome={data.genome} caption="Genom reklamy" />
       </div>

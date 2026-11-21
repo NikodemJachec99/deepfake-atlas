@@ -110,7 +110,27 @@ export interface AdDetail extends AdSummary {
   creative_url: string;
   advertiser: { id: number | null; external_id: string; name: string; payer: string } | null;
   creatives: string[]; // sha256 zrzutów reklamy, obraz: artifactImageUrl(sha)
+  videos: VideoMaterial[];
   genome: { family: Family; label: string; markers: Marker[] }[];
+}
+
+// Nagranie reklamy albo ekranu. Pola, których nie da się ustalić, są null; powód jest w `missing`.
+export interface VideoMaterial {
+  sha256: string;
+  name: string;
+  size: number | null;
+  playable: boolean; // false: plik ponad limit magazynu, nie da się go odtworzyć
+  url: string | null; // ścieżka API do <video>, obsługuje zakresy bajtów
+  duration_s: number | null;
+  fps: number | null;
+  frames: number | null;
+  width: number | null;
+  height: number | null;
+  // klatka poglądowa: sekunda według dekodera i jej położenie w nagraniu (0..1)
+  poster: { artifact: string; at_s: number; position: number | null; url: string } | null;
+  // długość oryginału z metadanych pobrania; clip: czy plik jest krótszym wycinkiem (null: nie wiadomo)
+  original: { duration_s: number | null; clip: boolean | null };
+  missing: string[];
 }
 
 export interface Edge {
@@ -517,6 +537,62 @@ export interface Precedent {
   evidence_then: { kind: string; label: string; weight_bits: number }[];
 }
 
+// Sugestia Jev dla krawędzi. Tylko odczyt; odpowiedź jest widoczna wyłącznie w trybie "on".
+export type AssistStatus =
+  | "disabled"
+  | "shadow"
+  | "none"
+  | "ok"
+  | "abstain"
+  | "unavailable"
+  | "timeout"
+  | "error"
+  | "unauthorized"
+  | "payment"
+  | "rate_limited";
+
+export interface ReviewPremises {
+  relacja: Relation;
+  bity: number;
+  pewnosc: number;
+  rozstrzygajacy_slad: boolean;
+  duplikat: boolean;
+  grupy_sladow: { grupa: string; slady: number; bity: number; rozstrzygajacy: boolean }[];
+  niezalezne_grupy: number;
+  niezalezne_grupy_zaplecza: number;
+  tylko_silnik_lub_motywy: boolean;
+}
+
+export interface EdgeAssist {
+  edge: number;
+  mode: "off" | "shadow" | "on";
+  model: string | null;
+  question_version: string;
+  question: string | null;
+  case_data_allowed: boolean;
+  visible: boolean;
+  status: AssistStatus;
+  suggestion: {
+    status: AssistStatus;
+    answer: "przeglad" | "spojne" | null;
+    label: string | null;
+    probabilities: Partial<Record<"przeglad" | "spojne", number>>;
+    confidence: number | null;
+    uncertain: boolean;
+    model: string;
+    served_model: string | null;
+    question_version: string;
+    created_at: string;
+    stale: boolean;
+    error: string | null;
+  } | null;
+  shadow?: { recorded_at: string; status: AssistStatus };
+  premises: ReviewPremises;
+  analyst: { verdict: Verdict; reason: VerdictReason | null; decided_at: string | null };
+  precedent_ranking: "not_validated";
+  notice: string;
+}
+
 export interface Precedents {
   edge: number;
   edge_version: string;
@@ -576,6 +652,7 @@ export const api = {
     request<EdgeDetail>(`/api/edges/${id}/verdict`, { method: "POST", body: JSON.stringify({ verdict, note, ...(reason ? { reason } : {}) }) }),
   edgeDecisions: (id: number) => request<EdgeDecisions>(`/api/edges/${id}/decisions`),
   edgePrecedents: (id: number, limit = 5) => request<Precedents>(`/api/edges/${id}/precedents?limit=${limit}`),
+  edgeAssist: (id: number) => request<EdgeAssist>(`/api/edges/${id}/assist`),
   // Laboratorium dowodów: przeliczenie bez wybranych dowodów. Niczego nie zapisuje. 409, gdy krawędź się zmieniła.
   simulateEdge: (id: number, exclude: number[], edgeVersion?: string) =>
     request<Simulation>(`/api/edges/${id}/simulate`, {

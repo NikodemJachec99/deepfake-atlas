@@ -1,0 +1,101 @@
+# Jev: zewnętrzny model decyzyjny
+
+Opcjonalny adapter usługi [Jev](https://docs.typesafe.ai/introduction) od TypeSafe ([#116](https://github.com/NikodemJachec99/deepfake-atlas/issues/116)). Zastępuje lokalny basal, którego plan i pomiar zostały w [basal.md](basal.md) jako archiwum. Kierunek i zasady są w [laboratorium.md](laboratorium.md#jev-jako-pomoc-analityka). Stan na 21.11.2026.
+
+## Co robi i czego nie robi
+
+Jev dostaje stan i zamknięte pytanie, a zwraca rozkład prawdopodobieństwa po zadanych odpowiedziach i `confidence`. Nie generuje tekstu. U nas zadaje jedno pytanie: czy krawędź wymaga przeglądu człowieka (`przeglad` albo `spojne`). Stan to sama struktura przesłanek policzona przez silnik dowodowy: relacja, bity, grupy śladów z liczbą i wkładem. Bez wartości śladów, adresów, tekstów stron i reklam.
+
+Wynik trafia do `AssistSuggestion` i jest wyłącznie sugestią. Nie zmienia krawędzi, wag, dowodów, grup ani decyzji analityka. Nie jest dowodem ani oceną winy.
+
+## Granica danych
+
+Jev to usługa zewnętrzna, hostowana w USA. Stan budowany z krawędzi to pochodna materiałów organizatora, więc adapter niczego nie wyśle, dopóki `JEV_ALLOW_CASE_DATA` nie jest `true`. Włączamy to dopiero po potwierdzeniu, że takie przekazanie jest dopuszczalne. Sama anonimizacja nie przesądza o dopuszczalności. Do tego czasu testy i pokazy używają wyłącznie danych syntetycznych.
+
+Polityka prywatności TypeSafe (ostatnia zmiana 19.11.2025, [typesafe.ai/legal/privacy-policy](https://typesafe.ai/legal/privacy-policy)):
+
+- usługi są hostowane w USA,
+- TypeSafe zbiera dane wejściowe zapytań, ale deklaruje, że nie trenuje na nich ani nie dostraja modeli,
+- dane osobowe przechowuje "tak długo, jak to rozsądnie potrzebne" do świadczenia usługi albo w celach biznesowych, bez podanego okresu,
+- usuwa je na żądanie, jeśli nie ma obowiązku ich przechowania.
+
+Warunki konkretnego konta (umowa, retencja, region) trzeba sprawdzić w konsoli TypeSafe przed włączeniem. Tego nie sprawdzałem.
+
+## Uruchomienie
+
+Klucz wpisujemy tylko w `.env` w katalogu głównym repo, który jest poza gitem. Klucz zostaje na backendzie, a do usługi idzie jako `Authorization: Bearer`.
+
+| Zmienna | Domyślnie | Znaczenie |
+|---|---|---|
+| `TYPESAFE_API_KEY` | pusta | klucz API; bez niego adapter się nie uruchomi |
+| `JEV_MODEL` | pusta | przypięta wersja, np. `jev-1.14.0`; aliasy `jev-latest` i `jev-preview` są odrzucane, bo ich odpowiedzi zmieniają się z wydaniem |
+| `JEV_MODE` | `off` | `shadow` zapisuje sugestie bez pokazywania, `on` pozwala je pokazać |
+| `JEV_ALLOW_CASE_DATA` | `false` | zgoda na wysyłkę pochodnych danych spraw, patrz wyżej |
+| `JEV_TIMEOUT` | 20 | sekundy na jedno zapytanie |
+| `JEV_MAX_REQUESTS` | 100 | najwięcej zapytań w jednym uruchomieniu |
+| `JEV_BUDGET_USD` | 0.10 | budżet jednego uruchomienia |
+| `JEV_PRICE_PER_MTOK` | 0.042 | cena za milion tokenów wejściowych |
+
+Po zmianie `.env`: `docker compose up -d --force-recreate backend worker`. Potem `docker compose exec backend python manage.py jev_review [--edge N] [--relation same_operator] [--limit 100]`.
+
+## Koszt i limity
+
+Według [cennika modeli](https://docs.typesafe.ai/models) Jev 1.14 kosztuje 42 USD za miliard tokenów wejściowych, czyli 0,042 USD za milion. Tokeny wyjściowe są bezpłatne. Odpowiedź podaje `usage.input_tokens`, a adapter zapisuje je przy każdej sugestii. `jev_review` sumuje tokeny i przerywa przed zapytaniem, które przekroczyłoby `JEV_BUDGET_USD`. Jedno nasze zapytanie ma ok. 540–640 tokenów, czyli ok. 0,000025 USD. Domyślny budżet 0,10 USD to ok. 4 tysiące zapytań.
+
+### Próba na żywo, 21.11.2026
+
+Cztery syntetyczne stany, `jev-1.14.0`, bez danych spraw. Odpowiedź pasuje do schematu adaptera, w tym pole `confidence` i `usage.input_tokens`.
+
+| Stan | Odpowiedź | P(`przeglad`) | `confidence` | Tokeny | Czas |
+|---|---|---|---|---|---|
+| tylko silnik lejka i motywy | `przeglad` | 0,99 | 0,98 | 613 | 282 ms |
+| konto, identyfikator i infrastruktura | `spojne` | 0,10 | 0,80 | 637 | 156 ms |
+| sprzeczne: wspólna kampania na samym silniku i motywach | `przeglad` | 0,99 | 0,98 | 618 | 171 ms |
+| brak danych | `przeglad` | 1,0 | 1,0 | 536 | 156 ms |
+
+Razem 2404 tokeny, ok. 0,0001 USD. To cztery przypadki ułożone ręcznie, a nie ewaluacja. Pokazują tylko, że kontrakt działa i model rozróżnia te przypadki.
+
+Statusy w `AssistSuggestion.status`:
+
+| Odpowiedź usługi | Status | Co robi `jev_review` |
+|---|---|---|
+| 200 z poprawną odpowiedzią | `ok` albo `abstain` | dalej |
+| 401 | `unauthorized` | kończy od razu |
+| 402 | `payment` | kończy od razu |
+| 429, 529 | `rate_limited` | czeka `Retry-After`, najwyżej 30 s; po 3 odmowach z rzędu kończy |
+| 502, 503, brak połączenia | `unavailable` | po 3 z rzędu kończy |
+| 504, przekroczony czas | `timeout` | po 3 z rzędu kończy |
+| 400 (np. `max_tokens_exceeded`), 413, 422, odpowiedź spoza schematu, przekierowanie | `error` | dalej; zapisujemy tylko kod błędu, bez treści odpowiedzi |
+
+Niepoprawna odpowiedź nigdy nie staje się wynikiem: odpowiedź spoza listy, rozkład spoza zakresu albo `confidence` poza 0..1 to `error`.
+
+## Ewaluacja ([#72](https://github.com/NikodemJachec99/deepfake-atlas/issues/72)), 21.11.2026
+
+`python manage.py jev_eval --out raport.json` (kod w `similarity/evaluation.py`). Wysyła tylko stany wygenerowane w kodzie: kombinacje relacji, śladu konta i grup śladów w kształcie prawdziwego stanu. Nie bierze nic z bazy ani z materiałów organizatora, więc nie wymaga `JEV_ALLOW_CASE_DATA`. Do bazy nic nie zapisuje.
+
+- Etykieta referencyjna to jawna rubryka: `spojne`, gdy relacja to wspólne źródło, jest ślad konta albo identyfikatora operatora i co najmniej dwie niezależne grupy zaplecza, a w pozostałych przypadkach `przeglad`. To nasza ocena, nie etykiety NASK.
+- Zbiór ma 90 stanów (45 `przeglad`, 45 `spojne`), podzielonych skrótem SHA-256 identyfikatora: 50 na walidację, 40 na test. Wersję pytania wybieramy na walidacji.
+- Reguła bez modelu: `przeglad` tylko wtedy, gdy stan stoi na samym silniku lejka i motywach.
+
+| Test, 40 stanów, `jev-1.14.0` | Zbalansowana trafność | Recall `przeglad` | Recall `spojne` | Brier |
+|---|---|---|---|---|
+| reguła bez modelu | 0,529 | 0,059 | 1,0 | — |
+| `edge-review-v1` | 0,559 | 0,118 | 1,0 | 0,234 |
+| `edge-review-v2` (wybrana na walidacji, 0,679) | 0,588 | 0,176 | 1,0 | 0,318 |
+| `edge-review-v3` | 0,559 | 0,118 | 1,0 | 0,288 |
+
+Przypadki odporności przechodzą we wszystkich trzech wersjach: sprzeczne przesłanki i brak danych dają `przeglad`, stan mocny `spojne`. Instrukcja wpisana w pole stanu nie zmienia odpowiedzi (P(`przeglad`) 0,97–1,0), w przeciwieństwie do lokalnego basal-mini. Całość to 282 zapytania, 188 624 tokeny, ok. 0,008 USD.
+
+Główny błąd: na całym zbiorze 32 z 45 stanów `przeglad` dostały odpowiedź `spojne` w v2, w tym 18 z 19 stanów `similar` ze śladem konta. Pytanie pyta, czy ślady pochodzą z niezależnych źródeł, a rubryka dodatkowo wymaga, żeby silnik wyliczył wspólne źródło. Jev odpowiada więc na swoje pytanie, ale nie na nasze kryterium. Wpisanie rubryki w kryteria pytania sprawiłoby, że model powtarza regułę, którą da się napisać w kodzie dokładnie i za darmo.
+
+**Decyzja:** sugestii Jev nie pokazujemy w interfejsie jako oceny krawędzi. Adapter zostaje wyłączony albo w trybie `shadow`. Ocena struktury przesłanek zostaje regułą w kodzie. Jev ma sens dla zadań, których nie da się zapisać regułą, np. oceny tekstu reklamy, ale to wymaga zgody na wysyłkę danych spraw i osobnej ewaluacji. Zbiór jest syntetyczny i mały, więc to wynik wstępny, bez twierdzeń o jakości Jev w ogóle.
+
+## Migracja z basal
+
+- Zmienne `BASAL_*` nie są już czytane. Usuń je z `.env`.
+- Wpisy `AssistSuggestion` z czasu basal zostają w bazie. Rozpoznać je można po `model` (`Remek/basal-…`), `revision` i `variant`. Nie mieszamy ich z wynikami Jev i nie przeliczamy.
+- Pomiar lokalnego basal-2.0-mini z 21.11.2026 jest w [basal.md](basal.md#wynik-z-21112026-wstępny). Na 44 krawędziach nie pobił prostej reguły i nie ma przełożenia na Jev. Ewaluację Jev na danych organizatora blokuje granica danych opisana wyżej.
+
+## Zadania
+
+[#72](https://github.com/NikodemJachec99/deepfake-atlas/issues/72) ewaluacja (na danych syntetycznych, dopóki nie ma zgody na dane spraw), [#73](https://github.com/NikodemJachec99/deepfake-atlas/issues/73) API sugestii, [#74](https://github.com/NikodemJachec99/deepfake-atlas/issues/74) panel analityka, [#75](https://github.com/NikodemJachec99/deepfake-atlas/issues/75) scenariusz demo z wariantem bez modelu.

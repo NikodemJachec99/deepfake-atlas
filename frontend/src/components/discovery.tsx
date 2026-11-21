@@ -3,6 +3,7 @@
 // Minimalny ekran Discovery. Dowodzi, że API działa od wejścia do dowodów.
 // Docelowy interfejs (trzy tryby, graf, panel dowodów) powstaje według docs/design-prompt.md.
 
+import { GroupLink } from "./ui";
 import { LiveGraph } from "./live-graph";
 import { EdgePanel } from "./edge-panel";
 import { markerValue } from "@/lib/format";
@@ -39,6 +40,20 @@ export function Discovery() {
   const [ad, setAd] = useState<AdDetail | null>(null);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
+  const evidenceHeading = useRef<HTMLHeadingElement>(null);
+  function focusEvidence() {
+    evidenceHeading.current?.focus({ preventScroll: true });
+    evidenceHeading.current?.scrollIntoView({ block: "start" });
+  }
+  useEffect(() => {
+    if (selected !== null) focusEvidence();
+  }, [selected]);
+
+  function openEvidence(id: number) {
+    if (id === selected) focusEvidence();
+    else setSelected(id);
+  }
+
   const [assessment, setAssessment] = useState("");
   const [batch, setBatch] = useState<Analysis[]>([]);
   const [activeId, setActiveId] = useState("");
@@ -141,10 +156,10 @@ export function Discovery() {
   const cluster = [...events].reverse().find(item => item.stage === "cluster" && item.status === "done")?.payload as Partial<ClusterResult> | undefined;
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 font-sans text-sm">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 font-sans md:px-7">
       <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">SCAM DNA</h1>
-        <p className="opacity-70">Wrzuć adres reklamy albo jej tekst. System znajdzie ślady i pokaże, z czym się łączy.</p>
+        <h1 className="text-2xl font-semibold tracking-tight">Analiza materiału</h1>
+        <p className="text-muted">Wrzuć adres reklamy albo jej tekst. System znajdzie ślady i pokaże, z czym się łączy.</p>
       </header>
 
       <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row">
@@ -153,7 +168,7 @@ export function Discovery() {
           aria-label="Rodzaj materiału"
           value={kind}
           onChange={(e) => setKind(e.target.value as "url" | "text")}
-          className="rounded border border-neutral-600 bg-transparent px-2 py-2"
+          className="rounded border border-line-strong bg-raised px-2 py-2"
         >
           <option value="url">Adres URL</option>
           <option value="text">Tekst lub nazwa produktu</option>
@@ -165,15 +180,15 @@ export function Discovery() {
           onChange={(e) => setValue(e.target.value)}
           placeholder={kind === "url" ? "https://..." : "Treść reklamy"}
           required
-          className="min-w-0 flex-1 rounded border border-neutral-600 bg-transparent px-3 py-2 font-mono"
+          className="min-w-0 flex-1 rounded border border-line-strong bg-raised px-3 py-2 font-mono"
         />
-        <button id="analyze" disabled={busy || !value.trim()} className="rounded bg-sky-600 px-4 py-2 font-medium text-white disabled:opacity-50">
+        <button id="analyze" disabled={busy || !value.trim()} className="rounded bg-accent px-4 py-2 font-medium text-on-accent disabled:opacity-50">
           {busy ? "Analiza trwa" : "Analizuj"}
         </button>
       </form>
 
-      <label onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); upload(Array.from(event.dataTransfer.files)); }} className="flex flex-wrap items-center gap-3 rounded border border-dashed border-neutral-600 px-3 py-3">
-        <span className="opacity-70">Upuść pliki lub wybierz je z dysku: zrzut ekranu reklamy, zapisana strona, HAR, ZIP ze sprawą.</span>
+      <label onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); upload(Array.from(event.dataTransfer.files)); }} className="flex flex-wrap items-center gap-3 rounded border border-dashed border-line-strong bg-panel px-4 py-4">
+        <span className="text-muted">Upuść pliki lub wybierz je z dysku: zrzut ekranu reklamy, zapisana strona, HAR, ZIP ze sprawą.</span>
         <input id="input-files" type="file" multiple disabled={busy} onChange={event => { upload(Array.from(event.target.files ?? [])); event.target.value = ""; }} className="text-xs" />
       </label>
 
@@ -191,11 +206,11 @@ export function Discovery() {
         <span>Przerwano odbiór danych analizy.</span>
         <button className="text-accent underline" onClick={() => void run(retry)}>Wznów podgląd</button>
       </div>}
-      {error && <p className="rounded border border-red-500 px-3 py-2 text-red-400">Analiza nie powiodła się: {error}</p>}
+      {error && <p className="rounded border border-rejected px-3 py-2 text-rejected">Analiza nie powiodła się: {error}</p>}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="flex min-w-0 flex-col gap-2">
-          <h2 className="font-semibold">Przebieg analizy</h2>
+          <h2 className="border-b border-line pb-2 text-lg font-semibold">Przebieg analizy</h2>
           <ol className="grid gap-1">
             {Object.entries(stageLabels).map(([stage, label]) => {
               const latest = [...events].reverse().find(event => event.stage === stage);
@@ -207,11 +222,11 @@ export function Discovery() {
               {(event.payload.chain as {url: string; status?: number}[]).map((hop, index) =>
                 <li key={index}>{hop.status} {hop.url}</li>)}
             </ol>)}
-          {events.length === 0 && <p className="opacity-60">Tu pojawią się kolejne etapy, na żywo.</p>}
+          {events.length === 0 && <p className="text-muted">Tu pojawią się kolejne etapy, na żywo.</p>}
           <ol className="flex flex-col gap-1 font-mono text-xs">
             {events.map((item) => (
-              <li key={item.seq} className={item.status === "error" ? "text-red-400" : item.status === "info" ? "opacity-70" : ""}>
-                <span className="opacity-50">{String(item.seq).padStart(2, "0")}</span> {item.stage} · {item.message}
+              <li key={item.seq} className={item.status === "error" ? "text-rejected" : item.status === "info" ? "text-muted" : ""}>
+                <span className="text-muted">{String(item.seq).padStart(2, "0")}</span> {item.stage} · {item.message}
               </li>
             ))}
           </ol>
@@ -219,18 +234,17 @@ export function Discovery() {
 
         <section className="flex min-w-0 flex-col gap-2">
           <h2 className="font-semibold">{cluster?.assessment_label || assessment || "Powiązania"}</h2>
-          {cluster && <p>Kampania {cluster.campaign ?? "brak"} · Operator {cluster.operator ?? "brak"}</p>}
+          {(ad || cluster) && <p aria-label="Przypisanie do grup">
+            Kampania <GroupLink group={ad ? ad.campaign : cluster?.campaign} /> · Operator <GroupLink group={ad ? ad.operator : cluster?.operator} />
+          </p>}
           {strongest.length > 0 && <section><h3>Najsilniejsze dowody</h3><ol>{strongest.map(({ best, edges }) => (
             <li key={JSON.stringify([best.kind, best.value])}><FamilyDot family={best.family} /> {best.label} · {markerValue(best.value, ad?.genome?.find(band => band.family === best.family)?.markers.find(marker => marker.kind === best.kind && marker.value === best.value)?.display_value)} · {best.bits} bitów · liczba powiązań: {edges.size}</li>
           ))}</ol></section>}
           {ad && (
             <p>
-              Reklama #{ad.id}
-              {ad.campaign ? <> należy do kampanii <b>{ad.campaign}</b>.</> : <> nie należy do żadnej kampanii.</>}
-              {ad.operator && <> Operator: <b>{ad.operator}</b>.</>}
-              {ad.labels.topics && ad.labels.topics.length > 0 && <span className="block opacity-70">Tematyka: {ad.labels.topics.join(", ")}</span>}
+              {ad.labels.topics && ad.labels.topics.length > 0 && <span className="block text-muted">Tematyka: {ad.labels.topics.join(", ")}</span>}
               {ad.labels.keywords && ad.labels.keywords.length > 0 && (
-                <span className="block opacity-70">Słowa kluczowe: {ad.labels.keywords.slice(0, 8).join(", ")}</span>
+                <span className="block text-muted">Słowa kluczowe: {ad.labels.keywords.slice(0, 8).join(", ")}</span>
               )}
               {"cert_pl" in ad.labels && <> Domena jest na Liście Ostrzeżeń CERT Polska.</>}
             </p>
@@ -239,13 +253,13 @@ export function Discovery() {
             <Link href={`/ads/${ad.id}`}>Karta reklamy #{ad.id}</Link>
             <Link href={`/investigation?ad=${ad.id}`}>Otwórz w Investigation</Link>
           </nav>}
-          {ad && edges.length === 0 && <p className="opacity-60">Brak powiązań powyżej progu.</p>}
+          {ad && edges.length === 0 && <p className="text-muted">Brak powiązań powyżej progu.</p>}
           <ul className="flex flex-col gap-1">
             {edges.map((edge) => (
               <li key={edge.id}>
                 <button
-                  onClick={() => setSelected(edge.id)}
-                  className="flex w-full items-center justify-between gap-3 rounded border border-neutral-700 px-3 py-2 text-left hover:border-sky-500"
+                  onClick={() => openEvidence(edge.id)}
+                  className="flex w-full items-center justify-between gap-3 rounded border border-line px-3 py-2 text-left hover:border-accent"
                 >
                   <span>
                     #{edge.ad_a} ↔ #{edge.ad_b} · {RELATION_LABELS[edge.relation]}
@@ -259,8 +273,11 @@ export function Discovery() {
         </section>
       </div>
 
-      <LiveGraph events={events} onEdge={setSelected} />
-      {selected !== null && <EdgePanel key={selected} edgeId={selected} />}
+      <LiveGraph events={events} onEdge={openEvidence} />
+      {selected !== null && <section aria-labelledby="discovery-evidence">
+        <h2 id="discovery-evidence" ref={evidenceHeading} tabIndex={-1} className="font-semibold">Dowody powiązania #{selected}</h2>
+        <EdgePanel key={selected} edgeId={selected} />
+      </section>}
     </main>
   );
 }

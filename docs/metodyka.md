@@ -157,7 +157,7 @@ Szczegóły: [dane-organizatora.md](dane-organizatora.md). W skrócie: 28 stron 
 
 ## 12. Ograniczenia
 
-- **Wagi są eksperckie.** Parametry `m`, `f0`, `cap` dobraliśmy ręcznie. Nie mamy zbioru z oznaczonymi kampaniami, więc nie podajemy precyzji ani czułości. Etap dalszy: model uczony na parach oznaczonych przez analityków.
+- **Wagi są eksperckie.** Parametry `m`, `f0`, `cap` dobraliśmy ręcznie. Wrażliwość sprawdziliśmy na danych organizatora: szansa wstępna ×0,1 albo ×10 i próg pewności 0,8 albo 0,95 nie zmieniają żadnej relacji, a zmiana siły dowodów o ±50% rusza tylko 4 pary graniczne ([dane-organizatora.md](dane-organizatora.md)). Nie mamy zbioru z oznaczonymi kampaniami, więc nie podajemy precyzji ani czułości. Etap dalszy: model uczony na parach oznaczonych przez analityków.
 - **Twarze tylko z bazy referencyjnej, bez głosu.** Twarz na zrzucie reklamy rozpoznajemy, gdy osoba jest w małej bazie zbudowanej ze zdjęć na wolnej licencji. Deepfake z osobą spoza bazy i bez nazwiska w tekście pozostaje nierozpoznany. Głosu nie analizujemy.
 - **Wideo tylko z klatek.** Z nagrania bierzemy 8 klatek rozłożonych równomiernie, bez jednolitych plansz. Każda daje hash percepcyjny (miękki marker `video_frames`: ten sam materiał po ponownym zakodowaniu albo przycięciu), tekst z OCR (dołączony do tekstu reklamy, z reklamodawcą przy "Sponsorowane") i twarze z bazy referencyjnej. Dźwięku, głosu i ruchu nie analizujemy.
 - **Strony na żywo.** Pobieramy HTML bez wykonywania JavaScriptu i bez obrazów. Pełny zestaw cech dają dopiero przechwycenia z HAR.

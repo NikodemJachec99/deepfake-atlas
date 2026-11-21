@@ -118,6 +118,24 @@ Co z tego wynika:
 
 Odtworzenie (czyści korpus, więc tylko na osobnym stosie): `python scripts/odpornosc.py --paczki data/raw/nask data/raw/nask-backup`.
 
+### Wrażliwość na wagi modelu
+
+Wagi są eksperckie, więc sprawdziliśmy, jak bardzo wynik od nich zależy (2026-11-21, `python manage.py weight_sensitivity`, tylko odczyt). Na 67 krawędziach między stronami z obu paczek (33 wspólnego źródła) przeliczyliśmy relacje tym samym silnikiem przy zmienionych wagach i progach.
+
+| Zmiana | Krawędzie ze zmienioną relacją | Utrata wspólnego źródła | Nowe wspólne źródło |
+|---|---|---|---|
+| szansa wstępna ×0,1 albo ×10 | 0 | 0 | 0 |
+| próg pewności 0,8 albo 0,95 zamiast 0,9 | 0 | 0 | 0 |
+| niezależne potwierdzenie od 5 bitów zamiast 4 | 0 | 0 | 0 |
+| niezależne potwierdzenie od 3 bitów | 2 | 0 | 2 |
+| siła wszystkich dowodów ×0,5 | 7 | 2 | 0 |
+| siła wszystkich dowodów ×1,5 | 4 | 0 | 3 |
+| siła jednego typu ×0,5 albo ×1,5 (30 typów po kolei) | najwyżej 4 | najwyżej 1 | najwyżej 1 |
+
+- **Rdzeń operatora A nie zależy od wag.** Połączenia spięte identyfikatorami z panelu lejka i pikselem Meta nie zmieniają się w żadnym scenariuszu.
+- **Ruszają się 4 pary graniczne, zawsze te same.** Drugi HAR sprawy 2 z p5 (operator B na jednym hoście zasobów), dwie strony sprawy 61 (zrzut reklamy i nazwa reklamodawcy), sprawa 48 ze sprawą 61 i p11 z p8 (ta sama treść albo ten sam silnik na innym zapleczu). To dokładnie pary, które laboratorium dowodów i przegląd krawędzi opisują jako kruche albo celowo tylko "podobne".
+- **Słabsze wagi niczego nie sklejają, mocniejsze sklejają tylko pary graniczne.** Przy wagach ×1,5 albo progu 3 bitów kopie treści stałyby się kampaniami, dlatego zostawiamy próg 4 bity i obecne wagi.
+
 ### Ślad językowy
 
 W sprawach nask/14, nask/47 i backup/p9 nazwy zestawów reklam w parametrach adresu zawierają litery cyrylicy wmieszane w łaciński tekst (np. `сс`, `С4`). To słaby marker (`lang_trace`), ale spójny z tym, co o operatorach takich kampanii piszą raporty branżowe.

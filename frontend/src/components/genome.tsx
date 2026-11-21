@@ -5,8 +5,8 @@
 import { ChevronDown, ChevronRight, Download } from "lucide-react";
 import { useState } from "react";
 
-import { artifactDownloadUrl, type AdDetail, type Marker } from "@/lib/api";
-import { famVar, plural } from "@/lib/format";
+import { artifactImageUrl, artifactDownloadUrl, type AdDetail, type Marker } from "@/lib/api";
+import { markerValue, famVar, plural } from "@/lib/format";
 
 import { FamilyDot, Mono, Tag, cx } from "./ui";
 
@@ -18,7 +18,7 @@ function Tick({ marker, color, matched }: { marker: Marker; color: string; match
   const shared = marker.ad_count > 1;
   return (
     <span
-      title={`${marker.label}: ${marker.value}\nwystępuje w ${reklam(marker.ad_count)}${marker.decisive ? "\nmarker rozstrzygający" : ""}`}
+      title={`${marker.label}: ${markerValue(marker.value, marker.display_value)}\nwystępuje w ${reklam(marker.ad_count)}${marker.decisive ? "\nmarker rozstrzygający" : ""}`}
       className="w-1.5 shrink-0 rounded-[1px] border"
       style={{
         height: marker.decisive ? 16 : 10,
@@ -64,14 +64,35 @@ export function MarkerChip({ marker, family }: { marker: Marker; family: AdDetai
     <span className="inline-flex h-5 max-w-full items-center gap-1.5 rounded-sm border border-line bg-raised px-1.5">
       <FamilyDot family={family} size={7} />
       <span className="shrink-0 text-muted">{marker.label}</span>
-      <Mono className="truncate" title={marker.value}>
-        {marker.value}
+      <Mono className="truncate" title={markerValue(marker.value, marker.display_value)}>
+        {markerValue(marker.value, marker.display_value)}
       </Mono>
       <Mono className="shrink-0 text-faint" title={`występuje w ${reklam(marker.ad_count)}`}>
         ×{marker.ad_count}
       </Mono>
     </span>
   );
+}
+
+function FaceObservation({ marker }: { marker: Marker }) {
+  const [size, setSize] = useState<{ width: number; height: number } | null>(null);
+  const box = marker.detail?.box;
+  const score = marker.detail?.score;
+  const image = marker.detail?.artifact;
+  const showBox = typeof image === "string" && /^[a-f0-9]{64}$/.test(image) && Array.isArray(box) && box.length === 4 && box.every(Number.isFinite) && box[2] > 0 && box[3] > 0;
+  return <div className="whitespace-normal text-xs">
+    {typeof score === "number" && <p>Podobieństwo modelu · {score.toLocaleString("pl-PL")}</p>}
+    {showBox && <details><summary>Pokaż twarz na zrzucie</summary>
+      <span className="relative inline-block max-w-full overflow-hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element -- współrzędne detekcji dotyczą oryginalnego artefaktu */}
+        <img src={artifactImageUrl(image)} loading="lazy" alt="Zrzut z zaznaczonym obszarem dopasowania"
+          className="block h-auto max-w-full" onLoad={event => setSize({width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight})} />
+        {size && <span aria-hidden className="absolute border-2 border-yellow-400" style={{
+          left: box[0] / size.width * 100 + "%", top: box[1] / size.height * 100 + "%",
+          width: box[2] / size.width * 100 + "%", height: box[3] / size.height * 100 + "%",
+        }} />}
+      </span></details>}
+  </div>;
 }
 
 export function MarkerList({ genome, initiallyOpen = false }: { genome: Genome; initiallyOpen?: boolean }) {
@@ -99,8 +120,9 @@ export function MarkerList({ genome, initiallyOpen = false }: { genome: Genome; 
                         <td className="w-[34%] pl-7! text-muted">
                           {marker.label} {marker.decisive && <Tag tone="accent">rozstrzyga</Tag>}
                         </td>
-                        <td className="max-w-0 font-mono text-[0.92rem]" title={marker.value}>
-                          {marker.value}
+                        <td className="max-w-0 font-mono text-[0.92rem]" title={markerValue(marker.value, marker.display_value)}>
+                          {markerValue(marker.value, marker.display_value)}
+                          {marker.kind === "face_match" && <FaceObservation marker={marker} />}
                         </td>
                         <td className={cx("w-24 text-right font-mono text-[0.92rem]", marker.ad_count > 1 ? "text-fg" : "text-faint")} title="W ilu reklamach korpusu występuje ta wartość">
                           {reklam(marker.ad_count)}

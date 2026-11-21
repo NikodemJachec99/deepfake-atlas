@@ -13,7 +13,7 @@ import { EvidenceLab } from "./evidence-lab";
 import { useState } from "react";
 
 import { api, artifactDownloadUrl, artifactImageUrl, type AdDetail, type AdSummary, type EdgeDetail, type Evidence, type Verdict } from "@/lib/api";
-import { RELATION_HINT, adTitle, bits, dateTime, errorText, famVar, hostOf, num, plural } from "@/lib/format";
+import { markerValue, RELATION_HINT, adTitle, bits, dateTime, errorText, famVar, hostOf, num, plural } from "@/lib/format";
 import { isTyping, useApi, useHotkey } from "@/lib/hooks";
 
 import { Btn, Empty, ErrorBox, FamilyBar, FamilyDot, GroupLink, Kbd, Loading, Meter, Mono, RelationTag, Tag, VerdictTag } from "./ui";
@@ -71,6 +71,8 @@ function EvidenceCard({ item, max, ads }: { item: Evidence; max: number; ads: [A
   const [open, setOpen] = useState(false);
   const soft = item.df === 0;
   const same = item.value_a === item.value_b;
+  const left = markerValue(item.value_a, item.display_value);
+  const right = same ? left : markerValue(item.value_b);
   const discounted = item.raw_bits - item.weight_bits > 0.05;
   return (
     <li className="border-b border-line">
@@ -87,8 +89,8 @@ function EvidenceCard({ item, max, ads }: { item: Evidence; max: number; ads: [A
               podobieństwo <Mono className="text-fg">{num(item.similarity, 2)}</Mono>
             </span>
           ) : (
-            <Mono className="truncate text-muted" title={same ? item.value_a : `${item.value_a} | ${item.value_b}`}>
-              {same ? item.value_a : `${item.value_a} | ${item.value_b}`}
+            <Mono className="truncate text-muted" title={same ? left : `${left} | ${right}`}>
+              {same ? left : `${left} | ${right}`}
             </Mono>
           )}
         </span>
@@ -116,7 +118,7 @@ function EvidenceCard({ item, max, ads }: { item: Evidence; max: number; ads: [A
                   {(["a", "b"] as const).map((side) => (
                     <div key={side} className="min-w-0">
                       <p className="cap">Strona {side.toUpperCase()}</p>
-                      <Mono className="break-all">{side === "a" ? item.value_a : item.value_b}</Mono>
+                      <Mono className="break-all">{side === "a" ? left : right}</Mono>
                     </div>
                   ))}
                   <p className="col-span-2 text-muted">

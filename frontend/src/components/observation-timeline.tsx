@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { api, type TimelineEvent } from "@/lib/api";
+import { markerValue } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 import { ErrorBox, Loading } from "./ui";
 
@@ -33,7 +34,7 @@ export function ObservationTimeline({ id, operator }: { id: number; operator: bo
       </div>
       <article aria-live="polite" className="break-words">
         <h3>{event.label}</h3><p>{eventDate(event)} · {event.time_kind === "observed" ? "Data obserwacji" : "Data podana przez źródło"} · {event.source}</p>
-        <p className="font-mono">{event.value}</p>
+        <p className="font-mono">{markerValue(event.value)}</p>
         {event.ads.map(ad => <Link key={ad} className="mr-2 text-accent underline" href={`/ads/${ad}`}>Reklama #{ad}</Link>)}
       </article>
     </> : <p>Brak datowanych zdarzeń.</p>}

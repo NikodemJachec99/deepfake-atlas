@@ -1,0 +1,291 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080,
+      "title": "05 Panel dowodów krawędzi · ciemny"
+    },
+    {
+      "file": "Panel-jasny.dc.html",
+      "x": 2000,
+      "y": 0,
+      "w": 1920,
+      "h": 1080,
+      "title": "05 Panel dowodów krawędzi · jasny"
+    },
+    {
+      "file": "System.dc.html",
+      "x": 4000,
+      "y": 0,
+      "w": 1920,
+      "h": 1640,
+      "title": "System projektowy"
+    },
+    {
+      "file": "Discovery-analiza.dc.html",
+      "x": 0,
+      "y": 1500,
+      "w": 1920,
+      "h": 1080,
+      "title": "02 Discovery · analiza w toku (60%)"
+    },
+    {
+      "file": "Discovery-wynik.dc.html",
+      "x": 2000,
+      "y": 1500,
+      "w": 1920,
+      "h": 1080,
+      "title": "03 Discovery · wynik"
+    },
+    {
+      "file": "Kampania.dc.html",
+      "x": 0,
+      "y": 2700,
+      "w": 1920,
+      "h": 1080,
+      "title": "07 Karta kampanii K-0142"
+    },
+    {
+      "file": "Kampania-jasna.dc.html",
+      "x": 2000,
+      "y": 2700,
+      "w": 1920,
+      "h": 1080,
+      "title": "07 Karta kampanii · jasny"
+    },
+    {
+      "file": "Graf.dc.html",
+      "x": 4000,
+      "y": 2700,
+      "w": 1920,
+      "h": 1080,
+      "title": "04 Graf główny"
+    },
+    {
+      "file": "Graf-jasny.dc.html",
+      "x": 6000,
+      "y": 2700,
+      "w": 1920,
+      "h": 1080,
+      "title": "04 Graf główny · jasny"
+    },
+    {
+      "file": "Discovery-wejscie.dc.html",
+      "x": 0,
+      "y": 3900,
+      "w": 1920,
+      "h": 1080,
+      "title": "01 Discovery · wejście"
+    },
+    {
+      "file": "Analiza-15.dc.html",
+      "x": 2000,
+      "y": 3900,
+      "w": 1920,
+      "h": 1080,
+      "title": "02 Discovery · analiza w toku (15%)"
+    },
+    {
+      "file": "Analiza-100.dc.html",
+      "x": 4000,
+      "y": 3900,
+      "w": 1920,
+      "h": 1080,
+      "title": "02 Discovery · analiza w toku (100%)"
+    },
+    {
+      "file": "Wynik-jasny.dc.html",
+      "x": 6000,
+      "y": 3900,
+      "w": 1920,
+      "h": 1080,
+      "title": "03 Discovery · wynik · jasny"
+    },
+    {
+      "file": "Reklama.dc.html",
+      "x": 0,
+      "y": 5100,
+      "w": 1920,
+      "h": 1080,
+      "title": "06 Karta reklamy"
+    },
+    {
+      "file": "Operator.dc.html",
+      "x": 2000,
+      "y": 5100,
+      "w": 1920,
+      "h": 1080,
+      "title": "08 Karta operatora O-0031"
+    },
+    {
+      "file": "Narracja.dc.html",
+      "x": 4000,
+      "y": 5100,
+      "w": 1920,
+      "h": 1080,
+      "title": "09 Rodzina narracji"
+    },
+    {
+      "file": "Os-czasu.dc.html",
+      "x": 0,
+      "y": 6300,
+      "w": 1920,
+      "h": 1080,
+      "title": "10 Evolution · oś czasu kampanii"
+    },
+    {
+      "file": "Os-czasu-jasna.dc.html",
+      "x": 2000,
+      "y": 6300,
+      "w": 1920,
+      "h": 1080,
+      "title": "10 Evolution · oś czasu · jasny"
+    },
+    {
+      "file": "Graf-w-czasie.dc.html",
+      "x": 4000,
+      "y": 6300,
+      "w": 1920,
+      "h": 1080,
+      "title": "11 Evolution · graf w czasie (trzy klatki)"
+    },
+    {
+      "file": "Rekonstrukcja.dc.html",
+      "x": 6000,
+      "y": 6300,
+      "w": 1920,
+      "h": 1080,
+      "title": "12 Evolution · rekonstrukcja przestrzenna"
+    },
+    {
+      "file": "Archiwum.dc.html",
+      "x": 0,
+      "y": 7500,
+      "w": 1920,
+      "h": 1080,
+      "title": "13 Archiwum"
+    },
+    {
+      "file": "Osoby.dc.html",
+      "x": 2000,
+      "y": 7500,
+      "w": 1920,
+      "h": 1080,
+      "title": "14 Baza referencyjna osób"
+    },
+    {
+      "file": "Zrodla.dc.html",
+      "x": 4000,
+      "y": 7500,
+      "w": 1920,
+      "h": 1080,
+      "title": "15 Źródła danych i skany"
+    },
+    {
+      "file": "Etykietowanie.dc.html",
+      "x": 6000,
+      "y": 7500,
+      "w": 1920,
+      "h": 1080,
+      "title": "16 Kolejka etykietowania"
+    },
+    {
+      "file": "Alerty.dc.html",
+      "x": 0,
+      "y": 8700,
+      "w": 1920,
+      "h": 1080,
+      "title": "17 Alerty"
+    },
+    {
+      "file": "Piaskownica.dc.html",
+      "x": 2000,
+      "y": 8700,
+      "w": 1920,
+      "h": 1080,
+      "title": "18 Piaskownica"
+    },
+    {
+      "file": "Raport.dc.html",
+      "x": 4000,
+      "y": 8700,
+      "w": 1920,
+      "h": 1080,
+      "title": "19 Raport i eksport"
+    },
+    {
+      "file": "Jakosc.dc.html",
+      "x": 6000,
+      "y": 8700,
+      "w": 1920,
+      "h": 1080,
+      "title": "20 Jakość modelu"
+    },
+    {
+      "file": "Administracja.dc.html",
+      "x": 8000,
+      "y": 8700,
+      "w": 1920,
+      "h": 1080,
+      "title": "21 Administracja"
+    },
+    {
+      "file": "Drzewo.dc.html",
+      "x": 0,
+      "y": -1500,
+      "w": 1920,
+      "h": 1080,
+      "title": "A · Rekonstrukcja kampanii: drzewo ewolucji"
+    },
+    {
+      "file": "Archeologia.dc.html",
+      "x": 2000,
+      "y": -1500,
+      "w": 1920,
+      "h": 1080,
+      "title": "B · Rekonstrukcja z usuniętej reklamy"
+    },
+    {
+      "file": "Blokada.dc.html",
+      "x": 4000,
+      "y": -1500,
+      "w": 1920,
+      "h": 1080,
+      "title": "C · Symulacja blokady elementu"
+    },
+    {
+      "file": "Rozpad.dc.html",
+      "x": 6000,
+      "y": -1500,
+      "w": 1920,
+      "h": 1080,
+      "title": "D · Rozpad reklamy na cechy (trzy klatki)"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "t1",
+      "x": 0,
+      "y": -300,
+      "w": 240,
+      "maxW": 5920,
+      "text": "Investigation: panel dowodów i system projektowy",
+      "kind": "title1"
+    },
+    {
+      "id": "t0",
+      "x": 0,
+      "y": -1800,
+      "w": 240,
+      "maxW": 7920,
+      "text": "SCAM DNA: rekonstrukcja kampanii",
+      "kind": "title1"
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

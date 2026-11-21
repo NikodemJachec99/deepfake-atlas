@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from ads.models import Ad, Analysis, AnalysisEvent
 from evidence.kinds import BAND_KINDS, FAMILIES, KINDS
+from evidence.models import Artifact
 from people.display import PERSON_KINDS, display_value, person_names
 from similarity.models import Campaign, Edge, EdgeDecision, EdgeEvidence, Operator
 
@@ -58,9 +59,10 @@ class AdDetailSerializer(AdListSerializer):
     advertiser = serializers.SerializerMethodField()
     genome = serializers.SerializerMethodField()
     creatives = serializers.SerializerMethodField()
+    videos = serializers.SerializerMethodField()
 
     class Meta(AdListSerializer.Meta):
-        fields = [*AdListSerializer.Meta.fields, "text", "display_url", "creative_url", "advertiser", "creatives", "genome"]
+        fields = [*AdListSerializer.Meta.fields, "text", "display_url", "creative_url", "advertiser", "creatives", "videos", "genome"]
 
     def get_advertiser(self, obj) -> dict | None:
         a = obj.advertiser
@@ -72,6 +74,32 @@ class AdDetailSerializer(AdListSerializer):
     def get_creatives(self, obj) -> list[str]:
         """Skróty SHA-256 zrzutów reklamy. Obraz pobiera się z `/api/artifacts/{sha}/image`."""
         return list(obj.raw.get("creatives", [])) if isinstance(obj.raw, dict) else []
+
+    def get_videos(self, obj) -> list[dict]:
+        """Nagrania reklamy i ekranu: metadane, klatka poglądowa z pozycją i adres odtwarzania, gdy plik jest w magazynie."""
+        out = []
+        for entry in (obj.raw.get("videos", []) if isinstance(obj.raw, dict) else []):
+            if not isinstance(entry, dict) or not entry.get("sha256"):
+                continue
+            sha = entry["sha256"]
+            stored = bool(entry.get("stored", Artifact.objects.filter(pk=sha, kind="creative_video").exists()))
+            poster = entry.get("poster")
+            out.append({
+                "sha256": sha,
+                "name": entry.get("name", ""),
+                "size": entry.get("size"),
+                "playable": stored,
+                "url": f"/api/artifacts/{sha}/video" if stored else None,
+                "duration_s": entry.get("duration_s"),
+                "fps": entry.get("fps"),
+                "frames": entry.get("frames"),
+                "width": entry.get("width"),
+                "height": entry.get("height"),
+                "poster": {**poster, "url": f"/api/artifacts/{poster['artifact']}/image"} if isinstance(poster, dict) else None,
+                "original": entry.get("original") or {"duration_s": None, "clip": None},
+                "missing": entry.get("missing") or ([] if "duration_s" in entry else ["nagranie zaimportowane przed odczytem metadanych"]),
+            })
+        return out
 
     def get_genome(self, obj) -> list[dict]:
         """Markery reklamy pogrupowane w siedem rodzin. Pasma LSH są techniczne, więc ich nie pokazujemy."""

@@ -93,3 +93,47 @@ def describe(entry: dict, probed: Probe | None, poster_sha: str | None, original
     if missing:
         out["missing"] = missing
     return out
+
+
+FRAME_COUNT = 8  # tyle klatek bierzemy równomiernie z nagrania; reklama ma zwykle 10-60 s
+MIN_FRAME_STD = 8.0  # klatka jednolita (czarna plansza, przejście) nie niesie treści
+
+
+@dataclass
+class Frame:
+    at_s: float
+    jpeg: bytes
+
+
+def sample_frames(path: str, count: int = FRAME_COUNT) -> list[Frame]:
+    """Kilka klatek rozłożonych równomiernie po nagraniu, bez jednolitych plansz. Pusta lista, gdy pliku nie da się odczytać."""
+    try:
+        import cv2
+    except ImportError:
+        return []
+    capture = cv2.VideoCapture(str(path))
+    out: list[Frame] = []
+    try:
+        if not capture.isOpened():
+            return []
+        frames = int(capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+        fps = float(capture.get(cv2.CAP_PROP_FPS) or 0)
+        if frames <= 0 or fps <= 0:
+            return []
+        for i in range(count):
+            index = int((i + 0.5) * frames / count)
+            capture.set(cv2.CAP_PROP_POS_FRAMES, index)
+            ok, frame = capture.read()
+            if not ok or frame is None or float(frame.std()) < MIN_FRAME_STD:
+                continue
+            scale = MAX_SIDE / max(frame.shape[0], frame.shape[1])
+            if scale < 1:
+                frame = cv2.resize(frame, (int(frame.shape[1] * scale), int(frame.shape[0] * scale)), interpolation=cv2.INTER_AREA)
+            encoded, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            if encoded:
+                out.append(Frame(round(index / fps, 2), buffer.tobytes()))
+        return out
+    except cv2.error:
+        return out
+    finally:
+        capture.release()

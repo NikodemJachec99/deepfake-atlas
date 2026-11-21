@@ -38,5 +38,5 @@ def set_signature(ad, soft_kind: str, values: list[int]) -> int:
         return 0
     AdSignature.objects.update_or_create(ad=ad, kind=soft_kind, defaults={"values": values})
     band_kind = BAND_OF[soft_kind]
-    bands = images.bands(values) if soft_kind == "image_set" else minhash.bands(values)
+    bands = images.bands(values) if soft_kind in ("image_set", "video_frames") else minhash.bands(values)
     return attach(ad, [Observation(band_kind, band) for band in bands])

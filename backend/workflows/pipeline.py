@@ -181,6 +181,9 @@ def stage_extract(analysis: Analysis) -> dict:
             add([Observation("payer", ad.advertiser.payer.strip().lower())])
 
     markers.set_signature(ad, "image_set", [int(v) for v in capture.get("image_hashes", [])])
+    markers.set_signature(ad, "video_frames", [int(v) for v in capture.get("video_hashes", [])])
+    if capture.get("video_hashes"):
+        counts["crea"] = counts.get("crea", 0) + len(capture["video_hashes"])
     if capture.get("image_hashes"):
         counts["crea"] = counts.get("crea", 0) + len(capture["image_hashes"])
 

@@ -252,6 +252,35 @@ def describe_video(path: Path, entry: dict, infos: list[dict]) -> dict:
     return described
 
 
+def analyze_video(path: Path) -> tuple[list[int], str, list[list], str]:
+    """Treść nagrania z kilku klatek: hasze percepcyjne, tekst z OCR i twarze z bazy referencyjnej.
+
+    Hasze trafiają do miękkiego markera `video_frames`, tekst do tekstu reklamy (adresy po redakcji),
+    a z twarzy zostaje najlepsze trafienie dla każdej osoby. Brak OpenCV albo nieczytelny plik: puste wyniki.
+    """
+    hashes: list[int] = []
+    lines: list[str] = []
+    best: dict[str, tuple[float, dict]] = {}
+    for frame in video_meta.sample_frames(str(path)):
+        value = images.dhash(frame.jpeg)
+        if value is not None and not any(images.distance(value, seen) <= images.MAX_DISTANCE for seen in hashes):
+            hashes.append(value)
+        for line in ocr.read_bytes(frame.jpeg):
+            if line not in lines:
+                lines.append(line)
+        for face in faces.match_faces(frame.jpeg):
+            if face.name not in best or face.score > best[face.name][0]:
+                best[face.name] = (face.score, {"file": path.name, "at_s": frame.at_s, "name": face.name, "score": face.score, "box": list(face.box)})
+    text = " ".join(redact_url(word) if word.startswith(("http://", "https://")) else word for word in " ".join(lines).split())
+    # Nagranie ekranu z kanału albo z biblioteki reklam ma ten sam układ co zrzut: reklamodawca, "Sponsorowane", numer biblioteki.
+    shot = ocr.parse_ad_screenshot(lines)
+    observations = [[o.kind, o.value, {**o.detail, "file": path.name, "from": "klatki nagrania"}] for o in shot.observations]
+    for name, (_score, detail) in best.items():
+        person = Person.objects.filter(name=name).first() or Person.objects.create(name=name)
+        observations.append(["face_match", person.marker_value, detail])
+    return hashes, text, observations, shot.advertiser
+
+
 def _file_sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -285,6 +314,7 @@ def import_case(case_dir: Path, bundle: str = "upload", case: str | None = None)
             creative_obs.append(["face_match", person.marker_value, detail])
 
     video_files = []
+    video_hashes: list[int] = []
     for item in capture.videos:
         size = item.stat().st_size
         entry = {"name": item.name, "size": size, "sha256": _file_sha256(item), "stored": size <= MAX_UPLOAD_ARTIFACT}
@@ -292,6 +322,12 @@ def import_case(case_dir: Path, bundle: str = "upload", case: str | None = None)
             store.put(item.read_bytes(), kind="creative_video", source_url=item.name)
         video_files.append(describe_video(item, entry, capture.infos))
         creative_obs.append(["creative_sha256", entry["sha256"], {"file": item.name}])
+        frame_hashes, frame_text, frame_faces, frame_advertiser = analyze_video(item)
+        advertiser = advertiser or frame_advertiser
+        video_hashes += [h for h in frame_hashes if h not in video_hashes]
+        if frame_text:
+            ocr_texts.append(frame_text)
+        creative_obs += frame_faces
 
     for info in capture.infos:
         library_id = str(info.get("playlist_id") or info.get("id") or "").split("_")[0]
@@ -311,6 +347,7 @@ def import_case(case_dir: Path, bundle: str = "upload", case: str | None = None)
         for directory in page.asset_dirs:
             blobs += [f.read_bytes() for f in sorted(directory.iterdir()) if f.is_file() and f.suffix.lower() in IMAGE_EXT]
         state["capture"]["image_hashes"] = images.hash_set(blobs)
+        state["capture"]["video_hashes"] = video_hashes
         if page.har is not None:
             summary = parse_har(page.har)
             har_artifact = store.put(page.har_bytes, kind="har", content_type="application/json", source_url=url)

@@ -92,6 +92,17 @@ def available() -> bool:
     return True
 
 
+def read_bytes(data: bytes) -> list[str]:
+    """Jak read_image, ale z obrazu w pamięci (np. klatki nagrania)."""
+    if not available():
+        return []
+    try:
+        result = _engine()(data)
+    except Exception:  # noqa: BLE001
+        return []
+    return [text for text in (result.txts or []) if text]
+
+
 def read_image(path: str) -> list[str]:
     """Linie tekstu z obrazu w kolejności czytania. Pusta lista, gdy silnika nie ma albo obraz jest nieczytelny."""
     if not available():

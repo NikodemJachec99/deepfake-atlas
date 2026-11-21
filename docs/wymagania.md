@@ -19,11 +19,11 @@
 | Przyjmuje URL reklamy lub strony | jest | `POST /api/analyses` |
 | Przyjmuje zrzut ekranu | jest | `POST /api/analyses/upload`, OCR |
 | Przyjmuje log komunikacji | jest | HAR |
-| Przyjmuje plik multimedialny | częściowo | obraz: tak; wideo: rejestrujemy plik i metadane, treści nie analizujemy |
+| Przyjmuje plik multimedialny | jest, bez dźwięku | obraz: tak; wideo: metadane, klatka poglądowa i 8 klatek z hashem, OCR i twarzami (`extractors/video.py`); dźwięku nie analizujemy |
 | Przyjmuje dane z udostępnionego zbioru | jest | `manage.py import_bundle`, ZIP przez interfejs |
 | Przyjmuje inną wskazówkę | jest | tekst, nazwa produktu |
 | Tekst, słowa kluczowe, tematyka | jest | treść strony, OCR reklamy, `extractors/keywords.py` |
-| Wizerunki osób | jest, w zakresie bazy | wzmianka w tekście z odmianą (30 osób) i twarz na zrzucie reklamy porównana z bazą referencyjną ze zdjęć na wolnej licencji (`people/faces.py`); głosu i wideo nie analizujemy |
+| Wizerunki osób | jest, w zakresie bazy | wzmianka w tekście z odmianą (30 osób) i twarz na zrzucie reklamy porównana z bazą referencyjną ze zdjęć na wolnej licencji (`people/faces.py`); także na klatkach nagrań; głosu nie analizujemy |
 | Logotypy | częściowo | podszycie pod markę po tekście; brak rozpoznawania logo na obrazie |
 | Cechy wizualne | częściowo | hash percepcyjny zrzutu reklamy i obrazów strony; brak embeddingów obrazu |
 | Domeny, przekierowania, linki, struktura stron | jest | URL, HAR, DOM |

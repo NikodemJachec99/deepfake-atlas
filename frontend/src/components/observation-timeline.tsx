@@ -44,9 +44,9 @@ export function ObservationTimeline({ id, operator }: { id: number; operator: bo
         {event.ads.map(ad => <Link key={ad} className="mr-2 text-accent underline" href={`/ads/${ad}`}>Reklama #{ad}</Link>)}
       </article>
     </> : <p>Brak datowanych zdarzeń.</p>}
-    <div><h3>Materiały bez daty</h3>
+    {(data.undated.ads.length + data.undated.links + data.undated.traces + data.undated.certificates > 0) && <div><h3>Materiały bez daty</h3>
       <p>Reklamy {data.undated.ads.length} · Ślady {data.undated.traces} · Powiązania {data.undated.links} · Certyfikaty {data.undated.certificates}</p>
       {data.undated.ads.map(ad => <Link key={ad} className="mr-2 text-accent underline" href={`/ads/${ad}`}>Reklama #{ad}</Link>)}
-    </div>
+    </div>}
   </section>;
 }

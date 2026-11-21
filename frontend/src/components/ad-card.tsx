@@ -126,7 +126,7 @@ export function AdMeta({ ad }: { ad: AdDetail }) {
         {SOURCE_LABELS[ad.source] ?? ad.source} <Mono className="text-muted">{ad.external_id}</Mono>
       </Field>
       <Field label="Pierwsza obserwacja"><Mono>{dateTime(ad.first_seen) || "brak daty"}</Mono></Field>
-      <Field label="Ostatnia obserwacja"><Mono>{dateTime(ad.last_seen) || "brak daty"}</Mono></Field>
+      <Field label={ad.source === "capture" || ad.source === "manual" ? "Import do systemu" : "Ostatnia obserwacja"}><Mono>{dateTime(ad.last_seen) || "brak daty"}</Mono></Field>
     </dl>
   );
 }

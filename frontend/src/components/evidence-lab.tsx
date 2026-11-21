@@ -19,7 +19,7 @@ export function EvidenceLab({ edge, refresh }: { edge: EdgeDetail; refresh: () =
       <p>Symulacja bez zapisu. Wyłącz dowody, aby sprawdzić ich wpływ.</p>
       {!ready ? <p>Brak danych wymaganych do symulacji.</p> : <>
         <WeakestLinkTest edge={edge} apply={setExcluded} refresh={refresh} />
-        <fieldset className="max-h-48 overflow-auto"><legend>Wyłączone dowody</legend>
+        <fieldset className="max-h-48 overflow-auto"><legend>Wybierz dowody do wyłączenia · zaznaczono {excluded.length} z {edge.evidence.length}</legend>
           {edge.evidence.map(item => <div key={item.id} className="border-b border-line py-1">
             <label className="break-all"><input type="checkbox" checked={excluded.includes(item.id)}
               onChange={event => setExcluded(event.target.checked ? [...excluded, item.id] : excluded.filter(id => id !== item.id))} />

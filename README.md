@@ -133,7 +133,8 @@ Jeszcze nie ma:
 - Rozpoznawania głosu i ruchu. Z nagrań reklam bierzemy 8 klatek (hasze, tekst z OCR, twarze) i mowę zamienioną na tekst lokalnym modelem Whisper (pierwsze 120 s, `TRANSCRIBE=off` wyłącza, `python manage.py transcribe_videos` przelicza już zaimportowane nagrania). Porównania mówcy i klonu głosu nie ma. Twarze rozpoznajemy tylko dla osób z małej bazy referencyjnej (`python manage.py build_face_refs` ją odbudowuje, modele pobierają się przy pierwszym użyciu). Obrazy porównujemy hashem percepcyjnym, reklamodawcę i tekst ze zrzutu czyta OCR.
 - Crawler z przeglądarką (Chromium w osobnym kontenerze, [docs/crawler.md](docs/crawler.md)) nie ma jeszcze wyjścia przez polski adres domowy ani zachowania ludzkiego. Strony z wykrywaniem automatu po odcisku przeglądarki mogą pokazać białą stronę.
 - Konektor Mety jest napisany według dokumentacji, nie był uruchomiony na żywym tokenie.
-- Wagi modelu par są eksperckie, nie uczone.
+- Wagi uczone metodą EM (`python manage.py estimate_weights`, `MODEL_WEIGHTS=learned`) są policzone, ale domyślnie działają eksperckie: na 28 reklamach z paczek uczone dają to samo grupowanie, a na korpusie z reklamami Microsoft łamią rdzeń operatora A. Kalibracji na decyzjach analityka nie ma, bo decyzji jest 0. Wyniki w [docs/dane-organizatora.md](docs/dane-organizatora.md).
+- Logo marki na obrazie nie rozpoznajemy: CLIP zero-shot na całym zrzucie dawał przewagę najwyżej 0,027 nad drugą marką. Podobne ujęcie (ten sam kadr w innej wersji) rozpoznajemy.
 - API nie ma uwierzytelniania. Do pracy lokalnej i demo, nie do wystawienia w sieci.
 
 ## Zasady pracy

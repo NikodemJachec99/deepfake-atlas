@@ -1,4 +1,4 @@
-> **Archiwum:** decyzją użytkownika basal zastępuje Jev. Aktualny kierunek i zadania są w [planie laboratorium](laboratorium.md#jev-jako-pomoc-analityka) oraz [#116](https://github.com/NikodemJachec99/deepfake-atlas/issues/116). Poniższy dokument opisuje poprzedni wariant, nie instrukcję bieżącego wdrożenia.
+> **Archiwum:** decyzją użytkownika basal zastępuje Jev. Aktualny kierunek i zadania są w [jev.md](jev.md), [planie laboratorium](laboratorium.md#jev-jako-pomoc-analityka) oraz [#116](https://github.com/NikodemJachec99/deepfake-atlas/issues/116). Poniższy dokument opisuje poprzedni wariant, nie instrukcję bieżącego wdrożenia.
 
 # Basal: plan zastosowań, wersje i sprzęt
 
@@ -119,6 +119,27 @@ Backend (zmienne w `.env`, wszystkie domyślnie puste albo `off`):
 - Porównanie: reguła bez modelu i basal. Precision i recall dla obu klas, pokrycie (ile decyzji model podejmuje przy danym `max_error`), kalibracja, opóźnienie, pamięć.
 - Progi ustawiamy na walidacji, nie na teście. Wynik zależy od modelu, portu, kwantyzacji i treści pytania, więc zapisujemy wszystkie.
 - Na danych organizatora krawędzi jest kilkadziesiąt. Taki zbiór daje wynik wstępny, bez twierdzeń o jakości. Do tego przypadki trudne: sprzeczne przesłanki, braki danych, warianty tekstu i wstrzyknięte instrukcje w treści.
+
+### Wynik z 21.11.2026 (wstępny)
+
+Protokół z ówczesnego adaptera basal (polecenie `basal_eval`, usunięte razem z adapterem; obecny odpowiednik dla Jev to `jev_eval`). Uruchomione na kopii bazy po imporcie obu paczek: 44 krawędzie, w tym 25 z etykietą `przeglad` i 19 z etykietą `spojne`.
+
+- **Etykieta referencyjna** to jawna rubryka z przeglądu krawędzi: `spojne`, gdy silnik wyliczył wspólne źródło, jest ślad konta albo identyfikatora operatora i co najmniej dwie niezależne grupy zaplecza, a w pozostałych przypadkach `przeglad`. To nasza ocena, nie etykiety NASK. Decyzji analityka z pamięci sprzeciwu jeszcze nie ma, więc nie weszły do zbioru.
+- **Podział** po parach spraw, z p2 liczonym jako p1, wyznaczony skrótem SHA-256 pary: 20 krawędzi na walidację, 24 na test.
+- **Reguła bez modelu**: `przeglad` tylko wtedy, gdy krawędź stoi na samym silniku lejka i motywach.
+
+| Test, 24 krawędzie | Pokrycie | Zbalansowana trafność | Recall `przeglad` | Recall `spojne` |
+|---|---|---|---|---|
+| reguła bez modelu | 1,0 | 0,682 | 0,364 | 1,0 |
+| mini, `edge-review-v1` | 1,0 | 0,5 | 1,0 | 0,0 |
+| mini, `edge-review-v2` | 1,0 | 0,5 | 0,0 | 1,0 |
+| mini, `edge-review-v3` (wybrana na walidacji) | 1,0 | 0,5 | 1,0 | 0,0 |
+
+basal-2.0-mini (bf16, `eager`, rewizja `1fb226f`) na 44 prawdziwych krawędziach odpowiada prawie stale: v1 44 razy `przeglad`, v2 44 razy `spojne`, v3 43 razy `przeglad`. Opóźnienie to 62 ms w medianie i 94 ms dla p95. Na przypadkach syntetycznych v3 odpowiada zgodnie z oczekiwaniem (sprzeczne przesłanki i brak danych: `przeglad`, mocne: `spojne`), a v2 zawsze `spojne`. Wstrzyknięta instrukcja w polu stanu nie zmienia odpowiedzi, ale przesuwa rozkład: dla v1 prawdopodobieństwo `przeglad` spada z 0,80 do 0,50. Prawdziwy stan nie zawiera tekstu ze stron, więc tą drogą nie da się wstrzyknąć instrukcji, ale wynik pokazuje, że model reaguje na treść pól.
+
+basal-2.0-4.5B-FP8 w `--mode fast` na Windowsie wymaga pakietu `triton-windows` (3.6.0.post26). Po jego instalacji serwer kompilował jądra ponad 55 minut przy 7,9 z 8 GB VRAM i nie wystartował, więc ten wariant nie był mierzony.
+
+**Decyzja:** w tej postaci sugestii basal nie pokazujemy w interfejsie. Adapter zostaje wyłączony, a co najwyżej w trybie `shadow`. Prosta reguła jest na tych danych lepsza od modelu. Zbiór jest mały i powtarzalny (większość krawędzi to pary operatora A), więc to wynik wstępny, bez twierdzeń o jakości basal w ogóle. Następny krok miałby sens dopiero z etykietami od analityka (pamięć sprzeciwu) i z innym zadaniem niż ocena struktury, którą reguła już dobrze opisuje.
 
 ## Zadania wdrożenia
 

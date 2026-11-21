@@ -107,6 +107,12 @@ JEV_MODE = env("JEV_MODE", "off")
 JEV_MODEL = env("JEV_MODEL", "")  # dokładna wersja, np. jev-1.14.0
 TYPESAFE_API_KEY = env("TYPESAFE_API_KEY", "")
 JEV_TIMEOUT = float(env("JEV_TIMEOUT", "20"))
+JEV_QUESTION = env("JEV_QUESTION", "")  # wersja pytania z similarity/assist.py, pusta: domyślna
+# Limity jednego uruchomienia jev_review: liczba zapytań i budżet w USD (cena za milion tokenów wejściowych).
+JEV_MAX_REQUESTS = int(env("JEV_MAX_REQUESTS", "100"))
+JEV_BUDGET_USD = float(env("JEV_BUDGET_USD", "0.10"))
+JEV_PRICE_PER_MTOK = float(env("JEV_PRICE_PER_MTOK", "0.042"))
+# Zmienne BASAL_* z poprzedniego wariantu nie są już czytane. Adapter Jev ich nie używa.
 # Włącz wyłącznie po potwierdzeniu uprawnienia do przekazywania danych dostawcy.
 JEV_ALLOW_CASE_DATA = env("JEV_ALLOW_CASE_DATA", "false").lower() == "true"
 CRAWLER_TIMEOUT = float(env("CRAWLER_TIMEOUT", "15"))

@@ -9,7 +9,7 @@ export default function Page() {
   if (!/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id))) {
     return <p className="p-4">Nieprawidłowy identyfikator reklamy.</p>;
   }
-  return <main className="mx-auto w-full max-w-5xl p-4">
+  return <main className="w-full min-w-0 bg-raised">
     <AdCard adId={Number(id)} full onEdge={edge => router.push(`/investigation?ad=${id}&edge=${edge.id}`)} />
   </main>;
 }

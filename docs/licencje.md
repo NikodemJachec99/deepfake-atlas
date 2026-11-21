@@ -88,9 +88,11 @@ Neo4j, OpenSearch i Redis działają jako osobne usługi. Nasz kod łączy się 
 
 Żadna z tych usług nie jest potrzebna do analizy materiałów z przechwyceń. Bez dostępu do sieci system nadal importuje sprawy i łączy je, traci tylko dane RDAP i certyfikaty z crt.sh. Do oceny nie trzeba żadnych kluczy.
 
-## Basal (plan, jeszcze nie uruchomiony)
+## Jev (TypeSafe) i archiwalny basal
 
-Opcjonalny lokalny model decyzji z [basal.md](basal.md): silnik basal 2.8.1 (Apache-2.0, NOTICE z listą modeli bazowych) i wagi basal-2.0 (Apache-2.0, na bazie Bielik v3 od SpeakLeash, też Apache-2.0). Nic z tego nie jest w repozytorium ani w obrazach kontenerów. Gdy zostanie uruchomiony, dopisujemy tu dokładną rewizję wag.
+[Jev](jev.md) to zewnętrzna usługa TypeSafe, płatna za tokeny wejściowe, hostowana w USA. Domyślnie wyłączona, a do wysyłki pochodnych danych spraw potrzebna jest osobna zgoda (`JEV_ALLOW_CASE_DATA`). Kodu ani wag TypeSafe nie ma w repozytorium. Klucz API trzymamy tylko w `.env`.
+
+Wcześniejszy wariant, lokalny basal ([basal.md](basal.md), archiwum): silnik basal 2.8.1 (Apache-2.0) i wagi basal-2.0 (Apache-2.0, na bazie Bielik v3 od SpeakLeash). Pomiar 21.11.2026 robiliśmy w osobnym środowisku poza repo. W repozytorium ani w obrazach kontenerów nic z tego nie ma.
 
 ## Materiały organizatora
 

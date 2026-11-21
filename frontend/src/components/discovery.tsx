@@ -17,7 +17,11 @@ import {
   type Edge,
   type EdgeDetail,
   type Family,
+  type FuseEventPayload,
 } from "@/lib/api";
+
+const stageLabels = { ingest: "Przyjęcie", crawl: "Strona", extract: "Markery", enrich: "Infrastruktura", fuse: "Powiązania", cluster: "Grupowanie", end: "Zakończenie" };
+const stateLabels = { started: "w toku", info: "w toku", done: "zakończono", error: "błąd" };
 
 function FamilyDot({ family }: { family: Family }) {
   return <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: `var(--fam-${family})` }} />;
@@ -57,7 +61,8 @@ export function Discovery() {
               setAd(await api.ad(finished.ad));
               setEdges(await api.adEdges(finished.ad));
             }
-            if (finished.status === "failed") setError(finished.error);
+            if (finished.status === "failed") setError(finished.error || "Backend zgłosił błąd analizy.");
+            if (finished.status === "running" || finished.status === "queued") setError("Utracono połączenie ze strumieniem. Analiza pozostaje w kolejce backendu.");
           } catch (reason) {
             setError(String(reason));
           } finally {
@@ -76,12 +81,18 @@ export function Discovery() {
     void run(() => api.createAnalysis(kind, value.trim()));
   }
 
-  function upload(event: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files ?? []);
-    event.target.value = "";
-    // Paczka może zawierać kilka stron. Na tym ekranie śledzimy pierwszą, reszta jest w archiwum.
-    if (files.length > 0) void run(async () => (await api.uploadCase(files))[0]);
+  function upload(files: File[]) {
+    if (!busy && files.length) void run(async () => {
+      const [first] = await api.uploadCase(files);
+      if (!first) throw new Error("W przesłanych plikach nie znaleziono materiału do analizy.");
+      return first;
+    });
   }
+
+  const strongest = events.filter(item => item.stage === "fuse" && item.status === "info")
+    .flatMap(item => (item.payload as Partial<FuseEventPayload>).top_evidence ?? [])
+    .sort((a, b) => b.bits - a.bits).slice(0, 5);
+  const cluster = [...events].reverse().find(item => item.stage === "cluster" && item.status === "done")?.payload as Partial<ClusterResult> | undefined;
 
   async function openEdge(id: number) {
     setSelected(await api.edge(id));
@@ -121,9 +132,9 @@ export function Discovery() {
         </button>
       </form>
 
-      <label className="flex flex-wrap items-center gap-3 rounded border border-dashed border-neutral-600 px-3 py-3">
-        <span className="opacity-70">Albo pliki: zrzut ekranu reklamy, zapisana strona, HAR, ZIP ze sprawą.</span>
-        <input id="input-files" type="file" multiple disabled={busy} onChange={upload} className="text-xs" />
+      <label onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); upload(Array.from(event.dataTransfer.files)); }} className="flex flex-wrap items-center gap-3 rounded border border-dashed border-neutral-600 px-3 py-3">
+        <span className="opacity-70">Upuść pliki lub wybierz je z dysku: zrzut ekranu reklamy, zapisana strona, HAR, ZIP ze sprawą.</span>
+        <input id="input-files" type="file" multiple disabled={busy} onChange={event => { upload(Array.from(event.target.files ?? [])); event.target.value = ""; }} className="text-xs" />
       </label>
 
       {error && <p className="rounded border border-red-500 px-3 py-2 text-red-400">Analiza nie powiodła się: {error}</p>}
@@ -131,6 +142,17 @@ export function Discovery() {
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="flex min-w-0 flex-col gap-2">
           <h2 className="font-semibold">Przebieg analizy</h2>
+          <ol className="grid gap-1">
+            {Object.entries(stageLabels).map(([stage, label]) => {
+              const latest = [...events].reverse().find(event => event.stage === stage);
+              return <li key={stage}>{label} · {latest ? stateLabels[latest.status] : "oczekuje"}</li>;
+            })}
+          </ol>
+          {events.filter(event => event.stage === "crawl" && Array.isArray(event.payload.chain)).map(event =>
+            <ol key={event.seq} aria-label="Łańcuch przekierowań" className="break-all font-mono">
+              {(event.payload.chain as {url: string; status?: number}[]).map((hop, index) =>
+                <li key={index}>{hop.status} {hop.url}</li>)}
+            </ol>)}
           {events.length === 0 && <p className="opacity-60">Tu pojawią się kolejne etapy, na żywo.</p>}
           <ol className="flex flex-col gap-1 font-mono text-xs">
             {events.map((item) => (
@@ -142,13 +164,14 @@ export function Discovery() {
         </section>
 
         <section className="flex min-w-0 flex-col gap-2">
-          <h2 className="font-semibold">Powiązania</h2>
+          <h2 className="font-semibold">{cluster?.assessment_label || assessment || "Powiązania"}</h2>
+          {cluster && <p>Kampania {cluster.campaign ?? "brak"} · Operator {cluster.operator ?? "brak"}</p>}
+          {strongest.length > 0 && <section><h3>Najsilniejsze dowody</h3><ol>{strongest.map((item, index) => <li key={index}><FamilyDot family={item.family} /> {item.label} · {item.value} · {item.bits} bitów</li>)}</ol></section>}
           {ad && (
             <p>
               Reklama #{ad.id}
               {ad.campaign ? <> należy do kampanii <b>{ad.campaign}</b>.</> : <> nie należy do żadnej kampanii.</>}
               {ad.operator && <> Operator: <b>{ad.operator}</b>.</>}
-              {assessment && <span className="mt-1 block font-medium">{assessment}</span>}
               {ad.labels.topics && ad.labels.topics.length > 0 && <span className="block opacity-70">Tematyka: {ad.labels.topics.join(", ")}</span>}
               {ad.labels.keywords && ad.labels.keywords.length > 0 && (
                 <span className="block opacity-70">Słowa kluczowe: {ad.labels.keywords.slice(0, 8).join(", ")}</span>

@@ -31,7 +31,7 @@ export function Creatives({ shas, size = "h-40" }: { shas: string[]; size?: stri
 function AdText({ ad }: { ad: AdDetail }) {
   const [expanded, setExpanded] = useState(false);
   if (!ad.text) return null;
-  const frameText = ad.source === "capture" && !ad.creatives.length && !!ad.videos?.length;
+  const frameText = ad.source === "capture" && !!ad.videos?.length;
   return <figure className="border-l-2 border-line-strong pl-3">
     {frameText && <figcaption className="text-sm text-muted">Tekst odczytany z klatek nagrania (OCR)</figcaption>}
     <blockquote className={frameText && !expanded ? "line-clamp-3 whitespace-pre-wrap" : "whitespace-pre-wrap"}>{ad.text}</blockquote>

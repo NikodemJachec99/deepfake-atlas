@@ -41,7 +41,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: cp .env.example .env
-      - run: docker compose up -d --build
+      # Rejestry obrazów (Docker Hub, public.ecr.aws) potrafią chwilowo odpowiadać 429. Pobranie i budowanie
+      # ponawiamy z rosnącym odstępem, warstwy z udanych prób zostają w cache. Start stosu idzie osobno.
+      - name: obrazy (z ponawianiem)
+        run: |
+          for i in 1 2 3 4; do
+            docker compose pull --ignore-buildable --quiet && docker compose build && exit 0
+            echo "próba $i nieudana, czekam $((i * 30)) s"
+            sleep $((i * 30))
+          done
+          exit 1
+      - run: docker compose up -d
       - name: health
         run: for i in $(seq 1 60); do curl -fsS localhost:8000/health && exit 0; sleep 3; done; exit 1
       - run: docker compose exec -T backend python manage.py seed_people

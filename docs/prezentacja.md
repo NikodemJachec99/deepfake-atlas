@@ -103,6 +103,10 @@ Próba 2026-11-21 na świeżym klonie (`main` po #16, crt.sh włączony): przygo
 
 Laboratorium dowodów na kampanii A i operatorze B, kroki i sprawdzone wyniki w [laboratorium.md](laboratorium.md#scenariusz-pokazu-laboratorium-52). Idzie po głównym demo, nie zamiast niego.
 
+### Drugi dodatek: dwie twarze jednego linku (25 s)
+
+Sprawa 61: ten sam pełny adres dał w 161 s dwie różne strony. Kroki i wyniki w [dwie-twarze.md](dwie-twarze.md#scenariusz-pokazu-65). Po laboratorium, jeśli jest czas.
+
 ## Pytania, których się spodziewamy
 
 | Pytanie | Odpowiedź |

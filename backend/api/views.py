@@ -9,7 +9,6 @@ from asgiref.sync import sync_to_async
 from django.db.models import Count, Q
 from django.http import Http404, HttpResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, parser_classes
@@ -20,10 +19,10 @@ from ads.models import Ad, Analysis
 from collectors import bundle
 from evidence import store
 from evidence.kinds import BAND_KINDS, FAMILIES, KINDS
-from evidence.models import AdMarker, Artifact, AuditLog
+from evidence.models import AdMarker, Artifact
 from extractors.url import redact_url
-from similarity import simulation, suggestions, timeline
-from similarity.models import Campaign, Edge, Operator
+from similarity import decisions, simulation, suggestions, timeline
+from similarity.models import Campaign, Edge, EdgeDecision, Operator
 from similarity.service import assign_campaign, assign_operator
 from workflows import runner
 
@@ -179,21 +178,25 @@ class EdgeDetail(generics.RetrieveAPIView):
 @extend_schema(request=s.VerdictSerializer, responses=s.EdgeDetailSerializer)
 @api_view(["POST"])
 def edge_verdict(request, pk):
-    """Decyzja analityka. Odrzucona krawędź przestaje spinać kampanię, a decyzja trafia do dziennika audytu."""
+    """Decyzja analityka z powodem. Zapisuje migawkę dowodów do historii decyzji i dziennika audytu.
+    Odrzucona krawędź przestaje spinać kampanię. Wagi, dowody i relacja zostają bez zmian."""
     edge = get_object_or_404(Edge, pk=pk)
     payload = s.VerdictSerializer(data=request.data)
     payload.is_valid(raise_exception=True)
     user = request.user if request.user.is_authenticated else None
-    edge.verdict = payload.validated_data["verdict"]
-    edge.verdict_note = payload.validated_data.get("note", "")
-    edge.verdict_by = user
-    edge.verdict_at = timezone.now()
-    edge.save()
-    AuditLog.objects.create(
-        user=user, action="edge.verdict", object_type="edge", object_id=str(edge.pk),
-        payload={"verdict": edge.verdict, "note": edge.verdict_note},
-    )
+    data = payload.validated_data
+    decisions.decide(edge.pk, data["verdict"], data.get("reason") or EdgeDecision.Reason.UNKNOWN, data.get("note", ""), user)
+    edge.refresh_from_db()
     return Response(s.EdgeDetailSerializer(edge).data)
+
+
+@extend_schema(responses=dict)
+@api_view(["GET"])
+def edge_decisions(request, pk):
+    """Historia decyzji o krawędzi, od najnowszej, z migawką podstawy każdej decyzji."""
+    edge = get_object_or_404(Edge, pk=pk)
+    rows = EdgeDecision.objects.filter(edge=edge).select_related("user")
+    return Response({"edge": edge.pk, "current": edge.verdict, "decisions": [decisions.serialize(d) for d in rows]})
 
 
 @extend_schema(request=s.SimulationSerializer, responses=dict)
@@ -360,6 +363,7 @@ def kinds(request):
                 for k in KINDS.values()
                 if k.code not in BAND_KINDS
             ],
+            "verdict_reasons": decisions.reasons(),
         }
     )
 

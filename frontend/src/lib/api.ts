@@ -147,6 +147,7 @@ export interface Evidence {
 
 export interface EdgeDetail extends Edge {
   verdict_note: string;
+  verdict_reason: VerdictReason | "";
   verdict_at: string | null;
   ads: AdSummary[];
   evidence: Evidence[];
@@ -326,6 +327,69 @@ export interface Stats {
 export interface Kinds {
   families: { code: Family; label: string }[];
   kinds: { code: string; family: Family; label: string; decisive: boolean; soft: boolean }[];
+  verdict_reasons: { value: Exclude<VerdictReason, "unknown">; label: string }[];
+}
+
+// Pamięć sprzeciwu: powód decyzji analityka. "unknown" mają decyzje bez podanego powodu i wszystkie sprzed tej funkcji.
+export type VerdictReason =
+  | "shared_tool"
+  | "shared_infrastructure"
+  | "extraction_error"
+  | "no_independent_confirmation"
+  | "confirmed_by_analyst"
+  | "other"
+  | "unknown";
+
+// Stan krawędzi z chwili decyzji. Dowody krawędzi są przebudowywane przy przeliczeniu, migawka nie.
+export interface DecisionSnapshot {
+  relation: Relation;
+  bits: number;
+  probability: number;
+  decisive: boolean;
+  duplicate: boolean;
+  families: Partial<Record<Family, number>>;
+  model_version: string;
+  edge_version: string | null;
+  evidence: {
+    kind: string;
+    label: string;
+    family: Family;
+    family_label: string;
+    value_a: string;
+    value_b: string;
+    similarity: number;
+    df: number;
+    corpus_n: number;
+    weight_bits: number;
+    decisive: boolean;
+    kit: boolean;
+    motif: boolean;
+  }[];
+  groups: Record<"a" | "b", { campaign: string | null; operator: string | null }>;
+  ads: Partial<Record<"a" | "b", { id: number; source: Source; case: string | null; landing_url: string }>>;
+}
+
+export interface EdgeDecision {
+  id: number;
+  edge: number | null;
+  ad_a: number | null;
+  ad_b: number | null;
+  verdict: Exclude<Verdict, "">;
+  previous_verdict: Verdict;
+  reason: VerdictReason;
+  reason_label: string;
+  note: string;
+  legacy: boolean;
+  user: string | null;
+  created_at: string;
+  has_snapshot: boolean;
+  snapshot: DecisionSnapshot | null;
+}
+
+export interface EdgeDecisions {
+  edge: number;
+  current: Verdict;
+  decisions: EdgeDecision[];
 }
 
 export interface Page<T> {
@@ -362,8 +426,9 @@ export const api = {
   ad: (id: number) => request<AdDetail>(`/api/ads/${id}`),
   adEdges: (id: number) => request<Edge[]>(`/api/ads/${id}/edges`),
   edge: (id: number) => request<EdgeDetail>(`/api/edges/${id}`),
-  setVerdict: (id: number, verdict: Exclude<Verdict, "">, note = "") =>
-    request<EdgeDetail>(`/api/edges/${id}/verdict`, { method: "POST", body: JSON.stringify({ verdict, note }) }),
+  setVerdict: (id: number, verdict: Exclude<Verdict, "">, note = "", reason?: Exclude<VerdictReason, "unknown">) =>
+    request<EdgeDetail>(`/api/edges/${id}/verdict`, { method: "POST", body: JSON.stringify({ verdict, note, ...(reason ? { reason } : {}) }) }),
+  edgeDecisions: (id: number) => request<EdgeDecisions>(`/api/edges/${id}/decisions`),
   // Laboratorium dowodów: przeliczenie bez wybranych dowodów. Niczego nie zapisuje. 409, gdy krawędź się zmieniła.
   simulateEdge: (id: number, exclude: number[], edgeVersion?: string) =>
     request<Simulation>(`/api/edges/${id}/simulate`, {

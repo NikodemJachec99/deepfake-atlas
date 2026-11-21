@@ -220,15 +220,21 @@ export function Loading({ label = "Pobieranie danych" }: { label?: string }) {
   );
 }
 
-export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () => void }) {
+export function ErrorBox({ message, onRetry, missing }: {
+  message: string;
+  onRetry?: () => void;
+  missing?: { description: string; href: string; link: string };
+}) {
   return (
     <div className="m-2 flex items-start gap-2 rounded-sm border border-rejected p-2" role="alert">
       <AlertTriangle size={14} className="mt-0.5 shrink-0 text-rejected" />
       <div className="min-w-0 flex-1">
-        <p>Nie udało się pobrać danych.</p>
-        <p className="font-mono text-[0.85rem] break-words text-muted">{message}</p>
+        <p>{missing?.description ?? (/^API 5\d\d:|Brak połączenia z API/.test(message) ? "Backend chwilowo niedostępny." : "Nie udało się pobrać danych.")}</p>
+        {missing && <Link href={missing.href} className="text-accent underline">{missing.link}</Link>}
+        <details><summary>Szczegóły techniczne</summary>
+        <p className="font-mono text-[0.85rem] break-words text-muted">{message}</p></details>
       </div>
-      {onRetry && <Btn onClick={onRetry}>Ponów</Btn>}
+      {onRetry && !missing && <Btn onClick={onRetry}>Ponów</Btn>}
     </div>
   );
 }

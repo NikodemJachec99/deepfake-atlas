@@ -1,5 +1,6 @@
 "use client";
 
+import { WeakestLinkTest } from "./weakest-link-test";
 import { useState } from "react";
 import { api, artifactDownloadUrl, type EdgeDetail } from "@/lib/api";
 import { useApi } from "@/lib/hooks";
@@ -16,6 +17,7 @@ export function EvidenceLab({ edge, refresh }: { edge: EdgeDetail; refresh: () =
     {open && <div className="mt-2 grid gap-2">
       <p>Symulacja bez zapisu. Wyłącz dowody, aby sprawdzić ich wpływ.</p>
       {!ready ? <p>Brak danych wymaganych do symulacji.</p> : <>
+        <WeakestLinkTest edge={edge} apply={setExcluded} refresh={refresh} />
         <fieldset className="max-h-48 overflow-auto"><legend>Wyłączone dowody</legend>
           {edge.evidence.map(item => <div key={item.id} className="border-b border-line py-1">
             <label className="break-all"><input type="checkbox" checked={excluded.includes(item.id)}

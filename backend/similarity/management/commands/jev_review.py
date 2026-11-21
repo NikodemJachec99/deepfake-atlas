@@ -1,4 +1,4 @@
-"""Sugestie przeglądu krawędzi z lokalnego modelu basal. Doradczo, bez zmian krawędzi, dowodów i grup."""
+"""Sugestie przeglądu krawędzi z zewnętrznej usługi Jev. Doradczo, bez zmian krawędzi, dowodów i grup."""
 
 from collections import Counter
 
@@ -12,7 +12,7 @@ STOP_AFTER_UNAVAILABLE = 3  # usługa leży: nie męczymy jej resztą krawędzi
 
 
 class Command(BaseCommand):
-    help = "Pyta lokalny model basal, które krawędzie wymagają przeglądu człowieka. Wymaga BASAL_MODE=shadow|on i BASAL_URL."
+    help = "Pyta usługę Jev, które krawędzie wymagają przeglądu człowieka. Wymaga JEV_MODE=shadow|on, JEV_MODEL i TYPESAFE_API_KEY."
 
     def add_arguments(self, parser):
         parser.add_argument("--edge", type=int, action="append", default=[], help="Tylko ta krawędź (można kilka razy).")
@@ -21,7 +21,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            client = assist.BasalClient(assist.Config.from_settings())
+            client = assist.JevClient(assist.Config.from_settings())
         except assist.AssistDisabled as exc:
             raise CommandError(str(exc)) from exc
         edges = Edge.objects.order_by("pk")
@@ -35,7 +35,10 @@ class Command(BaseCommand):
             suggestion = assist.review_edge(edge, client)
             counts[suggestion.status if suggestion.status != "ok" else f"ok:{suggestion.answer}"] += 1
             down = down + 1 if suggestion.status in ("unavailable", "timeout") else 0
+            if suggestion.error in ("HTTP 402", "HTTP 429"):
+                self.stdout.write(self.style.WARNING(f"Jev: {suggestion.error}, przerywam."))
+                break
             if down >= STOP_AFTER_UNAVAILABLE:
-                self.stdout.write(self.style.WARNING(f"basal nie odpowiada ({suggestion.error}), przerywam."))
+                self.stdout.write(self.style.WARNING(f"Jev nie odpowiada ({suggestion.error}), przerywam."))
                 break
         self.stdout.write(f"Sugestie ({client.config.model}, {assist.QUESTION_VERSION}): {dict(sorted(counts.items()))}")

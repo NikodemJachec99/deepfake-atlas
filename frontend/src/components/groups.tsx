@@ -45,7 +45,7 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
     ["Sprawy", new Set(group.ads.map(ad => ad.case).filter(Boolean)).size],
     ["Domeny na liście CERT", new Set(group.ads.map(ad => ad.labels.cert_pl?.domain).filter(Boolean)).size],
   ] as const;
-  const sorted = [...group.core_markers].sort((a,b) => Number(b.decisive) - Number(a.decisive) || a.ad_count - b.ad_count || b.in_group - a.in_group);
+  const sorted = [...group.core_markers].sort((a,b) => Number(b.decisive) - Number(a.decisive) || b.in_group - a.in_group || a.ad_count - b.ad_count);
   const paths = sorted.filter(marker => marker.kind === "kit_path");
   const markers = sorted.filter(marker => marker.kind !== "kit_path");
   const top = markers[0] ?? paths[0];

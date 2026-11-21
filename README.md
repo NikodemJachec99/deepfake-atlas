@@ -4,6 +4,7 @@ System łączy pozornie niezależne fałszywe reklamy w kampanie i operatorów n
 
 - **Metodyka** (cechy, podobieństwo, grupowanie): [docs/metodyka.md](docs/metodyka.md)
 - Wymagania zadania i zgodność z regulaminem: [docs/wymagania.md](docs/wymagania.md)
+- Teksty zgłoszenia na HackTribe: [docs/zgloszenie.md](docs/zgloszenie.md)
 - Wyniki na danych organizatora: [docs/dane-organizatora.md](docs/dane-organizatora.md)
 - Kontrakt API: [docs/api.md](docs/api.md)
 - Laboratorium dowodów (co zostaje z połączenia po wyłączeniu śladów): [docs/laboratorium.md](docs/laboratorium.md)

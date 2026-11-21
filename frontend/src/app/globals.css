@@ -77,8 +77,8 @@
   --color-unsure: var(--st-unsure);
   --color-rejected: var(--st-rejected);
   --color-new: var(--st-new);
-  --font-sans: var(--font-plex-sans), "IBM Plex Sans", system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), "IBM Plex Mono", ui-monospace, monospace;
+  --font-sans: var(--font-geist-sans), "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), "IBM Plex Mono", ui-monospace, monospace;
   --radius-sm: 2px;
   --radius: 3px;
   --radius-md: 4px;

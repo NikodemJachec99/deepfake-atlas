@@ -6,7 +6,7 @@
 import { LiveGraph } from "./live-graph";
 import { EdgePanel } from "./edge-panel";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   api,
@@ -41,7 +41,16 @@ export function Discovery() {
   const [assessment, setAssessment] = useState("");
   const stop = useRef<(() => void) | null>(null);
 
+  const generation = useRef(0);
+  useEffect(() => () => {
+    generation.current++;
+    stop.current?.();
+    stop.current = null;
+    setBusy(false);
+  }, []);
+
   async function run(start: () => Promise<Analysis>) {
+    const current = ++generation.current;
     stop.current?.();
     setBusy(true);
     setError("");
@@ -52,27 +61,32 @@ export function Discovery() {
     setAssessment("");
     try {
       const analysis = await start();
+      if (generation.current !== current) return;
       stop.current = streamAnalysis(
         analysis,
         (item) => setEvents((previous) => [...previous, item]),
         async () => {
           try {
             const finished = await api.analysis(analysis.id);
+            if (generation.current !== current) return;
             setAssessment((finished.result.cluster as ClusterResult | undefined)?.assessment_label ?? "");
             if (finished.ad) {
-              setAd(await api.ad(finished.ad));
-              setEdges(await api.adEdges(finished.ad));
+              const [detail, links] = await Promise.all([api.ad(finished.ad), api.adEdges(finished.ad)]);
+              if (generation.current !== current) return;
+              setAd(detail);
+              setEdges(links);
             }
             if (finished.status === "failed") setError(finished.error || "Backend zgłosił błąd analizy.");
             if (finished.status === "running" || finished.status === "queued") setError("Utracono połączenie ze strumieniem. Analiza pozostaje w kolejce backendu.");
           } catch (reason) {
-            setError(String(reason));
+            if (generation.current === current) setError(String(reason));
           } finally {
-            setBusy(false);
+            if (generation.current === current) setBusy(false);
           }
         },
       );
     } catch (reason) {
+      if (generation.current !== current) return;
       setError(String(reason));
       setBusy(false);
     }

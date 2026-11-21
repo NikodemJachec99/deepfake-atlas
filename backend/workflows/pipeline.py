@@ -177,8 +177,8 @@ def stage_extract(analysis: Analysis) -> dict:
         add([o for o in page.observations if final_url or o.kind != "page_name"], html_artifact)
         if page.dom_hash:
             add([Observation("dom_hash", page.dom_hash)], html_artifact)
-            markers.set_signature(ad, "dom_minhash", page.dom_signature)
-        markers.set_signature(ad, "page_text_minhash", page.text_signature)
+            markers.set_signature(ad, "dom_minhash", page.dom_signature, html_artifact)
+        markers.set_signature(ad, "page_text_minhash", page.text_signature, html_artifact)
         page_text = f"{page.title} {page.visible_text}"
         analysis.state["favicon_url"] = page.favicon_url
         if not ad.title and page.title:
@@ -196,7 +196,13 @@ def stage_extract(analysis: Analysis) -> dict:
     # Ślady z przechwycenia: ruch sieciowy z HAR, zrzuty reklamy, metadane wideo.
     captured = [Observation(kind, value, detail or {}) for kind, value, detail in capture.get("observations", []) if kind in KINDS]
     har_artifact = Artifact.objects.filter(pk=capture.get("har")).first() if capture.get("har") else None
-    add(captured, har_artifact or html_artifact)
+    # Ślad ze zrzutu kreacji wskazuje ten zrzut (detail.artifact), reszta zapis przechwycenia.
+    by_file: dict[str, list[Observation]] = {}
+    for obs in captured:
+        by_file.setdefault(str(obs.detail.get("artifact") or ""), []).append(obs)
+    for sha, group in by_file.items():
+        own = Artifact.objects.filter(pk=sha).first() if sha else None
+        add(group, own or har_artifact or html_artifact)
 
     ad_text = f"{ad.title}\n{ad.text}".strip()
     if ad.text:

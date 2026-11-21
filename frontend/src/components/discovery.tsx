@@ -3,6 +3,7 @@
 // Minimalny ekran Discovery. Dowodzi, że API działa od wejścia do dowodów.
 // Docelowy interfejs (trzy tryby, graf, panel dowodów) powstaje według docs/design-prompt.md.
 
+import { LiveGraph } from "./live-graph";
 import { EdgePanel } from "./edge-panel";
 import { useRef, useState } from "react";
 
@@ -191,6 +192,7 @@ export function Discovery() {
         </section>
       </div>
 
+      <LiveGraph events={events} onEdge={setSelected} />
       {selected !== null && <EdgePanel key={selected} edgeId={selected} />}
     </main>
   );

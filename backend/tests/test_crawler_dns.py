@@ -64,3 +64,23 @@ def test_private_answer_is_refused_before_connecting(monkeypatch):
     monkeypatch.setattr(socket, "getaddrinfo", fake_dns(["127.0.0.1"])[0])
     with pytest.raises(fetch.BlockedUrl):
         fetch.resolve_public("http://localhost.example/")
+
+
+def test_cookies_are_dropped_when_redirect_changes_host(monkeypatch, settings):
+    monkeypatch.setattr(socket, "getaddrinfo", fake_dns(["93.184.216.34"])[0])
+    sent = []
+
+    def handler(request):
+        sent.append((request.url.path, request.headers.get("cookie")))
+        if request.url.path == "/start":
+            return httpx.Response(302, headers={"location": "https://inna.example/dalej", "set-cookie": "sid=tajne; Path=/"})
+        if request.url.path == "/dalej":
+            return httpx.Response(302, headers={"location": "https://inna.example/koniec", "set-cookie": "t=2; Path=/"})
+        return httpx.Response(200, html="<html><title>ok</title></html>")
+
+    f = fetcher_with(monkeypatch, handler, settings)
+    result = f.fetch("https://pierwsza.example/start")
+    assert result.status == 200
+    cookies = dict(sent)
+    assert cookies["/dalej"] is None  # ciasteczko pierwszej domeny nie dociera do drugiej
+    assert cookies["/koniec"] and "t=2" in cookies["/koniec"]  # w obrębie jednej domeny działa

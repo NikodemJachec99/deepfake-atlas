@@ -20,6 +20,7 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | POST | `/api/edges/{id}/verdict` | `{"verdict":"confirmed"\|"rejected"\|"unsure","note":""}` | `EdgeDetail`, wpis w dzienniku audytu |
 | POST | `/api/edges/{id}/simulate` | `{"exclude":[<id dowodu>],"edge_version":"<Edge.updated_at>"}` | `Simulation`: krawędź przed i po wyłączeniu dowodów, nic nie zapisuje |
 | GET | `/api/edges/{id}/suggestions` | | `Suggestions`: co sprawdzić dalej, z brakujących dowodów tej pary |
+| POST | `/api/edges/{id}/weakest-link` | `{"max_group_size":2,"max_scenarios":500,"time_limit_ms":3000,"edge_version":"..."}` | `WeakestLink`: najmniejsze zestawy grup śladów, których utrata zmienia relację |
 | GET | `/api/campaigns` | `?page=` | strona grup z `size` |
 | GET | `/api/campaigns/{id}` | | reklamy, krawędzie, markery rdzeniowe |
 | GET | `/api/operators` | `?page=` | strona grup z `size` |
@@ -158,6 +159,34 @@ Odpowiedź:
 - `reasons`: zdania odpowiadające regułom z `similarity/fusion.py`, w kolejności sprawdzania.
 - `group_impact`: liczone tylko wtedy, gdy krawędź przestałaby spinać grupę. `pair_still_connected` mówi, czy obie reklamy łączy inna ścieżka z krawędzi tego samego rodzaju (bez odrzuconych). `false` oznacza, że grupa rozpadłaby się w tym miejscu na dwie, przy reszcie grafu bez zmian. Nie przeliczamy innych par.
 - Bity to wkład dowodów w skali logarytmicznej, nie procent i nie identyfikacja osoby.
+
+## Test najsłabszego ogniwa (`WeakestLink`)
+
+`POST /api/edges/{id}/weakest-link` szuka najmniejszych zestawów grup śladów, których wyłączenie zmienia relację krawędzi albo ją usuwa. Liczy tym samym silnikiem co `simulate`, niczego nie zapisuje, nie łączy się z siecią. To symulacja utraty obserwowalności jednej pary, nie przewidywanie działań oszusta i nie wniosek o grupie w grafie.
+
+Parametry (wszystkie opcjonalne): `max_group_size` 1 albo 2 (domyślnie 2), `max_scenarios` 1 do 5000 (500), `time_limit_ms` 100 do 10000 (3000), `edge_version` jak w `simulate` (409 przy zmianie krawędzi).
+
+Grupy śladów są stałe i wynikają z metodyki (opis: [laboratorium.md](laboratorium.md)): `kit` (ślady silnika lejka), `motif` (osoba, twarz, marka, tematyka), `infra` (domena, adres, certyfikat, rejestracja), `content` (tytuł i treść), `creative` (zrzut, kreacja, obrazy), `template` (struktura DOM), `kind:<typ>` (każdy inny typ osobno, np. `kind:funnel_id`), `unknown:<typ>` (typ spoza rejestru).
+
+```json
+{
+  "edge": 3082, "edge_version": "...",
+  "baseline": {"relation": "same_operator", "...": "jak Simulation.baseline"},
+  "groups": [{"id": "kind:asset_host", "label": "Host zasobów lub trackera", "evidence_ids": [901], "weight_bits": 9.0}],
+  "searched": {"max_group_size": 2, "scenarios_checked": 4, "scenario_limit": 500, "time_limit_ms": 3000,
+               "complete": true, "stopped_reason": ""},
+  "solutions": [{"groups": ["kind:asset_host"], "labels": ["Host zasobów lub trackera"], "excluded_evidence": [901],
+                 "simulated": {"relation": "similar", "...": "jak Simulation.simulated"},
+                 "change": "ten sam operator → podobna koncepcja"}],
+  "minimal_size": 1,
+  "message": "Najmniejszy zestaw zmieniający relację ma 1 grupę śladów (w sprawdzonym zakresie: pojedyncze grupy i pary, 4 scenariusze). Rozwiązań tego rozmiaru: 2."
+}
+```
+
+- Kolejność: najpierw wszystkie pojedyncze grupy, potem pary, w porządku alfabetycznym identyfikatorów grup. Gdy znajdzie się rozwiązanie danego rozmiaru, większych nie szukamy (nie byłyby minimalne).
+- `minimal_size` jest liczbą tylko wtedy, gdy przeszukiwanie jest pełne (`searched.complete`). Minimalność dotyczy liczby grup w sprawdzonym zakresie, nie kosztu ani prawdopodobieństwa czegokolwiek.
+- Brak rozwiązania: `solutions: []` i komunikat "Nie znaleziono w sprawdzonych scenariuszach (...)". Przy przerwanym przeszukiwaniu komunikat mówi, że jest niepełne i dlaczego.
+- `excluded_evidence` można podać wprost do `simulate`, żeby otworzyć scenariusz w ręcznej symulacji. Wynik jest ten sam.
 
 ## Co sprawdzić dalej (`Suggestions`)
 

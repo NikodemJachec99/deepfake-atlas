@@ -98,6 +98,7 @@ python manage.py ensure_schedules                       # harmonogramy skanów w
 python manage.py project_graph                          # odbudowa grafu w Neo4j
 python manage.py index_ads                              # odbudowa indeksu w OpenSearch
 python manage.py reset_corpus --yes                     # czyści korpus, zostawia listę CERT i osoby
+python manage.py export_corpus <katalog>                # wzbogacony korpus do plików: reklamy z markerami, krawędzie z dowodami, grupy
 ```
 
 ## Testy

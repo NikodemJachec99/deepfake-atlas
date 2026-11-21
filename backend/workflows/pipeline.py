@@ -20,6 +20,7 @@ from django.utils import timezone
 from django.utils.module_loading import import_string
 
 from ads.models import Ad, Analysis, AnalysisEvent, Source
+from enrichment import crtsh
 from enrichment.models import DomainRecord, WarningDomain
 from evidence import services as markers
 from evidence import store
@@ -257,6 +258,18 @@ def stage_enrich(analysis: Analysis) -> dict:
         if offline:
             observations += [Observation("nameserver", ns) for ns in rdap.nameservers]
         summary.update(registrar=rdap.registrar, registered_at=rdap.registered_at.isoformat() if rdap.registered_at else None)
+
+    # Dzienniki certyfikatów są historyczne, więc mają sens także dla przechwyconej strony.
+    certs = crtsh.lookup(domain, source)
+    if certs is None:
+        emit(analysis, "enrich", "info", "crt.sh nie odpowiedział, certyfikaty pominięte")
+        summary["crtsh"] = None
+    else:
+        cert_observations, neighbours = crtsh.observations(domain, certs)
+        observations += cert_observations
+        summary["crtsh"] = {"certs": len(certs), "used": len(cert_observations), "domains": neighbours}
+        if neighbours:
+            emit(analysis, "enrich", "info", f"Certyfikat domeny obejmuje też: {', '.join(neighbours[:5])}", {"domains": neighbours})
 
     markers.attach(ad, observations)
 

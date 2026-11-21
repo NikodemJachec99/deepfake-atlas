@@ -90,6 +90,15 @@ Część domen z obu paczek jest na liście (`civicdaybook.live`, `healthlinkq.p
 
 nask/5 (sama reklama wideo), nask/10, nask/14, nask/36, nask/47, backup/p6, p8, p9, p10, p12, p13, p14. Każda stoi na innym zapleczu. Do tego nask/48 i backup/p11 opisane wyżej. Sprawa p8 ma relację `similar` z p11: ten sam tytuł strony i te same obrazy, ale inne zaplecze, więc silnik nie przypisał jej do operatora.
 
+### Certyfikaty z crt.sh
+
+Sprawdzone 2026-11-21 dla 23 domen z obu paczek. crt.sh odpowiedział dla 18, dla 5 nie (`konbjk.com`, `lundevra.live`, `meroporepufulo.life`, `move-fitlum.top`, `zenithlab.ink`). Żadne dwie domeny z paczek nie dzielą certyfikatu, więc ten ślad nie dokłada krawędzi w korpusie. Daje za to tropy poza korpusem:
+
+- certyfikat `sfuxd.com` (sprawa p11) obejmuje też `zixips.com`,
+- certyfikat `spiritualityinsports.org` obejmuje też `spiritualityinsports.com`, `spiritualityandsports.org` i `spiritualityandsports.com`.
+
+Analiza wypisuje takie domeny w zdarzeniu etapu `enrich`. Domeny `abundancecaller.com` i `glowpixel.org` mają ponad 50 certyfikatów, bierzemy 50 najnowszych.
+
 ### Ślad językowy
 
 W sprawach nask/14, nask/47 i backup/p9 nazwy zestawów reklam w parametrach adresu zawierają litery cyrylicy wmieszane w łaciński tekst (np. `сс`, `С4`). To słaby marker (`lang_trace`), ale spójny z tym, co o operatorach takich kampanii piszą raporty branżowe.
@@ -97,7 +106,7 @@ W sprawach nask/14, nask/47 i backup/p9 nazwy zestawów reklam w parametrach adr
 ## Czego silnik jeszcze nie łapie na tych danych
 
 - **Wizerunki.** Zrzuty reklam zawierają twarze i kadry wideo. Porównujemy obrazy hashem percepcyjnym (ten sam obraz po przeróbkach), ale nie rozpoznajemy twarzy ani głosu, więc spraw o tej samej osobie w różnych kadrach nie łączymy po obrazie.
-- **Sprawa 48 i strona 1 sprawy 61** to ten sam artykuł, a relacja wyszła `similar` zamiast `same_campaign`: strona 1 nie ma adresu ani HAR, a tekst po zapisie różni się na tyle, że podobieństwo spada poniżej progu. Sprawa 48 i strona 2 sprawy 61 mają ten sam silnik lejka. Ten sam artykuł i ten sam silnik to razem dwa niezależne ślady, ale rozbite na dwie strony sprawy 61.
+- **Sprawa 48 i strona 1 sprawy 61** mają ten sam tytuł, lead i autora, a relacja wychodzi `similar`. Przegląd z 2026-11-21 pokazał, że to nie jest ten sam tekst z doklejoną sekcją: treść artykułu jest przepisana (w jednym bohaterem jest były premier, w drugim były minister finansów). Podobieństwo treści: Jaccard 0,31, zawieranie 0,50. Z 3464 słów sprawy 48 we wspólnych fragmentach od 8 słów wzwyż jest 708, z czego 589 to tekst formularza lejka, czyli ślad silnika, a nie artykułu. Miara treści odporna na doklejoną sekcję (model `fs-5`) tej pary więc nie zmienia i nie powinna: wspólny jest szablon artykułu, a nie tekst. Sprawa 48 i strona 2 sprawy 61 mają ten sam silnik lejka.
 - **Zrzut reklamy dołączany do każdej strony sprawy** łączy strony jednej sprawy dowodem `creative_phash`. W sprawie 61 krawędź między stroną 1 a stroną 3 stoi tylko na tym zrzucie i nazwie reklamodawcy z OCR. Wynik zgadza się z resztą sprawy (ta sama domena, cloaking), ale sam dowód wynika z tego, jak organizator ułożył pliki.
 - **Wideo.** Nagrania ekranu i reklamy wideo rejestrujemy (skrót pliku), ale ich nie analizujemy.
 - **Sprawy bez HAR** (p6, p12, p14) mają tylko ślady z HTML, więc odcisk zaplecza jest dla nich niedostępny.

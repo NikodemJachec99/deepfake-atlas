@@ -3,8 +3,10 @@
 // Minimalny ekran Discovery. Dowodzi, że API działa od wejścia do dowodów.
 // Docelowy interfejs (trzy tryby, graf, panel dowodów) powstaje według docs/design-prompt.md.
 
+import { LiveGraph } from "./live-graph";
 import { EdgePanel } from "./edge-panel";
-import { useRef, useState } from "react";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 
 import {
   api,
@@ -37,10 +39,22 @@ export function Discovery() {
   const [edges, setEdges] = useState<Edge[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
   const [assessment, setAssessment] = useState("");
+  const [batch, setBatch] = useState<Analysis[]>([]);
+  const [activeId, setActiveId] = useState("");
   const stop = useRef<(() => void) | null>(null);
 
-  async function run(start: () => Promise<Analysis>) {
+  const generation = useRef(0);
+  useEffect(() => () => {
+    generation.current++;
     stop.current?.();
+    stop.current = null;
+    setBusy(false);
+  }, []);
+
+  async function run(start: (() => Promise<Analysis | Analysis[]>) | Analysis) {
+    const current = ++generation.current;
+    stop.current?.();
+    if (typeof start === "function") setBatch([]);
     setBusy(true);
     setError("");
     setEvents([]);
@@ -49,28 +63,39 @@ export function Discovery() {
     setSelected(null);
     setAssessment("");
     try {
-      const analysis = await start();
+      const result = typeof start === "function" ? await start() : start;
+      if (generation.current !== current) return;
+      const analysis = Array.isArray(result) ? result[0] : result;
+      if (!analysis) throw new Error("W przesłanych plikach nie znaleziono materiału do analizy.");
+      if (Array.isArray(result)) setBatch(result);
+      setActiveId(analysis.id);
       stop.current = streamAnalysis(
         analysis,
-        (item) => setEvents((previous) => [...previous, item]),
+        (item) => {
+          if (generation.current === current) setEvents(previous => [...previous, item]);
+        },
         async () => {
           try {
             const finished = await api.analysis(analysis.id);
+            if (generation.current !== current) return;
             setAssessment((finished.result.cluster as ClusterResult | undefined)?.assessment_label ?? "");
             if (finished.ad) {
-              setAd(await api.ad(finished.ad));
-              setEdges(await api.adEdges(finished.ad));
+              const [detail, links] = await Promise.all([api.ad(finished.ad), api.adEdges(finished.ad)]);
+              if (generation.current !== current) return;
+              setAd(detail);
+              setEdges(links);
             }
             if (finished.status === "failed") setError(finished.error || "Backend zgłosił błąd analizy.");
             if (finished.status === "running" || finished.status === "queued") setError("Utracono połączenie ze strumieniem. Analiza pozostaje w kolejce backendu.");
           } catch (reason) {
-            setError(String(reason));
+            if (generation.current === current) setError(String(reason));
           } finally {
-            setBusy(false);
+            if (generation.current === current) setBusy(false);
           }
         },
       );
     } catch (reason) {
+      if (generation.current !== current) return;
       setError(String(reason));
       setBusy(false);
     }
@@ -82,11 +107,7 @@ export function Discovery() {
   }
 
   function upload(files: File[]) {
-    if (!busy && files.length) void run(async () => {
-      const [first] = await api.uploadCase(files);
-      if (!first) throw new Error("W przesłanych plikach nie znaleziono materiału do analizy.");
-      return first;
-    });
+    if (!busy && files.length) void run(() => api.uploadCase(files));
   }
 
   const strongest = events.filter(item => item.stage === "fuse" && item.status === "info")
@@ -129,6 +150,16 @@ export function Discovery() {
         <input id="input-files" type="file" multiple disabled={busy} onChange={event => { upload(Array.from(event.target.files ?? [])); event.target.value = ""; }} className="text-xs" />
       </label>
 
+      {batch.length > 1 && <label className="flex items-center gap-2">Materiał z paczki
+        <select className="min-w-0 max-w-full rounded border border-line bg-panel p-2" value={activeId} onChange={event => {
+          const analysis = batch.find(item => item.id === event.target.value);
+          if (analysis) void run(analysis);
+        }}>
+          {batch.map((item, index) => <option key={item.id} value={item.id}>
+            {index + 1}. {item.input_value || item.id}
+          </option>)}
+        </select>
+      </label>}
       {error && <p className="rounded border border-red-500 px-3 py-2 text-red-400">Analiza nie powiodła się: {error}</p>}
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -171,6 +202,10 @@ export function Discovery() {
               {"cert_pl" in ad.labels && <> Domena jest na Liście Ostrzeżeń CERT Polska.</>}
             </p>
           )}
+          {ad && <nav aria-label="Szczegóły wyniku" className="flex flex-wrap gap-4 text-accent">
+            <Link href={`/ads/${ad.id}`}>Karta reklamy #{ad.id}</Link>
+            <Link href={`/investigation?ad=${ad.id}`}>Otwórz w Investigation</Link>
+          </nav>}
           {ad && edges.length === 0 && <p className="opacity-60">Brak powiązań powyżej progu.</p>}
           <ul className="flex flex-col gap-1">
             {edges.map((edge) => (
@@ -191,6 +226,7 @@ export function Discovery() {
         </section>
       </div>
 
+      <LiveGraph events={events} onEdge={setSelected} />
       {selected !== null && <EdgePanel key={selected} edgeId={selected} />}
     </main>
   );

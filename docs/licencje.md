@@ -72,11 +72,12 @@ Neo4j, OpenSearch i Redis działają jako osobne usługi. Nasz kod łączy się 
 |---|---|---|---|
 | Lista Ostrzeżeń CERT Polska (`hole.cert.pl`) | etykieta domeny | bez klucza | dowolny użytek; bez sugerowania związku z NASK |
 | RDAP rejestru .pl (`rdap.dns.pl`), `rdap.org` | dane rejestrowe domen | bez klucza | dane osób fizycznych zamaskowane |
+| crt.sh (Sectigo) | certyfikaty domeny z dzienników CT | bez klucza | serwis bywa wolny i ogranicza ruch; pytamy co 3 s, odpowiedź trzymamy 7 dni |
 | Team Cymru IP→ASN | numer AS | bez klucza, zapytania DNS | tylko strony badane na żywo |
 | Microsoft Ad Library API | reklamy z adresem docelowym | bez klucza | ostre limity zapytań bez konta |
 | Meta Ad Library API | reklamy z UE | **wymaga tokenu**: weryfikacja tożsamości na facebook.com/ID, aplikacja deweloperska, token w `META_AD_LIBRARY_TOKEN` | tylko oficjalne API, scraping webowej biblioteki jest zabroniony; konektor nie był uruchomiony na żywym tokenie |
 
-Żadna z tych usług nie jest potrzebna do analizy materiałów z przechwyceń. Bez dostępu do sieci system nadal importuje sprawy i łączy je, traci tylko dane RDAP. Do oceny nie trzeba żadnych kluczy.
+Żadna z tych usług nie jest potrzebna do analizy materiałów z przechwyceń. Bez dostępu do sieci system nadal importuje sprawy i łączy je, traci tylko dane RDAP i certyfikaty z crt.sh. Do oceny nie trzeba żadnych kluczy.
 
 ## Materiały organizatora
 

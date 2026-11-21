@@ -7,6 +7,8 @@ nie może zatrzymać analizy reklamy.
 import hashlib
 import socket
 import ssl
+import threading
+import time
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -15,6 +17,13 @@ import httpx
 
 RDAP_PL = "https://rdap.dns.pl/domain/{domain}"
 RDAP_BOOTSTRAP = "https://rdap.org/domain/{domain}"
+CRTSH = "https://crt.sh/"
+CRTSH_TIMEOUT = 25.0  # crt.sh bywa wolny, ale dłużej analiza nie czeka
+CRTSH_INTERVAL = 3.0  # odstęp między zapytaniami z jednego procesu, crt.sh prosi o umiar
+CRTSH_PAUSE = 600.0  # po braku odpowiedzi nie pytamy przez 10 minut
+_crtsh_lock = threading.Lock()
+_crtsh_last = 0.0
+_crtsh_down_until = 0.0
 
 
 @dataclass
@@ -90,6 +99,33 @@ class LiveEnricher:
             return None
 
 
+    def crtsh(self, domain: str) -> list[dict] | None:
+        """Surowa odpowiedź crt.sh albo None, gdy nie odpowiedział. Zapytania idą po kolei, z odstępem.
+
+        Po nieudanym zapytaniu crt.sh jest pomijany przez CRTSH_PAUSE, żeby import kilkudziesięciu
+        stron nie czekał na każdy limit czasu osobno.
+        """
+        global _crtsh_last, _crtsh_down_until
+        with _crtsh_lock:
+            if time.monotonic() < _crtsh_down_until:
+                return None
+            wait = _crtsh_last + CRTSH_INTERVAL - time.monotonic()
+            if wait > 0:
+                time.sleep(wait)
+            data = None
+            try:
+                response = httpx.get(CRTSH, params={"q": domain, "output": "json"}, timeout=CRTSH_TIMEOUT)
+                if response.status_code == 200:
+                    parsed = response.json()
+                    data = parsed if isinstance(parsed, list) else None
+            except Exception:
+                data = None
+            _crtsh_last = time.monotonic()
+            if data is None:
+                _crtsh_down_until = _crtsh_last + CRTSH_PAUSE
+            return data
+
+
 class NullEnricher:
     """Bez sieci. Do testów i pracy offline."""
 
@@ -107,3 +143,6 @@ class NullEnricher:
 
     def rdap(self, domain: str) -> RdapInfo | None:
         return None
+
+    def crtsh(self, domain: str) -> list[dict] | None:
+        return []

@@ -99,6 +99,10 @@ Próba 2026-11-21 na świeżym klonie (`main` po #16, crt.sh włączony): przygo
 - Gdy jest czas albo pytają o warianty: wrzucić `p4.zip`. Wynik: nowa odsłona znanej kampanii, bo p4 to ten sam szablon artykułu co p3 z podmienioną osobą.
 - Gdy pytają o fałszywe połączenia: wrzucić `p11.zip`. Wynik: "Podobna koncepcja, brak dowodu wspólnego źródła", dowody to tylko ścieżki zaplecza strony. Ten sam silnik lejka, ale bez śladu konta operatora, więc system nie dopisuje jej do operatora A. W dzienniku etapu Infrastruktura widać trop z crt.sh: certyfikat `sfuxd.com` obejmuje też `zixips.com`.
 
+### Dodatek, gdy zostaje czas albo padnie pytanie o kruche połączenia (40 s)
+
+Laboratorium dowodów na kampanii A i operatorze B, kroki i sprawdzone wyniki w [laboratorium.md](laboratorium.md#scenariusz-pokazu-laboratorium-52). Idzie po głównym demo, nie zamiast niego.
+
 ## Pytania, których się spodziewamy
 
 | Pytanie | Odpowiedź |

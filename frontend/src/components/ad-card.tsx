@@ -28,6 +28,15 @@ export function Creatives({ shas, size = "h-40" }: { shas: string[]; size?: stri
   );
 }
 
+function AdText({ ad }: { ad: AdDetail }) {
+  if (!ad.text) return null;
+  const frameText = ad.source === "capture" && !ad.creatives.length && !!ad.videos?.length;
+  return <figure className="border-l-2 border-line-strong pl-3">
+    {frameText && <figcaption className="text-sm text-muted">Tekst odczytany z klatek nagrania (OCR)</figcaption>}
+    <blockquote className="whitespace-pre-wrap">{ad.text}</blockquote>
+  </figure>;
+}
+
 function MaterialWorkspace({ ad }: { ad: AdDetail }) {
   const [selected, setSelected] = useState(0);
   const image = ad.creatives[selected] ?? ad.creatives[0];
@@ -48,7 +57,7 @@ function MaterialWorkspace({ ad }: { ad: AdDetail }) {
             <span className="block px-1 py-1">Zrzut {i + 1}</span>
           </button>)}
         </div> : <p className="text-muted">Brak zrzutu reklamy w materiale.</p>}
-        {ad.text && <blockquote className="border-l-2 border-line-strong pl-3 whitespace-pre-wrap">{ad.text}</blockquote>}
+        <AdText ad={ad} />
         <ObservationPanel adId={ad.id} />
         <Link href={`/investigation?ad=${ad.id}`} className="inline-block text-accent underline">Pokaż na grafie powiązań</Link>
       </div>
@@ -179,7 +188,7 @@ export function AdCard({ adId, onEdge, selectedEdge, full = false }: { adId: num
         <Labels ad={data} />
         <Creatives shas={data.creatives} size="h-32" />
         <AdMeta ad={data} />
-        {data.text && <p className="max-h-24 overflow-auto border-l border-line-strong pl-2 whitespace-pre-wrap text-muted">{data.text}</p>}
+        {data.text && <div className="max-h-24 overflow-auto"><AdText ad={data} /></div>}
       </div>}
       <div className="border-b border-line p-2">
         <GenomeBands genome={data.genome} caption="Genom reklamy" />
@@ -187,7 +196,7 @@ export function AdCard({ adId, onEdge, selectedEdge, full = false }: { adId: num
       <p className="cap flex h-7 items-center border-b border-line px-2">Powiązania</p>
       {edges.loading ? <Loading /> : edges.error ? <ErrorBox message={edges.error} onRetry={edges.reload} /> : <EdgeRows edges={edges.data ?? []} adId={adId} onEdge={onEdge} selected={selectedEdge} />}
       <p className="cap flex h-7 items-center border-y border-line px-2">Markery</p>
-      <MarkerList genome={data.genome} initiallyOpen={full} />
+      <MarkerList videos={data.videos} genome={data.genome} initiallyOpen={full} />
     </div>
   );
 }

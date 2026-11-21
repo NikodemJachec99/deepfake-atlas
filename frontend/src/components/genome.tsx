@@ -5,7 +5,7 @@
 import { ChevronDown, ChevronRight, Download } from "lucide-react";
 import { useState } from "react";
 
-import { artifactImageUrl, artifactDownloadUrl, type AdDetail, type Marker } from "@/lib/api";
+import { API_URL, artifactImageUrl, artifactDownloadUrl, type AdDetail, type Marker } from "@/lib/api";
 import { markerValue, famVar, plural } from "@/lib/format";
 
 import { FamilyDot, Mono, Tag, cx } from "./ui";
@@ -74,14 +74,29 @@ export function MarkerChip({ marker, family }: { marker: Marker; family: AdDetai
   );
 }
 
-function FaceObservation({ marker }: { marker: Marker }) {
+function FaceObservation({ marker, videos }: { marker: Marker; videos: AdDetail["videos"] }) {
   const [size, setSize] = useState<{ width: number; height: number } | null>(null);
   const box = marker.detail?.box;
   const score = marker.detail?.score;
   const image = marker.detail?.artifact;
+  const at = marker.detail?.at_s;
+  const recording = videos.find(video => video.name === marker.detail?.file);
+  const seconds = typeof at === "number" && Number.isFinite(at) && at >= 0 ? at : null;
+  const [playing, setPlaying] = useState(false);
+  const stamp = seconds === null ? "" : Math.floor(seconds / 60) + ":" + String(Math.floor(seconds % 60)).padStart(2, "0");
   const showBox = typeof image === "string" && /^[a-f0-9]{64}$/.test(image) && Array.isArray(box) && box.length === 4 && box.every(Number.isFinite) && box[2] > 0 && box[3] > 0;
   return <div className="whitespace-normal text-xs">
     {typeof score === "number" && <p>Podobieństwo modelu · {score.toLocaleString("pl-PL")}</p>}
+    {seconds !== null && <div>
+      <p>{typeof marker.detail.name === "string" && marker.detail.name} · w nagraniu {stamp}</p>
+      {recording?.playable && recording.url ? <>
+        <button type="button" aria-expanded={playing} className="text-accent underline" onClick={() => setPlaying(!playing)}>
+          {playing ? "Zamknij odtwarzacz" : "Odtwórz od " + stamp}
+        </button>
+        {playing && <video controls autoPlay preload="metadata" className="max-h-64 w-full" aria-label={recording.name}
+          src={API_URL + recording.url + "#t=" + seconds} />}
+      </> : <p>Nagranie niedostępne do odtworzenia.</p>}
+    </div>}
     {showBox && <details><summary>Pokaż twarz na zrzucie</summary>
       <span className="relative inline-block max-w-full overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element -- współrzędne detekcji dotyczą oryginalnego artefaktu */}
@@ -95,7 +110,7 @@ function FaceObservation({ marker }: { marker: Marker }) {
   </div>;
 }
 
-export function MarkerList({ genome, initiallyOpen = false }: { genome: Genome; initiallyOpen?: boolean }) {
+export function MarkerList({ genome, videos = [], initiallyOpen = false }: { genome: Genome; videos?: AdDetail["videos"]; initiallyOpen?: boolean }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   return (
     <div className="flex flex-col">
@@ -122,7 +137,7 @@ export function MarkerList({ genome, initiallyOpen = false }: { genome: Genome; 
                         </td>
                         <td className="max-w-0 font-mono text-[0.92rem]" title={markerValue(marker.value, marker.display_value)}>
                           {markerValue(marker.value, marker.display_value)}
-                          {marker.kind === "face_match" && <FaceObservation marker={marker} />}
+                          {marker.kind === "face_match" && <FaceObservation marker={marker} videos={videos} />}
                         </td>
                         <td className={cx("w-24 text-right font-mono text-[0.92rem]", marker.ad_count > 1 ? "text-fg" : "text-faint")} title="W ilu reklamach korpusu występuje ta wartość">
                           {reklam(marker.ad_count)}

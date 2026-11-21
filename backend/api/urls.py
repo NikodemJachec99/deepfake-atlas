@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import hunt, views
 
 urlpatterns = [
     path("analyses", views.analysis_create),
@@ -27,6 +27,12 @@ urlpatterns = [
     path("operators", views.OperatorList.as_view()),
     path("operators/<int:pk>", views.operator_detail),
     path("operators/<int:pk>/timeline", views.operator_timeline),
+    path("operators/<int:pk>/hunt-profile", hunt.operator_hunt_profile),
+    path("hunt", hunt.HuntList.as_view()),
+    path("hunt/run", hunt.hunt_run),
+    path("hunt/runs", hunt.HuntRunList.as_view()),
+    path("hunt/runs/<uuid:pk>", hunt.hunt_run_detail),
+    path("hunt/<int:pk>/analyze", hunt.hunt_analyze),
     path("alerts", views.AlertList.as_view()),
     path("alerts/<int:pk>/seen", views.alert_seen),
     path("graph", views.graph),

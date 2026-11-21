@@ -34,6 +34,11 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | GET | `/api/operators/{id}/timeline` | | `Timeline` operatora, ten sam kształt (opis niżej) |
 | GET | `/api/alerts` | `?page=`, `?unseen=1` | strona `Alert`, najnowsze pierwsze: nowa reklama dołączyła do kampanii albo operatora, które były w korpusie wcześniej (opis niżej) |
 | POST | `/api/alerts/{id}/seen` | `{"seen":true}` (opcjonalne, `false` cofa) | `Alert`; idempotentne; zapis chroniony jak inne (`API_WRITE_KEY`, Origin) |
+| GET | `/api/hunt` | `?operator=<id albo O-0007>`, `?status=candidate,confirmed,...`, `?source=crtsh\|cert_pl`, `?page=` | strona `HuntCandidate`: potwierdzeni pierwsi, potem po wyniku wstępnym (opis niżej) |
+| GET | `/api/operators/{id}/hunt-profile` | | `HuntProfile`: wzorce łowcy operatora, każdy z reklamami, z których go wzięto |
+| POST | `/api/hunt/run` | `{"operator":<id>,"days":30,"max_queries":12,"max_crawl":20,"crawl":true}` (wszystko opcjonalne) | `HuntRun` (202), przebieg w tle (`ANALYSIS_RUNNER`); `409` z danymi trwającego przebiegu, gdy poprzedni (do 2 godzin) jeszcze trwa; `400` dla złych wartości; zapis chroniony jak inne |
+| GET | `/api/hunt/runs`, `/api/hunt/runs/{id}` | | strona `HuntRun` albo jeden przebieg: status i liczby |
+| POST | `/api/hunt/{id}/analyze` | | `Analysis` (201): domena kandydata idzie do pełnego potoku jak `POST /api/analyses`; `409` z istniejącą analizą, gdy już zgłoszona |
 | GET | `/api/graph` | `?campaign=` \| `?operator=` \| `?ad=`, `?relation=a,b`, `?limit=` | `{nodes, edges}` dla Sigma.js |
 | GET | `/api/kinds` | | słownik 7 rodzin i typów markerów |
 | GET | `/api/stats` | | liczby do paska stanu, w tym `alerts_unseen` (liczba nieprzejrzanych alertów) |
@@ -380,16 +385,56 @@ Pełny słownik zwraca `/api/kinds`. Najważniejsze:
 | `kinds[].expert` | `{m, f0, bits}` z `evidence/kinds.py`. `m` i `f0` są `null` dla typów miękkich. `bits` to `min(cap, log2(m/f0))` albo `cap` |
 | `kinds[].learned` | `null` bez pliku, inaczej `{source, m, u, u_basis, bits, pairs_agree, bits_std}`. `source`: `em` albo `expert` (za mało par, wartość ekspercka). `u_basis`: `population` albo `candidates`. `bits_std`: odchylenie z bootstrapu po reklamach, `null` dla `expert` |
 
+## Łowca domen (`HuntCandidate`)
+
+Łowca szuka nowych domen znanych operatorów, zanim pojawi się ich reklama (metoda: [metodyka.md](metodyka.md), sekcja "Łowca domen"). Kandydat to domena spoza korpusu, powiązana z jednym operatorem. Ta sama domena może być kandydatem dwóch operatorów.
+
+`HuntCandidate`:
+
+| Pole | Znaczenie |
+|---|---|
+| `id`, `domain` | domena rejestrowa |
+| `operator`, `operator_id` | klucz `O-0007` i identyfikator operatora |
+| `sources` | `crtsh` (świeży certyfikat), `cert_pl` (Lista Ostrzeżeń CERT Polska), albo oba |
+| `status`, `status_label` | `candidate` (jeszcze niesprawdzony albo za słabe dowody na potwierdzenie), `confirmed`, `rejected` (strona działa, brak wspólnych śladów), `unavailable` (crawler nie dostał strony) |
+| `prelim_score` | wynik wstępny 0..1, policzony bez połączenia ze stroną |
+| `score_parts` | `tokens` (`{token, match: exact\|part, weight}`), `template` (szablon nazwy znany z domen operatora albo `null`), `issuer` (wystawca zgodny z certyfikatami operatora albo `null`) |
+| `cert` | `null` albo `{issuer, serial, not_before, crtsh_id}` najnowszego pasującego certyfikatu |
+| `bits`, `probability` | po sprawdzeniu strony: suma bitów modelu par (`fusion.score_pair`) i pewność wspólnego źródła; `null` przed sprawdzeniem |
+| `evidence` | `{kind, label, family, bits, raw_bits, decisive, value, df, ad_ids}`, malejąco po `bits`; `ad_ids` to reklamy operatora, z których wzięto ten ślad |
+| `note` | jedno zdanie po polsku: dlaczego taki status |
+| `final_url`, `http_status`, `crawl_error`, `attempts`, `checked_at` | wynik ostatniej próby pobrania (adres z tokenami zamienionymi na skróty) |
+| `screenshot_sha`, `html_sha` | zrzut strony (`GET /api/artifacts/{sha}/image`) i surowy HTML (tylko do pobrania). Pusty, gdy brak |
+| `analysis`, `ad` | identyfikator analizy i reklamy po zgłoszeniu do pełnego potoku, inaczej `null` |
+| `alert` | identyfikator alertu `hunt_confirmed` dla potwierdzonej domeny |
+| `run`, `created_at`, `updated_at` | ostatni przebieg, który dotknął kandydata, i czasy |
+
+Potwierdzenie liczy te same ślady co etap `extract` potoku (HTML i HAR z crawlera) i porównuje je z markerami reklam operatora. `confirmed` wymaga tego samego co relacja `same_campaign` albo `same_operator` między reklamami: pewność co najmniej 0,9 i albo jeden rzadki marker rozstrzygający (identyfikator lejka, tracker, konto reklamowe), albo dwie niezależne rodziny śladów z jedną o charakterze zaplecza. Poniżej 4 bitów strona jest `rejected`, pomiędzy zostaje `candidate` z dowodami i notatką.
+
+`HuntProfile` (`GET /api/operators/{id}/hunt-profile`): `{operator: {id, key, label}, ads, domains, queries, patterns, candidates}`. `queries` to tokeny, po których pytamy crt.sh (najlepsze trzy), `candidates` to liczby kandydatów według statusu. Wzorzec: `{type, kind, label, value, role, ad_count, ad_ids}` plus pola zależne od typu.
+
+| `type` | `role` | Znaczenie i dodatkowe pola |
+|---|---|---|
+| `name_token` | `search` | słowo z nazw domen operatora (podział po `-` i cyfrach, bez słów ogólnych); `weight` (0 dla zbyt pospolitego), `domains`, `other_domains` (obce domeny korpusu z tym słowem), `generic`, `share` |
+| `name_template` | `score` | nazwa z cyframi zamienionymi na `{n}`; `domains` |
+| `cert_issuer` | `score` | wystawca certyfikatów operatora (z markerów `tls_serial` z crt.sh) |
+| `marker` | `confirm` | ślad do sprawdzenia na stronie kandydata; `kind` to typ markera (`kit_path`, `funnel_id`, `dom_hash`, `ga4`, `meta_pixel`, `registrar`, `nameserver`...) |
+
+`ad_ids` ma najwyżej 20 reklam, `ad_count` to wszystkie.
+
+`HuntRun`: `{id, operator, params, status: queued|running|done|failed, stats, error, created_at, started_at, finished_at}`. `stats` po przebiegu: `operators`, `tokens` (według klucza operatora), `queries_made`, `queries[{token, ok, certs, domains}]`, `aborted` (powód, gdy crt.sh przestał odpowiadać), `cert_pl_hits`, `domains_seen`, `in_corpus_skipped`, `candidates_new`, `candidates_updated`, `below_threshold`, `crawled`, `confirmed`, `rejected`, `weak`, `unavailable`.
+
 ## Alerty (`Alert`)
 
-Alert powstaje w etapie `cluster`, gdy reklama (import paczki, upload, skan biblioteki, zgłoszenie URL) dołącza do grupy, która istniała przed nią i miała już inne reklamy. Pierwsza reklama nowej kampanii alertu nie daje, a kampania powstała z dwóch dotąd niepowiązanych reklam nie jest "znana". Ponowne uruchomienie etapów nie dubluje alertów (unikalność: reklama i rodzaj).
+Alert powstaje w etapie `cluster`, gdy reklama (import paczki, upload, skan biblioteki, zgłoszenie URL) dołącza do grupy, która istniała przed nią i miała już inne reklamy. Pierwsza reklama nowej kampanii alertu nie daje, a kampania powstała z dwóch dotąd niepowiązanych reklam nie jest "znana". Ponowne uruchomienie etapów nie dubluje alertów (unikalność: reklama i rodzaj). Alert `hunt_confirmed` powstaje w łowcy domen, raz na kandydata.
 
 | Pole | Znaczenie |
 |---|---|
 | `id`, `created_at` | identyfikator i czas zapisu |
-| `kind` | `joined_campaign` (nowa odsłona znanej kampanii), `new_campaign_known_operator` (reklama bez kampanii albo z nową, ale ze znanym operatorem; ta sama sytuacja co ocena `known_operator`), `joined_operator` (reklama dołączyła do znanej kampanii i scaliła dwie grupy operatora) |
+| `kind` | `joined_campaign` (nowa odsłona znanej kampanii), `new_campaign_known_operator` (reklama bez kampanii albo z nową, ale ze znanym operatorem; ta sama sytuacja co ocena `known_operator`), `joined_operator` (reklama dołączyła do znanej kampanii i scaliła dwie grupy operatora), `hunt_confirmed` (łowca domen potwierdził na stronie jeszcze nieobecnej w korpusie ślady znanego operatora; wczesne ostrzeżenie, `ad` jest `null`) |
 | `kind_label` | polski opis rodzaju |
-| `ad`, `ad_title` | reklama, która wywołała alert |
+| `ad`, `ad_title` | reklama, która wywołała alert; `null` i `""` dla `hunt_confirmed` |
+| `hunt_candidate`, `domain` | tylko `hunt_confirmed`: identyfikator kandydata łowcy i jego domena, inaczej `null`. `evidence` ma ten sam kształt (z bitami śladów na stronie), `operator` wskazuje operatora |
 | `campaign`, `campaign_id` | klucz `K-0001` i identyfikator kampanii; `null`, gdy reklama nie ma kampanii |
 | `operator`, `operator_id` | klucz `O-0001` i identyfikator operatora; `null`, gdy go nie ma |
 | `description` | jedno zdanie po polsku |

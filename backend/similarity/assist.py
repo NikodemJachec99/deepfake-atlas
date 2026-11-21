@@ -23,23 +23,62 @@ from similarity.models import AssistSuggestion, Edge
 from similarity.weakest import group_label, group_of
 
 TASK_REVIEW = "edge_review"
-QUESTION_VERSION = "edge-review-v1"
+QUESTION_VERSION = "edge-review-v1"  # domyślna wersja pytania, JEV_QUESTION ją zmienia
 MAX_STATE_CHARS = 6000
 MAX_BODY_BYTES = 256 * 1024  # odpowiedź większa od tego to nie jest odpowiedź na nasze pytanie
 
-REVIEW_QUESTION = {
-    "type": "choice",
-    "instructions": (
-        "Stan opisuje powiązanie dwóch reklam wyliczone przez system dowodowy: relację, siłę w bitach i grupy śladów. "
-        "Ślady silnika lejka i wspólne motywy (osoba, marka, tematyka) mogą pochodzić od różnych operatorów. "
-        "Czy to powiązanie powinien sprawdzić człowiek?"
+_CONTEXT = (
+    "Stan opisuje powiązanie dwóch reklam wyliczone przez system dowodowy: relację, siłę w bitach i grupy śladów. "
+    "Ślady silnika lejka i wspólne motywy (osoba, marka, tematyka) mogą pochodzić od różnych operatorów. "
+)
+
+
+@dataclass(frozen=True)
+class Question:
+    """Wersja pytania. `meaning` sprowadza odpowiedź modelu do wspólnych etykiet przeglad / spojne."""
+
+    question: dict
+    meaning: dict
+
+
+QUESTIONS = {
+    "edge-review-v1": Question(
+        {
+            "type": "choice",
+            "instructions": _CONTEXT + "Czy to powiązanie powinien sprawdzić człowiek?",
+            "criteria": {
+                "przeglad": "przesłanki są niepełne, sprzeczne albo pochodzą z jednej przyczyny, potrzebna ocena człowieka",
+                "spojne": "przesłanki pochodzą z kilku niezależnych grup i są spójne z wyliczoną relacją",
+            },
+        },
+        {"przeglad": "przeglad", "spojne": "spojne"},
     ),
-    "criteria": {
-        "przeglad": "przesłanki są niepełne, sprzeczne albo pochodzą z jednej przyczyny, potrzebna ocena człowieka",
-        "spojne": "przesłanki pochodzą z kilku niezależnych grup i są spójne z wyliczoną relacją",
-    },
+    "edge-review-v2": Question(
+        {
+            "type": "choice",
+            "instructions": _CONTEXT + "Czy ślady mogą mieć jedną wspólną przyczynę, czy pochodzą z kilku niezależnych źródeł?",
+            "criteria": {
+                "jedna_przyczyna": "wszystkie ślady może wyjaśnić jedna przyczyna: ten sam silnik lejka, ten sam motyw albo kopia treści",
+                "kilka_zrodel": "co najmniej dwie niezależne grupy śladów, w tym ślad konta albo infrastruktury operatora",
+            },
+        },
+        {"jedna_przyczyna": "przeglad", "kilka_zrodel": "spojne"},
+    ),
+    "edge-review-v3": Question(
+        {
+            "type": "choice",
+            "instructions": _CONTEXT + "Jak mocno te przesłanki wskazują wspólnego operatora?",
+            "criteria": {
+                "slabo": "słabo: tylko podobna koncepcja, wspólny silnik lejka albo wspólne motywy",
+                "mocno": "mocno: wspólne konto, identyfikator albo infrastruktura operatora potwierdzone niezależnym śladem",
+            },
+        },
+        {"slabo": "przeglad", "mocno": "spojne"},
+    ),
 }
-ANSWERS = tuple(REVIEW_QUESTION["criteria"])
+LABELS = ("przeglad", "spojne")
+REVIEW_QUESTION = QUESTIONS[QUESTION_VERSION].question
+ANSWERS = LABELS
 
 
 class AssistDisabled(Exception):
@@ -57,6 +96,7 @@ class Config:
     timeout: float = 20.0
     max_error: float | None = None
     allow_case_data: bool = False
+    question: str = QUESTION_VERSION
 
     @classmethod
     def from_settings(cls) -> "Config":
@@ -67,6 +107,7 @@ class Config:
             api_key=getattr(settings, "TYPESAFE_API_KEY", ""),
             timeout=float(getattr(settings, "JEV_TIMEOUT", 20.0)),
             allow_case_data=getattr(settings, "JEV_ALLOW_CASE_DATA", False),
+            question=getattr(settings, "JEV_QUESTION", "") or QUESTION_VERSION,
         )
 
     def check(self) -> None:
@@ -78,6 +119,8 @@ class Config:
             raise AssistDisabled("JEV_MODEL musi wskazywać przypiętą wersję modelu")
         if not self.api_key:
             raise AssistDisabled("brak TYPESAFE_API_KEY")
+        if self.question not in QUESTIONS:
+            raise AssistDisabled(f"nieznana wersja pytania {self.question!r}")
         if not self.allow_case_data:
             raise AssistDisabled("wysyłanie danych spraw wyłączone; konieczne potwierdzenie uprawnienia do przekazania dostawcy")
 
@@ -118,8 +161,8 @@ def _concept(group: str) -> bool:
     return bool(kind and kind.family in CONCEPT_FAMILIES)
 
 
-def request_body(state: dict, model: str) -> dict:
-    question = dict(REVIEW_QUESTION)
+def request_body(state: dict, model: str, version: str = QUESTION_VERSION) -> dict:
+    question = dict(QUESTIONS[version].question)
     text = json.dumps(state, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     if len(text) > MAX_STATE_CHARS:
         raise ValueError(f"stan ma {len(text)} znaków, limit {MAX_STATE_CHARS}")
@@ -143,7 +186,7 @@ class Outcome:
     retry_after: float | None = None
 
 
-def parse_answer(payload) -> Outcome:
+def parse_answer(payload, version: str = QUESTION_VERSION) -> Outcome:
     """Sprawdza odpowiedź według schematu choice. Wszystko poza nim to błąd, nigdy zgadywana odpowiedź."""
     if not isinstance(payload, dict) or not isinstance(payload.get("answers"), dict):
         return Outcome("error", error="odpowiedź bez pola answers")
@@ -151,26 +194,27 @@ def parse_answer(payload) -> Outcome:
     if not isinstance(answer, dict) or answer.get("type") != "choice":
         return Outcome("error", error="brak odpowiedzi typu choice na pytanie review")
     probs = answer.get("probabilities")
-    if not isinstance(probs, dict) or set(probs) != set(ANSWERS):
+    meaning = QUESTIONS[version].meaning
+    if not isinstance(probs, dict) or set(probs) != set(meaning):
         return Outcome("error", error="rozkład spoza zadanych odpowiedzi")
     clean = {}
     for key, value in probs.items():
         if not isinstance(value, int | float) or isinstance(value, bool) or not math.isfinite(value) or not 0 <= value <= 1:
             return Outcome("error", error="prawdopodobieństwo poza zakresem 0..1")
-        clean[key] = round(float(value), 6)
+        clean[meaning[key]] = round(float(value), 6)
     if abs(sum(clean.values()) - 1) > 0.02:
         return Outcome("error", error="rozkład nie sumuje się do 1")
     model = str(payload.get("model", ""))[:128]
     if answer.get("abstain") is True:
         return Outcome("abstain", probabilities=clean, served_model=model)
     choice = answer.get("choice")
-    if choice not in ANSWERS:
+    if choice not in meaning:
         return Outcome("error", error="wybrana odpowiedź spoza listy")
     confidence = answer.get("confidence")
     if (not isinstance(confidence, int | float) or isinstance(confidence, bool)
             or not math.isfinite(confidence) or not 0 <= confidence <= 1):
         return Outcome("error", error="confidence poza zakresem 0..1")
-    return Outcome("ok", answer=choice, probabilities=clean, confidence=float(confidence), served_model=model)
+    return Outcome("ok", answer=meaning[choice], probabilities=clean, confidence=float(confidence), served_model=model)
 
 
 class JevClient:
@@ -182,7 +226,7 @@ class JevClient:
         self.http = httpx.Client(base_url=config.url.rstrip("/"), timeout=config.timeout, headers=headers, transport=transport,
                                  follow_redirects=False, trust_env=False)
 
-    def ask(self, body: dict) -> Outcome:
+    def ask(self, body: dict, version: str | None = None) -> Outcome:
         started = time.monotonic()
         try:
             response = self.http.post("/v1/systemone", json=body)
@@ -211,7 +255,7 @@ class JevClient:
             payload = response.json()
         except ValueError:
             return Outcome("error", latency_ms=latency, error="odpowiedź nie jest JSON")
-        outcome = parse_answer(payload)
+        outcome = parse_answer(payload, version or self.config.question)
         outcome.latency_ms = latency
         outcome.input_tokens = _input_tokens(payload)
         return outcome
@@ -248,7 +292,7 @@ def review_edge(edge: Edge, client: JevClient) -> AssistSuggestion:
     """Pyta model o jedną krawędź i zapisuje wynik. Krawędzi i dowodów nie zmienia."""
     config = client.config
     try:
-        body = request_body(review_state(edge), config.model)
+        body = request_body(review_state(edge), config.model, config.question)
     except ValueError as exc:
         body, outcome = {"state": "", "questions": {}}, Outcome("error", error=str(exc))
     else:
@@ -257,6 +301,6 @@ def review_edge(edge: Edge, client: JevClient) -> AssistSuggestion:
         edge=edge, ad_a_id=edge.ad_a_id, ad_b_id=edge.ad_b_id, task=TASK_REVIEW, mode=config.mode,
         status=outcome.status, answer=outcome.answer, probabilities=outcome.probabilities, confidence=outcome.confidence,
         model=config.model, revision=config.revision, variant=config.variant, served_model=outcome.served_model,
-        question_version=QUESTION_VERSION, state_fingerprint=fingerprint(body), edge_version=edge.updated_at.isoformat(),
+        question_version=config.question, state_fingerprint=fingerprint(body), edge_version=edge.updated_at.isoformat(),
         latency_ms=outcome.latency_ms, input_tokens=outcome.input_tokens, error=outcome.error[:300],
     )

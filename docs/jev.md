@@ -69,6 +69,27 @@ Statusy w `AssistSuggestion.status`:
 
 Niepoprawna odpowiedź nigdy nie staje się wynikiem: odpowiedź spoza listy, rozkład spoza zakresu albo `confidence` poza 0..1 to `error`.
 
+## Ewaluacja ([#72](https://github.com/NikodemJachec99/deepfake-atlas/issues/72)), 21.11.2026
+
+`python manage.py jev_eval --out raport.json` (kod w `similarity/evaluation.py`). Wysyła tylko stany wygenerowane w kodzie: kombinacje relacji, śladu konta i grup śladów w kształcie prawdziwego stanu. Nie bierze nic z bazy ani z materiałów organizatora, więc nie wymaga `JEV_ALLOW_CASE_DATA`. Do bazy nic nie zapisuje.
+
+- Etykieta referencyjna to jawna rubryka: `spojne`, gdy relacja to wspólne źródło, jest ślad konta albo identyfikatora operatora i co najmniej dwie niezależne grupy zaplecza, a w pozostałych przypadkach `przeglad`. To nasza ocena, nie etykiety NASK.
+- Zbiór ma 90 stanów (45 `przeglad`, 45 `spojne`), podzielonych skrótem SHA-256 identyfikatora: 50 na walidację, 40 na test. Wersję pytania wybieramy na walidacji.
+- Reguła bez modelu: `przeglad` tylko wtedy, gdy stan stoi na samym silniku lejka i motywach.
+
+| Test, 40 stanów, `jev-1.14.0` | Zbalansowana trafność | Recall `przeglad` | Recall `spojne` | Brier |
+|---|---|---|---|---|
+| reguła bez modelu | 0,529 | 0,059 | 1,0 | — |
+| `edge-review-v1` | 0,559 | 0,118 | 1,0 | 0,234 |
+| `edge-review-v2` (wybrana na walidacji, 0,679) | 0,588 | 0,176 | 1,0 | 0,318 |
+| `edge-review-v3` | 0,559 | 0,118 | 1,0 | 0,288 |
+
+Przypadki odporności przechodzą we wszystkich trzech wersjach: sprzeczne przesłanki i brak danych dają `przeglad`, stan mocny `spojne`. Instrukcja wpisana w pole stanu nie zmienia odpowiedzi (P(`przeglad`) 0,97–1,0), w przeciwieństwie do lokalnego basal-mini. Całość to 282 zapytania, 188 624 tokeny, ok. 0,008 USD.
+
+Główny błąd: na całym zbiorze 32 z 45 stanów `przeglad` dostały odpowiedź `spojne` w v2, w tym 18 z 19 stanów `similar` ze śladem konta. Pytanie pyta, czy ślady pochodzą z niezależnych źródeł, a rubryka dodatkowo wymaga, żeby silnik wyliczył wspólne źródło. Jev odpowiada więc na swoje pytanie, ale nie na nasze kryterium. Wpisanie rubryki w kryteria pytania sprawiłoby, że model powtarza regułę, którą da się napisać w kodzie dokładnie i za darmo.
+
+**Decyzja:** sugestii Jev nie pokazujemy w interfejsie jako oceny krawędzi. Adapter zostaje wyłączony albo w trybie `shadow`. Ocena struktury przesłanek zostaje regułą w kodzie. Jev ma sens dla zadań, których nie da się zapisać regułą, np. oceny tekstu reklamy, ale to wymaga zgody na wysyłkę danych spraw i osobnej ewaluacji. Zbiór jest syntetyczny i mały, więc to wynik wstępny, bez twierdzeń o jakości Jev w ogóle.
+
 ## Migracja z basal
 
 - Zmienne `BASAL_*` nie są już czytane. Usuń je z `.env`.

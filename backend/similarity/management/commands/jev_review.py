@@ -67,6 +67,6 @@ class Command(BaseCommand):
                 time.sleep(min(MAX_WAIT_S, wait if wait is not None else 2.0 ** failures))
         cost = tokens * price / 1e6
         self.stdout.write(
-            f"Sugestie ({client.config.model}, {assist.QUESTION_VERSION}): {dict(sorted(counts.items()))}; "
+            f"Sugestie ({client.config.model}, {client.config.question}): {dict(sorted(counts.items()))}; "
             f"zapytań {sent}, tokenów wejściowych {tokens}, koszt ok. {cost:.6f} USD"
         )

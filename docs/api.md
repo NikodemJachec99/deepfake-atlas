@@ -22,11 +22,28 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | GET | `/api/campaigns/{id}` | | reklamy, krawędzie, markery rdzeniowe |
 | GET | `/api/operators` | `?page=` | strona grup z `size` |
 | GET | `/api/operators/{id}` | | jak kampania, plus lista `campaigns` operatora |
+| GET | `/api/campaigns/{id}/timeline` | | `Timeline`: zdarzenia kampanii posortowane po dacie |
+| GET | `/api/operators/{id}/timeline` | | `Timeline` operatora, ten sam kształt (opis niżej) |
 | GET | `/api/graph` | `?campaign=` \| `?operator=` \| `?ad=`, `?relation=a,b`, `?limit=` | `{nodes, edges}` dla Sigma.js |
 | GET | `/api/kinds` | | słownik 7 rodzin i typów markerów |
 | GET | `/api/stats` | | liczby do paska stanu |
 | GET | `/api/artifacts/{sha256}` | | surowy dowód jako załącznik (nigdy się nie renderuje) |
 | GET | `/api/artifacts/{sha256}/image` | | zrzut reklamy jako obraz (tylko artefakty obrazów) |
+
+## Oś czasu
+
+`Timeline` to `{"group": "K-0001", "events": [TimelineEvent]}`. Zdarzenia są posortowane po `at`, a przy tej samej dacie najpierw zaplecze, potem reklama. Zdarzenie bez daty w bazie się nie pojawia.
+
+| `type` | Data z | `value` | `detail` |
+|---|---|---|---|
+| `domain_registered` | RDAP | domena | `registrar` |
+| `cert_issued` | crt.sh, `not_before` | numer seryjny | `issuer`, `domains` (inne domeny z certyfikatu) |
+| `ad_first_seen` | `Ad.first_seen` | | |
+| `snapshot` | migawka reklamy z biblioteki | | `active` |
+| `ad_last_seen` | `Ad.last_seen` reklamy z biblioteki | | |
+| `cert_pl_added`, `cert_pl_removed` | Lista Ostrzeżeń CERT Polska | domena | |
+
+`ads` to identyfikatory reklam grupy, których dotyczy zdarzenie (domena albo certyfikat może łączyć kilka). Ostatnie wystąpienie i migawki są tylko dla reklam z bibliotek, bo dla przechwyceń i zgłoszeń ręcznych to data importu. Z tego samego powodu pomijamy pierwsze wystąpienie przechwycenia, które w paczce nie miało daty.
 
 ## Wejście plikami
 

@@ -22,6 +22,7 @@ from evidence import store
 from evidence.kinds import BAND_KINDS, FAMILIES, KINDS
 from evidence.models import AdMarker, Artifact, AuditLog
 from extractors.url import redact_url
+from similarity import timeline
 from similarity.models import Campaign, Edge, Operator
 from similarity.service import assign_campaign, assign_operator
 from workflows import runner
@@ -255,6 +256,23 @@ def operator_detail(request, pk):
     detail = _group_detail(operator, s.OperatorSerializer, [Edge.Relation.SAME_CAMPAIGN, Edge.Relation.SAME_OPERATOR])
     detail["campaigns"] = sorted({ad["campaign"] for ad in detail["ads"] if ad["campaign"]})
     return Response(detail)
+
+
+def _timeline(group) -> dict:
+    ad_ids = list(group.memberships.values_list("ad_id", flat=True))
+    return {"group": group.key, "events": timeline.events_for(ad_ids)}
+
+
+@api_view(["GET"])
+def campaign_timeline(request, pk):
+    """Zdarzenia kampanii w czasie: wystąpienia reklam, migawki, rejestracja domen, certyfikaty, wpisy CERT Polska."""
+    return Response(_timeline(get_object_or_404(Campaign, pk=pk)))
+
+
+@api_view(["GET"])
+def operator_timeline(request, pk):
+    """Zdarzenia operatora w czasie, w tym samym kształcie co oś kampanii."""
+    return Response(_timeline(get_object_or_404(Operator, pk=pk)))
 
 
 @api_view(["GET"])

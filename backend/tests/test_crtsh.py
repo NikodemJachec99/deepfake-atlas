@@ -131,3 +131,63 @@ def test_no_answer_from_crtsh_does_not_stop_the_analysis():
     assert not Marker.objects.filter(kind="tls_serial").exists()
     # brak odpowiedzi nie trafia do pamięci, następna analiza spyta jeszcze raz
     assert not CertLookup.objects.exists()
+
+
+@pytest.mark.django_db
+def test_fill_certs_adds_missing_certificates_and_relinks():
+    from io import StringIO
+
+    from django.core.management import call_command
+
+    fakes.page("https://zysk-a.example/lp/1", LANDING_A)
+    fakes.page("https://inwest-b.example/start", LANDING_A.replace("Zarabiaj 12 000 zł", "Odbierz 9 500 zł"))
+    fakes.CERTS["zysk-a.example"] = None
+    fakes.CERTS["inwest-b.example"] = None
+    analyze_url("https://zysk-a.example/lp/1")
+    analyze_url("https://inwest-b.example/start")
+    assert not Edge.objects.get().evidence.filter(kind="tls_serial").exists()
+
+    fakes.CERTS["zysk-a.example"] = RECORDED
+    fakes.CERTS["inwest-b.example"] = [RECORDED[0]]
+    fakes.CERT_CALLS.clear()
+    out = StringIO()
+    call_command("fill_certs", stdout=out)
+    assert sorted(fakes.CERT_CALLS) == ["inwest-b.example", "zysk-a.example"]
+    assert "Przeliczone reklamy: 2" in out.getvalue()
+    assert Edge.objects.get().evidence.get(kind="tls_serial").value_a == SHARED
+
+    # drugi raz nie ma czego dociągać
+    fakes.CERT_CALLS.clear()
+    call_command("fill_certs", stdout=StringIO())
+    assert fakes.CERT_CALLS == []
+
+
+@pytest.mark.django_db
+def test_fill_certs_stops_when_crtsh_is_down():
+    from io import StringIO
+
+    from django.core.management import call_command
+
+    fakes.page("https://zysk-a.example/lp/1", LANDING_A)
+    fakes.page("https://inwest-b.example/start", LANDING_A)
+    fakes.CERTS["zysk-a.example"] = None
+    fakes.CERTS["inwest-b.example"] = None
+    analyze_url("https://zysk-a.example/lp/1")
+    analyze_url("https://inwest-b.example/start")
+    fakes.CERT_CALLS.clear()
+    out = StringIO()
+    call_command("fill_certs", stdout=out)
+    assert fakes.CERT_CALLS == ["inwest-b.example"]  # pierwsza alfabetycznie, potem stop
+    assert "Bez odpowiedzi zostaje 2: inwest-b.example, zysk-a.example" in out.getvalue()
+    assert not CertLookup.objects.exists()
+
+
+@pytest.mark.django_db
+def test_empty_answer_is_not_cached():
+    # crt.sh pod obciążeniem zwraca czasem pustą listę dla domeny z certyfikatami
+    fakes.CERTS["zysk-a.example"] = []
+    assert crtsh.lookup("zysk-a.example", fakes.FakeEnricher()) == []
+    assert not CertLookup.objects.exists()
+    fakes.CERTS["zysk-a.example"] = RECORDED
+    assert len(crtsh.lookup("zysk-a.example", fakes.FakeEnricher())) == 3
+    assert fakes.CERT_CALLS == ["zysk-a.example", "zysk-a.example"]

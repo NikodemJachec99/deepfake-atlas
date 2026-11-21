@@ -81,7 +81,10 @@ def lookup(domain: str, source) -> list[Cert] | None:
     raw = source.crtsh(domain)
     if raw is None:
         return None
-    CertLookup.objects.update_or_create(domain=domain, defaults={"raw": raw})
+    # Pustej listy nie zapisujemy: crt.sh pod obciążeniem potrafi ją zwrócić dla domeny,
+    # która ma certyfikaty, a zapis ukryłby je na tydzień.
+    if raw:
+        CertLookup.objects.update_or_create(domain=domain, defaults={"raw": raw})
     return parse(raw)
 
 

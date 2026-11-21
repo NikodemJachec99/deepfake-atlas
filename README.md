@@ -89,6 +89,7 @@ Usługi w compose: `db` 5432, `redis` 6380, `temporal` 7233 (UI 8233), `s3` 9000
 
 ```bash
 python manage.py import_bundle <katalog> --name <nazwa>  # paczka przechwyceń: import, analiza, raport
+python manage.py fill_certs                             # dociąga crt.sh dla domen, które przy imporcie zostały bez odpowiedzi
 python manage.py seed_people                            # baza referencyjna osób
 python manage.py collect cert_pl                        # bieżąca lista ostrzeżeń
 python manage.py collect cert_pl_history --year 2025    # historia z actions_YYYY.log

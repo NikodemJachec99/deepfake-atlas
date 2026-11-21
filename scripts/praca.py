@@ -383,10 +383,17 @@ def cmd_oddaj(args) -> None:
         break
     else:
         fail("CI nie skończyło się w 15 minut")
-    run("gh", "pr", "merge", branch, "--merge", "--delete-branch")
-    run("git", "switch", "main", check=False, quiet=True)
-    run("git", "pull", "--ff-only", "origin", "main", check=False, quiet=True)
+    # Bez --delete-branch: gh próbuje wtedy przełączyć się lokalnie na main, a w worktree main bywa
+    # wyciągnięty gdzie indziej. Gałęzie kasujemy sami, a w worktree wracamy na origin/main bez gałęzi.
+    run("gh", "pr", "merge", branch, "--merge")
     run("gh", "issue", "edit", str(number), "--remove-label", f"robi:{me}", check=False, quiet=True)
+    run("git", "push", "origin", "--delete", branch, check=False, quiet=True)
+    run("git", "fetch", "origin", "--prune", check=False, quiet=True)
+    if ok("git", "switch", "main"):
+        run("git", "pull", "--ff-only", "origin", "main", check=False, quiet=True)
+    else:
+        run("git", "switch", "--detach", "origin/main", check=False, quiet=True)
+    run("git", "branch", "-D", branch, check=False, quiet=True)
     print(f"ODDANE: #{number} {item['title']} jest w main.")
 
 

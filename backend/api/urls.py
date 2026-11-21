@@ -11,6 +11,8 @@ urlpatterns = [
     path("ads/<int:pk>", views.AdDetail.as_view()),
     path("ads/<int:pk>/edges", views.AdEdges.as_view()),
     path("ads/<int:pk>/recluster", views.ad_recluster),
+    path("ads/<int:pk>/observations", views.ad_observations),
+    path("observations/compare", views.observations_compare),
     path("edges/<int:pk>", views.EdgeDetail.as_view()),
     path("edges/<int:pk>/verdict", views.edge_verdict),
     path("edges/<int:pk>/decisions", views.edge_decisions),

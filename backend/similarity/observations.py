@@ -14,10 +14,13 @@ Progi (nie są wykalibrowaną pewnością, tylko opisem, jak czytać liczby):
 
 from datetime import datetime
 
-from ads.models import Ad
+from django.db.models import Q
+
+from ads.models import Ad, Analysis
 from evidence.kinds import KINDS
 from evidence.models import AdMarker, AdSignature
 from extractors import images, minhash
+from similarity.models import Edge
 
 SAME_TEXT, SAME_DOM = 0.9, 0.9
 SIMILAR_TEXT, SIMILAR_DOM = 0.5, 0.6
@@ -161,3 +164,56 @@ def compare(a: Ad, b: Ad) -> dict:
         "limitations": limitations,
         "thresholds": {"same_text": SAME_TEXT, "same_dom": SAME_DOM, "similar_text": SIMILAR_TEXT, "similar_dom": SIMILAR_DOM},
     }
+
+
+def artifacts(ad: Ad) -> dict:
+    """Bezpieczne odnośniki do dowodów: HAR i zapis HTML tylko do pobrania, zrzut reklamy jako obraz.
+    Zrzut reklamy to reklama, nie strona docelowa, więc podajemy go osobno."""
+    analysis = Analysis.objects.filter(ad=ad).order_by("-created_at").first()
+    state = analysis.state if analysis else {}
+    har = (state.get("capture") or {}).get("har")
+    html = ((state.get("pages") or {}).get("victim") or {}).get("html_sha")
+    creatives = list(ad.raw.get("creatives", [])) if isinstance(ad.raw, dict) else []
+    return {
+        "har": {"sha256": har, "download": f"/api/artifacts/{har}"} if har else None,
+        "html": {"sha256": html, "download": f"/api/artifacts/{html}"} if html else None,
+        "page_screenshot": None,  # zrzutów stron nie mamy; nie podstawiamy zrzutu reklamy
+        "ad_creatives": [{"sha256": sha, "image": f"/api/artifacts/{sha}/image"} for sha in creatives],
+    }
+
+
+def candidates(ad: Ad, limit: int = 20) -> list[dict]:
+    """Inne strony, z którymi warto porównać: ten sam adres dokładny albo po normalizacji, a w tej samej
+    sprawie także ta sama domena. Bez sieci, tylko po zapisie obserwacji."""
+    own = observation(ad)
+    if not own.get("exact_url"):
+        return []
+    query = Q(raw__observation__exact_url=own["exact_url"]) | Q(raw__observation__normalized_url=own.get("normalized_url") or "-")
+    if own.get("domain") and ad.labels.get("case"):
+        query |= Q(raw__observation__domain=own["domain"], labels__case=ad.labels.get("case"), labels__bundle=ad.labels.get("bundle"))
+    out = []
+    for other in Ad.objects.filter(query).exclude(pk=ad.pk).order_by("id")[:limit]:
+        obs = observation(other)
+        match = url_match(own, obs)
+        out.append({
+            "ad": other.pk,
+            "external_id": other.external_id,
+            "title": other.title[:200],
+            "url_match": match,
+            "url_match_label": URL_MATCH_LABELS[match],
+            "captured_at": obs.get("captured_at") or None,
+        })
+    order = {"exact": 0, "normalized": 1, "domain": 2}
+    return sorted(out, key=lambda c: (order.get(c["url_match"], 3), c["ad"]))
+
+
+def compare_with_links(a: Ad, b: Ad) -> dict:
+    result = compare(a, b)
+    result["a"]["artifacts"] = artifacts(a)
+    result["b"]["artifacts"] = artifacts(b)
+    low, high = sorted((a.pk, b.pk))
+    edge = Edge.objects.filter(ad_a_id=low, ad_b_id=high).first()
+    result["edge"] = {"id": edge.pk, "relation": edge.relation, "detail": f"/api/edges/{edge.pk}"} if edge else None
+    result["graph"] = f"/api/graph?ad={a.pk}"
+    result["note"] = "Porównanie tylko do odczytu. Nie zmienia krawędzi, grup ani decyzji analityka i niczego nie pobiera z sieci."
+    return result

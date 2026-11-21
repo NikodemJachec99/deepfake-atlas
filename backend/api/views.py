@@ -22,7 +22,7 @@ from evidence import store
 from evidence.kinds import BAND_KINDS, FAMILIES, KINDS
 from evidence.models import AdMarker, Artifact, AuditLog
 from extractors.url import redact_url
-from similarity import simulation, timeline
+from similarity import simulation, suggestions, timeline
 from similarity.models import Campaign, Edge, Operator
 from similarity.service import assign_campaign, assign_operator
 from workflows import runner
@@ -208,6 +208,14 @@ def edge_simulate(request, pk):
     except simulation.SimulationError as exc:
         return Response({"detail": str(exc), **exc.extra}, status=exc.status)
     return Response(result)
+
+
+@extend_schema(responses=dict)
+@api_view(["GET"])
+def edge_suggestions(request, pk):
+    """Co sprawdzić dalej: wskazówki z brakujących dowodów tej pary. Bez zapytań na zewnątrz."""
+    edge = get_object_or_404(Edge.objects.select_related("ad_a", "ad_b"), pk=pk)
+    return Response(suggestions.suggestions_for(edge))
 
 
 def _group_detail(group, serializer, relations: list[str]) -> dict:

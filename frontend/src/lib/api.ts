@@ -185,6 +185,40 @@ export interface Simulation {
   warnings: string[];
 }
 
+export type SuggestionCode =
+  | "single_support"
+  | "engine_without_account"
+  | "copy_without_backend"
+  | "har_missing"
+  | "screenshot_only"
+  | "story_unknown";
+
+export interface Suggestion {
+  code: SuggestionCode;
+  missing: string; // jakiego dowodu brakuje (hipoteza, nie istniejący dowód)
+  why: string;
+  next_step: string;
+  limitation: string;
+  rule: string; // reguła silnika albo stan materiałów, z której wynika wskazówka
+  sides: string[]; // "A (reklama #12)"; pusta, gdy dotyczy całej pary
+}
+
+export interface EdgeMaterials {
+  har: boolean;
+  page: boolean;
+  creative: boolean;
+  library_ids: string[];
+}
+
+export interface Suggestions {
+  edge: number;
+  relation: Relation | null;
+  materials: { A: EdgeMaterials; B: EdgeMaterials };
+  suggestions: Suggestion[]; // pusta lista to poprawny wynik
+  note: string;
+  warnings: string[];
+}
+
 export interface Group {
   id: number;
   key: string;
@@ -315,6 +349,8 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ exclude, ...(edgeVersion ? { edge_version: edgeVersion } : {}) }),
     }),
+  // Co sprawdzić dalej: wskazówki z brakujących dowodów pary, bez zapytań na zewnątrz.
+  edgeSuggestions: (id: number) => request<Suggestions>(`/api/edges/${id}/suggestions`),
   campaigns: () => request<Page<Group>>("/api/campaigns"),
   campaign: (id: number) => request<GroupDetail>(`/api/campaigns/${id}`),
   operators: () => request<Page<Group>>("/api/operators"),

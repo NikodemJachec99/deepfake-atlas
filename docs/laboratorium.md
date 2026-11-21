@@ -10,7 +10,7 @@ Stan na 2026-11-21.
 |---|---|---|---|---|
 | 1 | [#48](https://github.com/NikodemJachec99/deepfake-atlas/issues/48) czysta symulacja i kontrakt API | backend | p0 | w `main`: `POST /api/edges/{id}/simulate`, opis w [api.md](api.md) |
 | 2 | [#49](https://github.com/NikodemJachec99/deepfake-atlas/issues/49) interaktywny panel co-jeśli w widoku powiązania | frontend | p0 | czeka na koder |
-| 3 | [#50](https://github.com/NikodemJachec99/deepfake-atlas/issues/50) co sprawdzić dalej: wskazówki z brakujących dowodów | backend | p1 | do zrobienia, zależy od #48 |
+| 3 | [#50](https://github.com/NikodemJachec99/deepfake-atlas/issues/50) co sprawdzić dalej: wskazówki z brakujących dowodów | backend | p1 | w `main`: `GET /api/edges/{id}/suggestions` |
 | 3 | [#51](https://github.com/NikodemJachec99/deepfake-atlas/issues/51) karta działań analityka | frontend | p1 | zależy od #50 |
 | 4 | [#52](https://github.com/NikodemJachec99/deepfake-atlas/issues/52) walidacja i scenariusz demo laboratorium | docs | p1 | zależy od #48 i #49 |
 | 5 | [#53](https://github.com/NikodemJachec99/deepfake-atlas/issues/53) oś obserwacji: ewolucja śladów kampanii | backend | p1 | opcjonalne, po MVP |

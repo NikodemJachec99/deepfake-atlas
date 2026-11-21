@@ -1,5 +1,6 @@
 "use client";
 
+import { CrawlShot } from "./crawl-shot";
 import Link from "next/link";
 import { useState } from "react";
 import { api, artifactDownloadUrl, type ObservationSide } from "@/lib/api";
@@ -14,7 +15,7 @@ function Capture({ side }: { side: ObservationSide }) {
     <p>{date && Number.isFinite(date.getTime()) ? date.toLocaleString("pl-PL", { timeZoneName: "short" }) : "Data nieznana"} · {side.time_source || "Źródło daty nieznane"}</p>
     <p>Źródła obserwacji · {side.sources.join(", ") || "Brak informacji"}</p>
     <p>Kontekst · {side.context ? [side.context.browser, side.context.platform, side.context.accept_language].filter(Boolean).join(", ") || "Nieznany" : "Nieznany"}</p>
-    <p>Brak zrzutu strony docelowej.</p>
+    {side.artifacts?.page_screenshot ? <CrawlShot sha={side.artifacts.page_screenshot.sha256} /> : <p>Brak zrzutu strony docelowej.</p>}
     {side.text_excerpt?.text ? <figure>
       <figcaption className="text-muted">Fragment tekstu strony · {side.text_excerpt.source}</figcaption>
       <blockquote className="whitespace-pre-wrap border-l border-line pl-2">{side.text_excerpt.text}</blockquote>
@@ -37,7 +38,7 @@ export function ObservationPanel({ adId }: { adId: number }) {
   return <section className="grid gap-2 border-y border-line p-2">
     <button className="justify-self-start text-accent underline" aria-expanded={open} onClick={() => setOpen(!open)}>Dwie twarze jednego linku</button>
     {open && (observations.loading ? <Loading /> : observations.error ? <ErrorBox message={observations.error} onRetry={observations.reload} /> :
-      !partner ? <p>{observations.data?.message || "Brak drugiego przechwycenia do porównania."}</p> : <>
+      !partner ? <><CrawlShot sha={observations.data?.artifacts?.page_screenshot?.sha256} /><p>{observations.data?.message || "Brak drugiego przechwycenia do porównania."}</p></> : <>
         <label>Porównaj z materiałem <select className="max-w-full border border-line bg-panel" value={partner.ad} onChange={event => setChosen(Number(event.target.value))}>
           {candidates?.map(item => <option key={item.ad} value={item.ad}>#{item.ad} · {item.url_match_label} · {item.title || item.external_id}</option>)}
         </select></label>

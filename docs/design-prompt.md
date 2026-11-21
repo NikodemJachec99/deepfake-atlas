@@ -6,22 +6,81 @@ Wklej całość poniżej jako jedno zlecenie, z podłączonym tym repozytorium.
 
 ## 0. Kontekst repo i zakres na teraz (MVP na jutro)
 
-Pracujesz w repozytorium, w którym backend już działa. Buduj prawdziwy kod w `frontend/` (Next.js 16, React 19, TypeScript, Tailwind 4). Przeczytaj najpierw `frontend/AGENTS.md`, `docs/api.md` i `frontend/src/lib/api.ts`.
+Pracujesz w repozytorium, w którym backend już działa i ma wczytane prawdziwe dane organizatora. Buduj prawdziwy kod w `frontend/` (Next.js 16, React 19, TypeScript, Tailwind 4). Zanim cokolwiek napiszesz, przeczytaj:
 
-Zasady twarde:
+- `frontend/AGENTS.md` (ta wersja Next.js różni się od znanych, dokumentacja jest w `node_modules/next/dist/docs/`),
+- `docs/api.md` (kontrakt API, relacje, typy markerów),
+- `docs/metodyka.md` (jak powstają cechy i relacje, żeby interfejs nazywał rzeczy tak jak silnik),
+- `docs/wymagania.md` (kryteria oceny: interpretowalność powiązań to 15%, kompletność przebiegu end-to-end to 15%, estetyka nie jest oceniana),
+- `frontend/src/lib/api.ts` (typy i gotowy klient, używaj go wszędzie),
+- `docs/dane-organizatora.md` (co jest w korpusie i co silnik w nim znalazł),
+- `frontend/src/components/discovery.tsx` (działający punkt wyjścia: wysłanie, upload, strumień SSE, powiązania, panel dowodów, decyzja analityka).
+
+### Zasady twarde
+
 - Wszystkie dane bierz z klienta `frontend/src/lib/api.ts`. Żadnych danych na sztywno ani udawanych. Dane przykładowe z sekcji 8 służą tylko do makiet ekranów, których API jeszcze nie obsługuje.
-- Punkt wyjścia to działający ekran `frontend/src/components/discovery.tsx`. Zastąp go, nie psując przepływu: wysłanie, strumień SSE, lista powiązań, panel dowodów, decyzja analityka.
-- Graf: Sigma.js + Graphology, dane z `GET /api/graph`.
+- Nie psuj przepływu z `discovery.tsx`. Możesz go zastąpić, ale każda jego funkcja ma zostać.
+- Graf: Sigma.js + Graphology, dane z `GET /api/graph`. Animacje: Motion.
+- Adres backendu z `NEXT_PUBLIC_API_URL`.
+- Strony oszustów nigdy nie renderują się w interfejsie. Pokazujemy markery, tekst i zrzuty reklam (`artifactImageUrl`), a surowy HTML tylko jako plik do pobrania.
+- Aplikacja ma przejść `npm run lint` i `npm run build`.
 
-**P0, ma działać jutro na prawdziwym API:**
-1. Discovery: wejście (URL albo tekst), analiza w toku ze strumienia SSE (etapy `ingest, crawl, extract, enrich, fuse, cluster, end`), graf dorysowujący krawędź przy każdym zdarzeniu `fuse/info`, wynik z kampanią.
-2. Investigation: graf kampanii albo sąsiedztwa reklamy, filtr po rodzinach i typie relacji, klik w krawędź.
-3. Panel dowodów krawędzi (`GET /api/edges/{id}`): obie reklamy, pewność, dowody z `weight_bits`, `df` z `corpus_n`, znacznik `decisive`, przyciski decyzji (`POST /api/edges/{id}/verdict`).
-4. Karta reklamy (`GET /api/ads/{id}`): genom w siedmiu pasmach.
-5. Lista i karta kampanii (`GET /api/campaigns`, `GET /api/campaigns/{id}`): reklamy, krawędzie, markery rdzeniowe.
-6. Archiwum reklam (`GET /api/ads?q=&source=&campaign=`).
+### Co już zwraca backend
 
-**P1, tylko projekt ekranu, bez podpinania:** Evolution (oś czasu), źródła i skany, baza osób, kolejka etykietowania, alerty, piaskownica, raporty, jakość modelu, administracja. API dla nich jeszcze nie istnieje, więc oznacz je w interfejsie jako niedostępne zamiast pokazywać zmyślone liczby.
+**Trzy relacje** między reklamami (krawędzie grafu):
+
+| Relacja | Znaczenie | Rysunek |
+|---|---|---|
+| `same_campaign` | to samo źródło i ta sama opowieść | linia ciągła, gruba |
+| `same_operator` | to samo zaplecze, inna opowieść | linia ciągła, cienka |
+| `similar` | podobna koncepcja, brak dowodu wspólnego zaplecza | linia przerywana |
+
+**Dwa poziomy grup:** kampania (`K-0033`) i operator (`O-0001`). Jeden operator prowadzi kilka kampanii na wspólnym zapleczu. W danych organizatora jeden operator obejmuje kilkanaście stron na różnych domenach, z kilkoma różnymi fałszywymi artykułami. To jest główna historia do pokazania.
+
+**Sprawa** (`case`): numer z paczki przechwyceń. Reklamy z jednej sprawy to materiał zebrany razem przez analityka.
+
+**Genom reklamy:** markery w 7 rodzinach, każdy z wartością, liczbą reklam, które go dzielą, i znacznikiem `decisive`.
+
+**Dowód krawędzi:** rodzina, typ, wartości po obu stronach, `df` z `corpus_n` (w ilu niezależnych źródłach występuje wartość), wkład w bitach, odnośniki do artefaktów.
+
+**Wejścia:** adres URL, tekst, pliki (zrzut ekranu reklamy, zapisana strona, HAR, ZIP ze sprawą).
+
+**Ocena nowego materiału** (`ClusterResult.assessment`, zawsze z gotową etykietą po polsku w `assessment_label`):
+
+| Ocena | Znaczenie |
+|---|---|
+| `duplicate` | ten materiał już jest w korpusie |
+| `known_campaign` | nowa odsłona znanej kampanii |
+| `known_operator` | nowa kampania znanego operatora |
+| `similar_only` | podobna koncepcja, brak dowodu wspólnego źródła |
+| `new_pattern` | brak powiązań, potencjalnie nowa kampania |
+
+**Duplikat** (`Edge.duplicate`): ta sama strona przechwycona ponownie. Oznacz go wyraźnie na krawędzi i w panelu dowodów.
+
+**Słowa kluczowe i tematyka** (`ad.labels.keywords`, `ad.labels.topics`): do karty reklamy i jako filtr w archiwum.
+
+**Warstwa wizualna:** dowody `image_set` (wspólne obrazy na stronie, z podobieństwem 0..1) i `creative_phash` (ten sam zrzut reklamy). Zrzuty reklamy pokazuj obok siebie z `artifactImageUrl`.
+
+### P0: ma działać jutro na prawdziwym API
+
+1. **Discovery.** Wejście: pole adresu albo tekstu oraz strefa upuszczania plików (`api.uploadCase`). Analiza w toku ze strumienia SSE: oś etapów `ingest, crawl, extract, enrich, fuse, cluster, end` ze stanem każdego kroku, łańcuch przekierowań z `crawl/info`, liczniki markerów per rodzina z `extract/info`. Graf dorysowuje krawędź przy każdym zdarzeniu `fuse/info` (ładunek ma `other_ad`, `relation`, `probability`, `top_evidence`). Wynik: ocena (`assessment_label`) jako nagłówek, kampania i operator z `cluster/done`, tematyka i słowa kluczowe, pięć najsilniejszych dowodów, przejście do Investigation. Dla `new_pattern` pokaż wprost, że to potencjalnie nowa kampania i jakie markery ma materiał.
+2. **Investigation.** Graf z `GET /api/graph` (`?operator=`, `?campaign=`, `?ad=`). Węzeł to reklama: kolor według operatora albo kampanii, obwódka dla domen z Listy Ostrzeżeń (`listed`), etykieta sprawy. Krawędź: styl według relacji, kolor według dominującej rodziny (`family`), grubość według pewności. Filtry: relacja, rodziny markerów, próg pewności. Klik w krawędź otwiera panel dowodów, klik w węzeł kartę reklamy.
+3. **Panel dowodów krawędzi** (`GET /api/edges/{id}`). Najważniejszy ekran. Obie reklamy obok siebie (tytuł, domena, sprawa, zrzut reklamy jeśli jest), relacja, pewność, suma bitów, udział rodzin jako pasek. Lista dowodów posortowana po `weight_bits`: kolor rodziny, nazwa, wartość w kroju o stałej szerokości, rzadkość ("w 2 z 41 źródeł"), wkład w bitach, znacznik "rozstrzyga". Dla markerów miękkich podobieństwo zamiast wartości. Decyzja analityka: potwierdź, niepewne, odrzuć (`api.setVerdict`).
+4. **Karta reklamy** (`GET /api/ads/{id}`). Zrzuty reklamy (`creatives`), reklamodawca, tekst, adres, sprawa, kampania, operator, etykieta CERT z datą. Genom w siedmiu pasmach. Lista powiązań (`api.adEdges`).
+5. **Operator i kampania** (`GET /api/operators`, `/api/operators/{id}`, `/api/campaigns`, `/api/campaigns/{id}`). Lista grup z rozmiarem. Karta: reklamy, kampanie operatora, graf grupy, markery rdzeniowe (`core_markers`: te, które grupę spinają, z liczbą reklam w grupie i w całym korpusie).
+6. **Archiwum** (`GET /api/ads?q=&source=&campaign=&operator=&case=`). Gęsta tabela z filtrami i stronicowaniem.
+7. **Pasek stanu** z `GET /api/stats`: reklamy, kampanie, operatorzy, krawędzie per relacja, domeny na liście CERT, czas ostatniej analizy.
+
+### P1: tylko projekt ekranu, bez podpinania
+
+Evolution (oś czasu), źródła i skany, przegląd bazy osób, kolejka etykietowania, alerty, piaskownica, raporty, jakość modelu, administracja. API dla nich jeszcze nie istnieje. Oznacz je w interfejsie jako niedostępne zamiast pokazywać zmyślone liczby.
+
+### Ścieżka demo, pod którą projektujesz
+
+1. Investigation otwarte na największym operatorze: kilkanaście stron, różne domeny, kilka kampanii w różnych kolorach.
+2. Klik w krawędź między dwiema różnymi domenami: panel pokazuje identyfikator strony w panelu lejka, ścieżki zaplecza i piksel Meta. Strony wyglądają inaczej, a zaplecze jest to samo.
+3. Discovery: upuszczenie ZIP-a ze sprawą, której nie ma w korpusie. Etapy lecą na żywo, graf dorysowuje krawędzie do znanych reklam, wynik: "Nowa odsłona znanej kampanii".
+4. Discovery drugi raz, z materiałem bez powiązań: wynik "Nowy wzorzec". Jury sprawdza także, czy system nie łączy tego, czego nie powinien.
 
 Poniżej pełna wizja produktu. Stosuj jej kierunek wizualny, kolory rodzin i komponenty już w P0.
 
@@ -39,8 +98,8 @@ Zaprojektuj kompletny interfejs aplikacji **SCAM DNA**. To platforma analityki �
 
 1. **Każda krawędź ma dowody.** Połączenie między dwiema reklamami zawsze da się kliknąć i zobaczyć, z czego wynika: typ markera, wartości po obu stronach, rzadkość markera w korpusie, wkład do wyniku, poziom pewności, artefakt źródłowy.
 2. **Frontend pokazuje wyłącznie wyniki backendu.** Animacje odtwarzają prawdziwe zdarzenia analizy w kolejności, w jakiej zaszły. Nic nie jest udawane ani losowane dla efektu.
-3. **Dwa typy relacji są zawsze rozróżnialne**: `SAME_CAMPAIGN` (to samo źródło, linia ciągła) i `SIMILAR_TO` (podobna koncepcja, inny operator, linia przerywana).
-4. **Hierarchia jest zawsze widoczna** w okruszkach: rodzina narracji › operator › kampania › wariant kreacji › reklama.
+3. **Trzy typy relacji są zawsze rozróżnialne**: `same_campaign` (to samo źródło i ta sama opowieść, linia ciągła gruba), `same_operator` (to samo zaplecze, inna opowieść, linia ciągła cienka) i `similar` (podobna koncepcja bez dowodu wspólnego zaplecza, linia przerywana).
+4. **Hierarchia jest zawsze widoczna** w okruszkach: operator › kampania › reklama. Rodzina narracji i wariant kreacji dojdą później.
 
 ## 3. Kierunek wizualny
 

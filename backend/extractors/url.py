@@ -1,7 +1,8 @@
-"""Markery z adresu URL: domena rejestrowa, szablon ścieżki, zestaw nazw parametrów."""
+"""Markery z adresu URL: domena, szablon ścieżki, zestaw parametrów i identyfikatory przemycane w parametrach."""
 
+import hashlib
 import re
-from urllib.parse import parse_qsl, urlsplit
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import tldextract
 
@@ -12,9 +13,21 @@ _extract = tldextract.TLDExtract(suffix_list_urls=(), cache_dir=None)
 
 # Identyfikatory kliknięć doklejane przez platformy. Nie mówią nic o kampanii.
 PLATFORM_PARAMS = {"fbclid", "gclid", "gbraid", "wbraid", "ttclid", "msclkid", "yclid", "twclid", "igshid", "_ga", "_gl"}
+STANDARD_UTM = {"utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_id"}
+
+# Parametry, w których lejki oszustów przenoszą własne identyfikatory.
+PIXEL_PARAMS = {"pxl", "fbpx", "fbpixel", "pixel", "px", "fb_pixel"}
+FUNNEL_PARAMS = {"key", "lpkey", "acc", "land_id", "_camp_id", "affid", "aff_id", "offer_id", "flow", "stream"}
+AD_REF_PARAMS = {"ad_id", "adset_id", "campaign_id", "utm_id", "utm_content", "utm_term"}
+AD_NAMING_PARAMS = {"ad_name", "adset_name", "campaign_name", "utm_campaign"}
+SECRET_PARAMS = {"access_token"}
 
 _NUM = re.compile(r"^\d+$")
 _TOKEN = re.compile(r"^(?=.*\d)[A-Za-z0-9_-]{12,}$|^[0-9a-fA-F]{8,}$")
+_META_ID = re.compile(r"^\d{15,20}$")
+_PIXEL_ID = re.compile(r"^\d{10,20}$")
+_CYRILLIC = re.compile(r"[Ѐ-ӿ]{2,}")
+_PLACEHOLDER = re.compile(r"[{}\[\]]|^%7b", re.I)
 
 
 def host_of(url: str) -> str:
@@ -33,6 +46,11 @@ def registered_domain(host: str) -> str:
     return ".".join(labels[-2:]) if len(labels) >= 2 else host
 
 
+def domain_label(host: str) -> str:
+    """Nazwa własna domeny bez końcówki, np. `jasnyporanek` dla `www.jasnyporanek.example`."""
+    return registered_domain(host).split(".")[0]
+
+
 def path_template(path: str) -> str:
     out = []
     for segment in path.split("/"):
@@ -43,6 +61,22 @@ def path_template(path: str) -> str:
         else:
             out.append(segment.lower())
     return "/".join(out)
+
+
+def secret_hash(value: str) -> str:
+    """Skrót sekretu. Pozwala powiązać dwa użycia tego samego tokenu bez przechowywania go."""
+    if value.startswith("sha256-"):
+        return value
+    return "sha256-" + hashlib.sha256(value.encode()).hexdigest()[:16]
+
+
+def redact_url(url: str) -> str:
+    """Zamienia sekrety w adresie na skróty. Tokeny dostępu z cudzych kont nie mogą trafić do bazy ani do API."""
+    parts = urlsplit(url)
+    if not any(name in parts.query.lower() for name in SECRET_PARAMS):
+        return url
+    pairs = [(k, secret_hash(v) if k.lower() in SECRET_PARAMS else v) for k, v in parse_qsl(parts.query, keep_blank_values=True)]
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(pairs), parts.fragment))
 
 
 def url_observations(url: str) -> list[Observation]:
@@ -57,8 +91,26 @@ def url_observations(url: str) -> list[Observation]:
     if path:
         observations.append(Observation("url_path_tpl", path_template(path)))
 
-    keys = sorted({k.lower() for k, _ in parse_qsl(parts.query, keep_blank_values=True)} - PLATFORM_PARAMS)
-    # Sam zestaw utm_* ma połowa internetu. Marker powstaje dopiero, gdy jest coś własnego.
-    if any(not k.startswith("utm_") for k in keys):
+    params = [(k.lower(), v) for k, v in parse_qsl(parts.query, keep_blank_values=True)]
+    keys = sorted({k for k, _ in params} - PLATFORM_PARAMS)
+    # Standardowy zestaw utm_* ma połowa internetu. Marker powstaje dopiero, gdy jest coś własnego.
+    if any(k not in STANDARD_UTM for k in keys):
         observations.append(Observation("url_param_keys", ",".join(keys)))
-    return observations
+
+    for name, value in params:
+        value = value.strip()
+        if not value or _PLACEHOLDER.search(value):
+            continue
+        if name in SECRET_PARAMS:
+            observations.append(Observation("capi_token", secret_hash(value)))
+        elif name in PIXEL_PARAMS and _PIXEL_ID.match(value):
+            observations.append(Observation("meta_pixel", value, {"param": name}))
+        elif name in AD_REF_PARAMS and _META_ID.match(value):
+            observations.append(Observation("meta_ad_ref", value, {"param": name}))
+        elif name in FUNNEL_PARAMS and len(value) >= 4:
+            observations.append(Observation("funnel_param", f"{name}={value}"))
+        elif name in AD_NAMING_PARAMS and len(value) >= 5 and not _NUM.match(value):
+            observations.append(Observation("ad_naming", f"{name}={value}"))
+        if _CYRILLIC.search(value):
+            observations.append(Observation("lang_trace", "cyrillic", {"where": f"parametr {name}"}))
+    return list(dict.fromkeys(observations))

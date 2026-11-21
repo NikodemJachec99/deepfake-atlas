@@ -11,15 +11,18 @@ from dataclasses import dataclass, field
 
 from evidence.kinds import CONCEPT_FAMILIES, KINDS
 
-MODEL_VERSION = "fs-1"
+MODEL_VERSION = "fs-3"
 
 PRIOR = 1e-4  # szansa, że dwie losowe reklamy z korpusu należą do jednej kampanii
 PRIOR_STRENGTH = 1000  # ile "wirtualnych reklam" waży częstość bazowa typu markera
 SAME_PROBABILITY = 0.9  # próg pewności dla relacji "ta sama kampania"
 DECISIVE_BITS = 10.0  # marker rozstrzygający musi być do tego rzadki
 FAMILY_MIN_BITS = 4.0  # od tylu bitów rodzina liczy się jako niezależne potwierdzenie
-SIMILAR_MIN_BITS = 4.0  # zgodność koncepcji wystarczająca do relacji "podobne"
+SIMILAR_MIN_BITS = 4.0  # zgodność treści wystarczająca do "tej samej opowieści"
+WEAK_SIMILAR_MIN_BITS = 5.5  # albo kilka zgodnych motywów naraz: osoba, marka i tematyka
 FAMILY_DISCOUNT = 0.5  # kolejne markery w tej samej rodzinie są skorelowane
+DUPLICATE_TEXT = 0.97  # od takiej zgodności treści i struktury mówimy o duplikacie
+DUPLICATE_DOM = 0.97
 
 
 @dataclass(frozen=True)
@@ -65,6 +68,7 @@ class PairResult:
     probability: float = 0.0
     relation: str | None = None
     decisive: bool = False
+    duplicate: bool = False
     families: dict[str, float] = field(default_factory=dict)
     evidence: list[EvidenceItem] = field(default_factory=list)
 
@@ -135,14 +139,29 @@ def score_pair(shared: list[Shared], soft: list[Soft], corpus_n: int) -> PairRes
     result.probability = 1 / (1 + 2 ** -(result.bits + prior_bits))
     result.decisive = any(e.decisive for e in items)
 
+    # Duplikat: ta sama strona przechwycona drugi raz. Ta sama treść i ta sama struktura.
+    best = {e.kind: max(e.similarity, 0.0) for e in items if KINDS[e.kind].soft}
+    same_text = best.get("page_text_minhash", 0.0) >= DUPLICATE_TEXT or best.get("text_minhash", 0.0) >= DUPLICATE_TEXT
+    same_shape = any(e.kind == "dom_hash" for e in items) or best.get("dom_minhash", 0.0) >= DUPLICATE_DOM
+    result.duplicate = same_text and same_shape
+
     strong_families = [f for f, bits in families.items() if bits >= FAMILY_MIN_BITS]
+    # Ta sama opowieść: zgodna treść, obraz albo kontakt. Sam wspólny motyw (tematyka, osoba, marka)
+    # to za mało, bo różni operatorzy grają na tych samych nazwiskach i tych samych redakcjach.
+    story_bits = sum(e.weight_bits for e in items if KINDS[e.kind].story)
     concept_bits = sum(bits for f, bits in families.items() if f in CONCEPT_FAMILIES)
 
     # Reguła bezpieczeństwa: sama wysoka suma nie wystarcza. Potrzebny jest jeden rzadki marker
     # rozstrzygający albo dwie niezależne rodziny, inaczej jeden wspólny szablon skleja wszystko.
-    if result.probability >= SAME_PROBABILITY and (result.decisive or len(strong_families) >= 2):
-        result.relation = "same_campaign"
-    elif concept_bits >= SIMILAR_MIN_BITS:
+    # Co najmniej jedna z tych rodzin musi dotyczyć zaplecza. Treść i obrazy da się skopiować,
+    # więc dwie rodziny koncepcyjne nie dowodzą wspólnego źródła.
+    backed = any(f not in CONCEPT_FAMILIES for f in strong_families)
+    same_source = result.probability >= SAME_PROBABILITY and (result.decisive or (len(strong_families) >= 2 and backed))
+    if same_source:
+        # To samo źródło i ta sama opowieść to jedna kampania. To samo źródło z inną opowieścią
+        # to ten sam operator, który prowadzi kilka kampanii na wspólnym zapleczu.
+        result.relation = "same_campaign" if story_bits >= SIMILAR_MIN_BITS else "same_operator"
+    elif story_bits >= SIMILAR_MIN_BITS or concept_bits >= WEAK_SIMILAR_MIN_BITS:
         result.relation = "similar"
     return result
 

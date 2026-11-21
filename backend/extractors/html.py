@@ -1,4 +1,4 @@
-"""Markery ze strony docelowej: identyfikatory śledzące, lejek, kontakty i odcisk szablonu."""
+"""Markery ze strony docelowej: identyfikatory śledzące, lejek, kontakty, podszycia i odcisk szablonu."""
 
 import hashlib
 import re
@@ -7,8 +7,8 @@ from html.parser import HTMLParser
 from urllib.parse import urljoin, urlsplit
 
 from . import Observation, minhash
-from .text import contact_observations, digits
-from .url import host_of, registered_domain
+from .text import contact_observations, digits, extract_text
+from .url import domain_label, host_of, registered_domain
 
 TRACKERS: dict[str, list[re.Pattern]] = {
     "ga4": [re.compile(r"\bG-[A-Z0-9]{8,12}\b")],
@@ -20,10 +20,42 @@ TRACKERS: dict[str, list[re.Pattern]] = {
     ],
     "yandex_metrica": [re.compile(r"\bym\(\s*(\d{6,10})\s*,"), re.compile(r"mc\.yandex\.[a-z]+/watch/(\d{6,10})")],
     "tiktok_pixel": [re.compile(r"ttq\.load\(\s*['\"]([A-Z0-9]{18,24})['\"]")],
+    "google_ads": [re.compile(r"\bAW-(\d{8,12})\b")],
 }
+
+# Marki, pod które podszywają się strony oszustów, z ich prawdziwymi domenami.
+BRANDS: dict[str, tuple[str, ...]] = {
+    "Gazeta.pl": ("gazeta.pl",),
+    "TVN24": ("tvn24.pl", "tvn.pl"),
+    "Onet": ("onet.pl",),
+    "Wirtualna Polska": ("wp.pl",),
+    "Interia": ("interia.pl",),
+    "TVP Info": ("tvp.info", "tvp.pl"),
+    "Polsat News": ("polsatnews.pl", "polsat.pl"),
+    "Money.pl": ("money.pl",),
+    "Bankier.pl": ("bankier.pl",),
+    "Business Insider": ("businessinsider.com.pl", "businessinsider.com"),
+    "Forbes": ("forbes.pl", "forbes.com"),
+    "Fakt": ("fakt.pl",),
+    "Super Express": ("se.pl",),
+    "Rzeczpospolita": ("rp.pl",),
+    "App Store": ("apple.com",),
+    "Google Play": ("google.com",),
+    "InPost": ("inpost.pl",),
+    "PKO BP": ("pkobp.pl",),
+    "Pekao": ("pekao.com.pl",),
+    "Orlen": ("orlen.pl",),
+}
+# Krótkie nazwy sprawdzamy tylko w tytule, bo w treści trafiają się przypadkiem.
+_BRAND_IN_TEXT = {name for name in BRANDS if "." in name or " " in name or any(ch.isdigit() for ch in name)}
+_BRAND_PATTERNS = {name: re.compile(r"(?<![\w.])" + re.escape(name) + r"(?!\w)", re.I) for name in BRANDS}
+_CYRILLIC = re.compile(r"[Ѐ-ӿ]{3,}")
+_SPACE = re.compile(r"\s+")
 
 SHINGLE_TOKENS = 3
 MIN_DOM_TOKENS = 20
+MIN_TITLE = 12
+MIN_NAME = 5
 _SKIP_TEXT = {"script", "style", "noscript", "template"}
 
 
@@ -74,6 +106,7 @@ class PageFeatures:
     dom_signature: list[int] = field(default_factory=list)
     favicon_url: str | None = None
     visible_text: str = ""
+    text_signature: list[int] = field(default_factory=list)
 
 
 def extract_page(html: str, base_url: str) -> PageFeatures:
@@ -81,7 +114,8 @@ def extract_page(html: str, base_url: str) -> PageFeatures:
     collector.feed(html)
     collector.close()
 
-    own_domain = registered_domain(host_of(base_url))
+    own_host = host_of(base_url)
+    own_domain = registered_domain(own_host)
     observations: list[Observation] = []
 
     for kind, patterns in TRACKERS.items():
@@ -108,11 +142,32 @@ def extract_page(html: str, base_url: str) -> PageFeatures:
         if host and registered_domain(host) != own_domain:
             observations.append(Observation("form_action", f"{host}{target.path}".rstrip("/")))
 
+    title = _SPACE.sub(" ", collector.title).strip()
+    if len(title) >= MIN_TITLE:
+        observations.append(Observation("page_title", title.lower()))
+
+    # Podszycie: nazwa marki w tytule albo na początku strony, a domena nie należy do tej marki.
+    lead = visible[:600]
+    for brand, domains in BRANDS.items():
+        if own_domain in domains:
+            continue
+        pattern = _BRAND_PATTERNS[brand]
+        if pattern.search(title) or (brand in _BRAND_IN_TEXT and pattern.search(lead)):
+            observations.append(Observation("brand_impersonated", brand))
+
+    label = domain_label(own_host)
+    if len(label) >= MIN_NAME:
+        observations.append(Observation("page_name", label, {"from": "domena"}))
+
+    if _CYRILLIC.search(html):
+        observations.append(Observation("lang_trace", "cyrillic", {"where": "źródło strony"}))
+
     page = PageFeatures(
-        title=collector.title.strip(),
+        title=title,
         observations=list(dict.fromkeys(observations)),
         favicon_url=urljoin(base_url, collector.favicon) if collector.favicon else None,
         visible_text=visible,
+        text_signature=extract_text(visible).signature,
     )
     if len(collector.tokens) >= MIN_DOM_TOKENS:
         page.dom_hash = hashlib.sha1("\n".join(collector.tokens).encode()).hexdigest()[:20]

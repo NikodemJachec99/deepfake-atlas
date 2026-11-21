@@ -52,13 +52,11 @@ def test_different_domains_same_tracker_and_template_become_one_campaign():
     assert ga.artifact_a_id and ga.artifact_b_id and ga.artifact_a_id != ga.artifact_b_id
 
     campaign = Campaign.objects.get()
-    assert second.result["cluster"] == {
-        "campaign": campaign.key,
-        "campaign_id": campaign.pk,
-        "action": "created",
-        "neighbours": 1,
-        "size": 2,
-    }
+    cluster = second.result["cluster"]
+    assert (cluster["campaign"], cluster["campaign_id"], cluster["action"], cluster["neighbours"], cluster["size"]) == (
+        campaign.key, campaign.pk, "created", 1, 2,
+    )
+    assert cluster["operator"].startswith("O-") and cluster["operator_size"] == 2
     assert campaign.memberships.count() == 2
 
 

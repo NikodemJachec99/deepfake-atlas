@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from ads.models import Ad, Analysis, AnalysisEvent
 from evidence.kinds import BAND_KINDS, FAMILIES, KINDS
-from similarity.models import Campaign, Edge, EdgeEvidence
+from similarity.models import Campaign, Edge, EdgeEvidence, Operator
 
 
 class AnalysisCreateSerializer(serializers.Serializer):
@@ -34,26 +34,43 @@ class AnalysisSerializer(serializers.ModelSerializer):
 
 class AdListSerializer(serializers.ModelSerializer):
     campaign = serializers.SerializerMethodField()
+    operator = serializers.SerializerMethodField()
+    case = serializers.SerializerMethodField()
 
     class Meta:
         model = Ad
-        fields = ["id", "source", "external_id", "title", "landing_url", "first_seen", "last_seen", "labels", "campaign"]
+        fields = ["id", "source", "external_id", "title", "landing_url", "first_seen", "last_seen", "labels", "campaign", "operator", "case"]
 
     def get_campaign(self, obj) -> str | None:
         membership = getattr(obj, "membership", None)
         return membership.campaign.key if membership else None
 
+    def get_operator(self, obj) -> str | None:
+        membership = getattr(obj, "operator_membership", None)
+        return membership.operator.key if membership else None
+
+    def get_case(self, obj) -> str | None:
+        return obj.labels.get("case")
+
 
 class AdDetailSerializer(AdListSerializer):
     advertiser = serializers.SerializerMethodField()
     genome = serializers.SerializerMethodField()
+    creatives = serializers.SerializerMethodField()
 
     class Meta(AdListSerializer.Meta):
-        fields = [*AdListSerializer.Meta.fields, "text", "display_url", "creative_url", "advertiser", "genome"]
+        fields = [*AdListSerializer.Meta.fields, "text", "display_url", "creative_url", "advertiser", "creatives", "genome"]
 
     def get_advertiser(self, obj) -> dict | None:
         a = obj.advertiser
-        return {"id": a.pk, "external_id": a.external_id, "name": a.name, "payer": a.payer} if a else None
+        if a:
+            return {"id": a.pk, "external_id": a.external_id, "name": a.name, "payer": a.payer}
+        name = obj.raw.get("advertiser_name") if isinstance(obj.raw, dict) else ""
+        return {"id": None, "external_id": "", "name": name, "payer": ""} if name else None
+
+    def get_creatives(self, obj) -> list[str]:
+        """Skróty SHA-256 zrzutów reklamy. Obraz pobiera się z `/api/artifacts/{sha}/image`."""
+        return list(obj.raw.get("creatives", [])) if isinstance(obj.raw, dict) else []
 
     def get_genome(self, obj) -> list[dict]:
         """Markery reklamy pogrupowane w siedem rodzin. Pasma LSH są techniczne, więc ich nie pokazujemy."""
@@ -68,7 +85,9 @@ class AdDetailSerializer(AdListSerializer):
                     "label": KINDS[marker.kind].label,
                     "value": marker.value,
                     "ad_count": marker.ad_count,
+                    "decisive": KINDS[marker.kind].decisive,
                     "artifact": am.artifact_id,
+                    "detail": am.detail,
                 }
             )
         return [{"family": code, "label": FAMILIES[code], "markers": items} for code, items in by_family.items()]
@@ -95,7 +114,7 @@ class EdgeEvidenceSerializer(serializers.ModelSerializer):
 class EdgeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Edge
-        fields = ["id", "ad_a", "ad_b", "relation", "bits", "probability", "decisive", "families", "model_version", "verdict", "updated_at"]
+        fields = ["id", "ad_a", "ad_b", "relation", "duplicate", "bits", "probability", "decisive", "families", "model_version", "verdict", "updated_at"]
 
 
 class EdgeDetailSerializer(EdgeSerializer):
@@ -120,4 +139,13 @@ class CampaignSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Campaign
+        fields = ["id", "key", "label", "size", "created_at"]
+
+
+class OperatorSerializer(serializers.ModelSerializer):
+    key = serializers.CharField(read_only=True)
+    size = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Operator
         fields = ["id", "key", "label", "size", "created_at"]

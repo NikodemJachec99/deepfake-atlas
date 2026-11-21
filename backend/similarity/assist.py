@@ -1,4 +1,4 @@
-"""Opcjonalny lokalny adapter modelu decyzji basal (`POST /v1/systemone`), plan w docs/basal.md.
+"""Opcjonalny adapter usługi Jev (`POST /v1/systemone`). Dane trafiają poza infrastrukturę projektu.
 
 Zadanie MVP: czy istniejąca krawędź wymaga przeglądu człowieka, na podstawie samej struktury przesłanek.
 Do modelu idzie stan zbudowany z pól policzonych przez silnik dowodowy: relacja, bity, rodziny, grupy
@@ -14,7 +14,6 @@ import json
 import math
 import time
 from dataclasses import dataclass, field
-from urllib.parse import urlsplit
 
 import httpx
 from django.conf import settings
@@ -57,31 +56,31 @@ class Config:
     api_key: str = ""
     timeout: float = 20.0
     max_error: float | None = None
-    allowed_hosts: list[str] = field(default_factory=list)
+    allow_case_data: bool = False
 
     @classmethod
     def from_settings(cls) -> "Config":
-        raw = getattr(settings, "BASAL_MAX_ERROR", "")
         return cls(
-            url=getattr(settings, "BASAL_URL", ""),
-            mode=getattr(settings, "BASAL_MODE", "off"),
-            model=getattr(settings, "BASAL_MODEL", ""),
-            revision=getattr(settings, "BASAL_REVISION", ""),
-            variant=getattr(settings, "BASAL_VARIANT", ""),
-            api_key=getattr(settings, "BASAL_API_KEY", ""),
-            timeout=float(getattr(settings, "BASAL_TIMEOUT", 20.0)),
-            max_error=float(raw) if raw else None,
-            allowed_hosts=list(getattr(settings, "BASAL_ALLOWED_HOSTS", [])),
+            url="https://api.typesafe.ai",
+            mode=getattr(settings, "JEV_MODE", "off"),
+            model=getattr(settings, "JEV_MODEL", ""),
+            api_key=getattr(settings, "TYPESAFE_API_KEY", ""),
+            timeout=float(getattr(settings, "JEV_TIMEOUT", 20.0)),
+            allow_case_data=getattr(settings, "JEV_ALLOW_CASE_DATA", False),
         )
 
     def check(self) -> None:
-        if self.mode not in ("shadow", "on") or not self.url:
-            raise AssistDisabled("basal wyłączony (BASAL_MODE=off albo pusty BASAL_URL)")
-        parts = urlsplit(self.url)
-        if parts.scheme not in ("http", "https") or (parts.hostname or "") not in self.allowed_hosts:
-            raise AssistDisabled(f"host {parts.hostname!r} spoza BASAL_ALLOWED_HOSTS: model ma działać lokalnie")
-        if not self.model:
-            raise AssistDisabled("brak BASAL_MODEL: wersję modelu trzeba przypiąć jawnie")
+        if self.mode not in ("shadow", "on"):
+            raise AssistDisabled("Jev wyłączony (JEV_MODE=off)")
+        if self.url != "https://api.typesafe.ai":
+            raise AssistDisabled("Jev wymaga oficjalnego adresu HTTPS")
+        if not self.model or self.model in ("jev-latest", "jev-preview"):
+            raise AssistDisabled("JEV_MODEL musi wskazywać przypiętą wersję modelu")
+        if not self.api_key:
+            raise AssistDisabled("brak TYPESAFE_API_KEY")
+        if not self.allow_case_data:
+            raise AssistDisabled("wysyłanie danych spraw wyłączone; konieczne potwierdzenie uprawnienia do przekazania dostawcy")
+
 
 
 def review_state(edge: Edge) -> dict:
@@ -119,14 +118,12 @@ def _concept(group: str) -> bool:
     return bool(kind and kind.family in CONCEPT_FAMILIES)
 
 
-def request_body(state: dict, max_error: float | None) -> dict:
+def request_body(state: dict, model: str) -> dict:
     question = dict(REVIEW_QUESTION)
-    if max_error is not None:
-        question["max_error"] = max_error
     text = json.dumps(state, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     if len(text) > MAX_STATE_CHARS:
         raise ValueError(f"stan ma {len(text)} znaków, limit {MAX_STATE_CHARS}")
-    return {"state": text, "questions": {"review": question}, "lang": "pl"}
+    return {"model": model, "state": text, "questions": {"review": question}}
 
 
 def fingerprint(body: dict) -> str:
@@ -167,10 +164,14 @@ def parse_answer(payload) -> Outcome:
     choice = answer.get("choice")
     if choice not in ANSWERS:
         return Outcome("error", error="wybrana odpowiedź spoza listy")
-    return Outcome("ok", answer=choice, probabilities=clean, confidence=clean[choice], served_model=model)
+    confidence = answer.get("confidence")
+    if (not isinstance(confidence, int | float) or isinstance(confidence, bool)
+            or not math.isfinite(confidence) or not 0 <= confidence <= 1):
+        return Outcome("error", error="confidence poza zakresem 0..1")
+    return Outcome("ok", answer=choice, probabilities=clean, confidence=float(confidence), served_model=model)
 
 
-class BasalClient:
+class JevClient:
     def __init__(self, config: Config, transport: httpx.BaseTransport | None = None):
         config.check()
         self.config = config
@@ -204,11 +205,11 @@ class BasalClient:
         return outcome
 
 
-def review_edge(edge: Edge, client: BasalClient) -> AssistSuggestion:
+def review_edge(edge: Edge, client: JevClient) -> AssistSuggestion:
     """Pyta model o jedną krawędź i zapisuje wynik. Krawędzi i dowodów nie zmienia."""
     config = client.config
     try:
-        body = request_body(review_state(edge), config.max_error)
+        body = request_body(review_state(edge), config.model)
     except ValueError as exc:
         body, outcome = {"state": "", "questions": {}}, Outcome("error", error=str(exc))
     else:

@@ -99,6 +99,7 @@ python manage.py collect cert_pl_history --year 2025    # historia z actions_YYY
 python manage.py collect microsoft --query <fraza>      # Microsoft Ad Library, bez klucza
 python manage.py collect meta --query <fraza>           # wymaga META_AD_LIBRARY_TOKEN
 python manage.py ensure_schedules                       # harmonogramy skanów w Temporalu
+python manage.py ensure_schedules --pause               # wstrzymuje skany bibliotek reklam (np. na demo), --resume wznawia
 python manage.py project_graph                          # odbudowa grafu w Neo4j
 python manage.py index_ads                              # odbudowa indeksu w OpenSearch
 python manage.py reset_corpus --yes                     # czyści korpus, zostawia listę CERT i osoby

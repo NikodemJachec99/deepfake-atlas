@@ -1,15 +1,15 @@
 # Prezentacja na 5 minut i demo na 2 minuty
 
 Etap II: 5 minut prezentacji, 5 minut pytań. Zgłoszenie: prezentacja i demo do 2 minut.
-Liczby poniżej pochodzą z `GET /api/stats` po imporcie obu paczek (stan po przeglądzie krawędzi, model `fs-4`):
+Liczby poniżej pochodzą z `GET /api/stats` po imporcie samych paczek organizatora, bez reklam z bibliotek (model `fs-5`, z podobieństwem znaczenia treści):
 
 ```json
 {"ads": 28, "campaigns": 4, "operators": 3,
- "edges": {"same_campaign": 20, "same_operator": 13, "similar": 30},
+ "edges": {"same_campaign": 20, "same_operator": 13, "similar": 34},
  "cert_pl_listed": 6}
 ```
 
-Przed prezentacją sprawdź je jeszcze raz: `curl localhost:8000/api/stats`. Jeśli się różnią, popraw slajd 4.
+Przed prezentacją sprawdź je jeszcze raz: `curl localhost:8000/api/stats`. Jeśli się różnią, popraw slajd 4. Harmonogram skanów co 6 godzin dokłada reklamy z Microsoft Ad Library, więc na stosie, który chodzi dłużej, reklam jest więcej (np. 327 zamiast 28). Na demo wstrzymaj skany (przygotowanie niżej).
 
 ## Slajdy
 
@@ -21,8 +21,10 @@ Przed prezentacją sprawdź je jeszcze raz: `curl localhost:8000/api/stats`. Je�
 
 ### 2. Genom reklamy (45 s)
 
-- Z każdego materiału (URL, zrzut reklamy, zapisana strona, HAR, ZIP sprawy, archiwum NASK) wyciągamy markery w 7 rodzinach: infrastruktura, tracking i lejek, szablon strony, kreacja, narracja, osoby i marki, zachowanie.
+- Z każdego materiału (URL, zrzut reklamy, nagranie, zapisana strona, HAR, ZIP sprawy, archiwum NASK) wyciągamy markery w 7 rodzinach: infrastruktura, tracking i lejek, szablon strony, kreacja, narracja, osoby i marki, zachowanie.
 - Ok. 50 typów markerów. Przykłady, które rozstrzygały na danych organizatora: identyfikator strony w panelu lejka z treści żądań POST, ścieżki zaplecza strony z HAR, piksel Meta, konto Google Ads, własny host zasobów operatora.
+- Nagrania: 8 klatek z OCR, twarzami i hashem. Sprawa 5 (sama reklama wideo) dostaje tak tekst reklamy z podszyciem pod lekarza.
+- Znaczenie treści: lokalny model wielojęzyczny łapie ten sam artykuł przepisany innymi słowami (sprawa 48 i strona 1 sprawy 61: znaczenie 0,98 przy zgodności tekstu 0,39).
 - Analiza materiału z przechwycenia działa bez sieci. Niczego nie pobieramy od oszustów.
 
 ### 3. Metoda: Evidence Fusion (1 min)
@@ -47,15 +49,16 @@ Przed prezentacją sprawdź je jeszcze raz: `curl localhost:8000/api/stats`. Je�
 - Ten sam artykuł na innym zapleczu to tylko podobieństwo: treść da się skopiować.
 - Ten sam silnik lejka bez śladu konta operatora to też tylko podobieństwo: silnik da się kupić. Tak potraktowaliśmy sprawy 48, 61 i p11. Wcześniej wisiały przy operatorze A, przegląd każdej krawędzi to wyłapał i reguła została poprawiona z testem.
 - 14 stron zostało bez operatora.
+- Sprawdziliśmy to liczbowo. Bez plików HAR zostaje 19 z 33 połączeń, bez zapisu strony 30, bez zrzutów 32, a w żadnym wariancie nie powstaje fałszywe połączenie. Zmiana wag o ±50% rusza tylko 4 pary graniczne, rdzeń operatora A się nie zmienia.
 
 ### 6. Demo (2 min, scenariusz niżej)
 
 ### 7. Ograniczenia i dalej (30 s)
 
 - Wagi są eksperckie. Bez oznaczonego zbioru nie podajemy precyzji ani czułości. Następny krok: model uczony na decyzjach analityków, które już zapisujemy w dzienniku audytu.
-- Twarze rozpoznajemy tylko dla osób z małej bazy referencyjnej. Wideo i głos rejestrujemy, nie analizujemy.
+- Twarze rozpoznajemy tylko dla osób z małej bazy referencyjnej. Z nagrań bierzemy klatki, dźwięku nie analizujemy.
 - Strony na żywo pobieramy bez JavaScriptu. Pełny zestaw cech dają przechwycenia z HAR.
-- Działa jako `docker compose up`, z Temporalem, Postgresem i projekcją do Neo4j. Harmonogram skanuje bibliotekę reklam Microsoft.
+- Działa jako `docker compose up`, z Temporalem, Postgresem i projekcją do Neo4j, sprawdzone na Windowsie i Linuksie, CI stawia cały stos przy każdym PR. Harmonogram skanuje bibliotekę reklam Microsoft. Wzbogacony korpus do pobrania jednym kliknięciem (`GET /api/export`).
 
 ## Scenariusz demo (2 min)
 
@@ -66,6 +69,7 @@ Cel: pokazać pełny proces na nowym materiale i dołączenie do znanego operato
 Korpus bez spraw p3, p4 i p11 z drugiej paczki, wszystkie trzy spakowane do ZIP-ów:
 
 ```bash
+docker compose exec backend python manage.py ensure_schedules --pause   # skany bibliotek reklam stoją do końca demo
 docker compose exec backend python manage.py reset_corpus --yes
 docker compose exec backend python manage.py import_bundle /data/raw/nask --name nask
 mkdir -p data/raw/demo data/raw/demo-na-zywo
@@ -80,6 +84,8 @@ Na Windowsie bez `zip`: `Compress-Archive data/raw/demo-na-zywo/p3 data/raw/p3.z
 Po imporcie `GET /api/stats` daje 25 reklam, 3 kampanie i 3 operatorów, a operator O-0001 ma 6 stron na 5 domenach w jednej kampanii.
 
 Próba 2026-11-21 na świeżym klonie (`main` po #16, crt.sh włączony): przygotowanie ok. 2 min, analiza `p3.zip` ok. 5 s, `p11.zip` ok. 25 s, bo etap Infrastruktura czeka na crt.sh. Jeśli crt.sh nie odpowiada, etap czeka do 25 s i idzie dalej.
+
+Po demo: `docker compose exec backend python manage.py ensure_schedules --resume` wznawia skany.
 
 ### Przebieg
 

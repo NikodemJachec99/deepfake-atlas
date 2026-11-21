@@ -24,11 +24,13 @@ Wynik to trzy relacje (ta sama kampania, ten sam operator, podobna koncepcja), k
 
 Na danych organizatora (28 stron z 25 spraw) system bez podpowiedzi znalazł operatora z 8 stronami na 7 domenach w 2 kampaniach, spiętego identyfikatorami z panelu lejka i pikselem Meta, drugiego operatora z 3 stronami i kampanię z dwiema różnymi stronami pod tym samym adresem. Każdą krawędź między sprawami przejrzeliśmy ręcznie.
 
-Dodatkowo: laboratorium dowodów (co zostaje z połączenia po wyłączeniu śladów i test najsłabszego ogniwa), wskazówki "co sprawdzić dalej", porównanie dwóch przechwyceń tego samego adresu, twarze z małej bazy referencyjnej, eksport wzbogaconego korpusu, Lista Ostrzeżeń CERT Polska, crt.sh, RDAP, konektory bibliotek reklam i harmonogram skanów.
+Dodatkowo: laboratorium dowodów (co zostaje z połączenia po wyłączeniu śladów i test najsłabszego ogniwa), wskazówki "co sprawdzić dalej", porównanie dwóch przechwyceń tego samego adresu, twarze z małej bazy referencyjnej (także na klatkach nagrań), analiza nagrań reklam (klatki: OCR, twarze, hash), podobieństwo znaczenia treści (lokalny model wielojęzyczny łapie przepisany artykuł), pobranie wzbogaconego korpusu jako ZIP, Lista Ostrzeżeń CERT Polska, crt.sh, RDAP, konektory bibliotek reklam i harmonogram skanów.
+
+Wynik sprawdziliśmy liczbowo. Bez plików HAR zostaje 19 z 33 połączeń wspólnego źródła, bez zapisu strony 30, bez zrzutów 32, a w żadnym wariancie nie powstaje fałszywe połączenie. Zmiana wag modelu o ±50% rusza tylko 4 pary graniczne, a szansa wstępna i próg pewności nie zmieniają żadnej relacji.
 
 ## Technologie
 
-Python 3.12, Django 5.2, DRF, Temporal, PostgreSQL 16 z pgvector, RustFS (S3), Neo4j, OpenSearch, RapidOCR (PP-OCRv5), OpenCV YuNet i SFace, Next.js 16, React 19, TypeScript, Tailwind 4, Sigma.js, Docker Compose.
+Python 3.12, Django 5.2, DRF, Temporal, PostgreSQL 16 z pgvector, RustFS (S3), Neo4j, OpenSearch, RapidOCR (PP-OCRv5), OpenCV YuNet i SFace, paraphrase-multilingual-MiniLM-L12-v2 (ONNX), Next.js 16, React 19, TypeScript, Tailwind 4, Sigma.js, Docker Compose.
 
 ## Repozytorium
 

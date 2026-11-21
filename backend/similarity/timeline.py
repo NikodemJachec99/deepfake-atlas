@@ -57,7 +57,7 @@ LABELS = {
     "cert_issued": "Wystawienie certyfikatu",
     "ad_first_seen": "Pierwsze wystąpienie reklamy",
     "trace_first_observed": "Pierwsza obserwacja śladu w grupie",
-    "link_observable": "Powiązanie możliwe do zaobserwowania",
+    "link_observable": "Powiązania możliwe do zaobserwowania",
     "snapshot": "Migawka reklamy",
     "ad_last_seen": "Ostatnie wystąpienie reklamy",
     "cert_pl_added": "Wpis na Listę Ostrzeżeń CERT Polska",
@@ -199,19 +199,47 @@ def _trace_events(ad_ids: list[int], seen: dict[int, Seen], undated: dict) -> li
     return out
 
 
+LINK_LIST_LIMIT = 50
+
+
 def _link_events(ad_ids: list[int], relations: list[str], seen: dict[int, Seen], undated: dict) -> list[dict]:
-    """Powiązanie da się zaobserwować dopiero, gdy obie reklamy są w ręku. To nie jest data,
-    w której operator je połączył."""
-    out = []
+    """Powiązanie da się zaobserwować dopiero, gdy obie reklamy są w ręku. To nie jest data, w której
+    operator je połączył. Jedno zdarzenie na reklamę, która dołącza do grupy: z iloma wcześniej widzianymi
+    reklamami się wiąże. Przy tej samej chwili obu reklam nie wiemy, która była pierwsza: przypisujemy parę
+    reklamie o wyższym numerze i oznaczamy remis."""
+    joins: dict[int, dict] = {}
     edges = Edge.objects.filter(ad_a_id__in=ad_ids, ad_b_id__in=ad_ids, relation__in=relations).exclude(verdict=Edge.Verdict.REJECTED)
-    for edge in edges:
+    for edge in edges.order_by("pk"):
         a, b = seen.get(edge.ad_a_id), seen.get(edge.ad_b_id)
         if a is None or b is None:
             undated["links"] += 1
             continue
-        later = b if b.at > a.at else a
-        detail = {"relation": edge.relation, "probability": round(edge.probability, 4)}
-        out.append(_event("link_observable", later, [edge.ad_a_id, edge.ad_b_id], str(edge.pk), detail))
+        tied = a.at == b.at
+        if tied:
+            joining, partner = max(edge.ad_a_id, edge.ad_b_id), min(edge.ad_a_id, edge.ad_b_id)
+        else:
+            joining, partner = (edge.ad_b_id, edge.ad_a_id) if b.at > a.at else (edge.ad_a_id, edge.ad_b_id)
+        entry = joins.setdefault(joining, {"partners": [], "edges": [], "relations": {}, "max_probability": 0.0, "tied": False})
+        entry["partners"].append(partner)
+        entry["edges"].append(edge.pk)
+        entry["relations"][edge.relation] = entry["relations"].get(edge.relation, 0) + 1
+        entry["max_probability"] = max(entry["max_probability"], round(edge.probability, 4))
+        entry["tied"] = entry["tied"] or tied
+    out = []
+    for joining, entry in joins.items():
+        count = len(entry["edges"])
+        detail = {
+            "count": count,
+            "relations": dict(sorted(entry["relations"].items())),
+            "partners": sorted(entry["partners"])[:LINK_LIST_LIMIT],
+            "edges": sorted(entry["edges"])[:LINK_LIST_LIMIT],
+            "max_probability": entry["max_probability"],
+        }
+        if count > LINK_LIST_LIMIT:
+            detail["truncated"] = True
+        if entry["tied"]:
+            detail["tied"] = True
+        out.append(_event("link_observable", seen[joining], [joining], str(count), detail))
     return out
 
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Archive, Compass, FolderOpen, Network, UsersRound } from "lucide-react";
+import { Scale, Bell, Archive, Compass, FolderOpen, Network, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -8,13 +8,13 @@ import { api, RELATION_LABELS, type Stats } from "@/lib/api";
 
 const sections: Record<string, string> = {
   "/": "Discovery", "/investigation": "Investigation", "/archive": "Archiwum",
-  "/operators": "Operatorzy", "/campaigns": "Kampanie", "/ads": "Reklamy", "/alerts": "Alerty",
+  "/operators": "Operatorzy", "/campaigns": "Kampanie", "/ads": "Reklamy", "/alerts": "Alerty", "/weights": "Wagi markerów",
 };
 
 const navigation = [
   { href: "/", Icon: Compass }, { href: "/investigation", Icon: Network },
   { href: "/archive", Icon: Archive }, { href: "/operators", Icon: UsersRound },
-  { href: "/campaigns", Icon: FolderOpen }, { href: "/alerts", Icon: Bell },
+  { href: "/campaigns", Icon: FolderOpen }, { href: "/alerts", Icon: Bell }, { href: "/weights", Icon: Scale },
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {

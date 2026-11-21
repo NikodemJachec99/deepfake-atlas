@@ -29,11 +29,13 @@ export function Creatives({ shas, size = "h-40" }: { shas: string[]; size?: stri
 }
 
 function AdText({ ad }: { ad: AdDetail }) {
+  const [expanded, setExpanded] = useState(false);
   if (!ad.text) return null;
   const frameText = ad.source === "capture" && !ad.creatives.length && !!ad.videos?.length;
   return <figure className="border-l-2 border-line-strong pl-3">
     {frameText && <figcaption className="text-sm text-muted">Tekst odczytany z klatek nagrania (OCR)</figcaption>}
-    <blockquote className="whitespace-pre-wrap">{ad.text}</blockquote>
+    <blockquote className={frameText && !expanded ? "line-clamp-3 whitespace-pre-wrap" : "whitespace-pre-wrap"}>{ad.text}</blockquote>
+    {frameText && <button aria-expanded={expanded} className="text-accent underline" onClick={() => setExpanded(!expanded)}>{expanded ? "Zwiń OCR" : "Rozwiń OCR"}</button>}
   </figure>;
 }
 
@@ -61,7 +63,8 @@ function Recordings({ videos = [] }: { videos?: AdDetail["videos"] }) {
         <video controls preload="metadata" aria-label={video.name} src={API_URL + video.url}
           poster={video.poster ? API_URL + video.poster.url : undefined} className="max-h-80 w-full bg-black" />
         {video.poster && <p className="text-sm text-muted">Klatka poglądowa z nagrania · {video.poster.at_s.toLocaleString("pl-PL")} s</p>}
-      </> : <p>Brak możliwości odtworzenia. {video.missing.join(" · ")}</p>}
+      </> : <div><p>Nagranie niedostępne do odtworzenia. {video.missing.some(reason => reason.includes("ponad limit magazynu")) ? "Plik przekracza limit magazynu." : "Brak dostępnej kopii do odtworzenia."}</p>
+        {video.missing.length > 0 && <details><summary>Szczegóły nagrania</summary><ul>{video.missing.map(reason => <li key={reason}>{reason}</li>)}</ul></details>}</div>}
       {video.speech?.text && <Speech speech={video.speech} />}
     </figure>)}
   </section>;
@@ -107,6 +110,7 @@ function MaterialWorkspace({ ad }: { ad: AdDetail }) {
 }
 
 export function Labels({ ad }: { ad: Pick<AdDetail, "labels"> }) {
+  const [expanded, setExpanded] = useState(false);
   const topics = ad.labels.topics ?? [];
   const keywords = ad.labels.keywords ?? [];
   if (topics.length + keywords.length === 0) return null;
@@ -115,11 +119,12 @@ export function Labels({ ad }: { ad: Pick<AdDetail, "labels"> }) {
       {topics.map((topic) => (
         <Tag key={topic} tone="accent">{topic}</Tag>
       ))}
-      {keywords.map((keyword) => (
+      {(expanded ? keywords : keywords.slice(0, 8)).map((keyword) => (
         <Link key={keyword} href={`/archive?q=${encodeURIComponent(keyword)}`} className="rounded-sm border border-line px-1 text-[0.85rem] text-muted hover:border-line-strong hover:text-fg" title="Słowo kluczowe. Kliknij, aby szukać w archiwum.">
           {keyword}
         </Link>
       ))}
+      {keywords.length > 8 && <button aria-expanded={expanded} className="text-accent underline" onClick={() => setExpanded(!expanded)}>{expanded ? "Pokaż mniej" : `Więcej słów (${keywords.length - 8})`}</button>}
     </div>
   );
 }

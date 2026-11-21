@@ -247,33 +247,54 @@ export interface OperatorDetail extends GroupDetail {
   campaigns: string[];
 }
 
-// Oś czasu kampanii albo operatora. Zdarzenie bez daty w bazie się nie pojawia.
+// Oś obserwacji kampanii albo operatora. Każde zdarzenie mówi, jaki to rodzaj czasu i skąd jest data.
+// Rzeczy bez daty nie ma na osi, są tylko policzone w `undated`.
 export type TimelineEventType =
   | "domain_registered"
   | "cert_issued"
   | "ad_first_seen"
+  | "trace_first_observed"
+  | "link_observable"
   | "snapshot"
   | "ad_last_seen"
   | "cert_pl_added"
   | "cert_pl_removed";
 
+// observed: chwila obserwacji materiału (to nie jest początek kampanii); reported: data podana przez źródło zewnętrzne.
+export type TimeKind = "observed" | "reported";
+export type TimeSource = Source | "rdap" | "crt.sh" | "cert_pl";
+
 export interface TimelineEvent {
   type: TimelineEventType;
   label: string;
   at: string;
+  time_kind: TimeKind;
+  source: TimeSource;
+  precision: "exact" | "day";
   ads: number[];
   value: string;
   detail: {
     registrar?: string;
     issuer?: string;
     domains?: string[];
+    count?: number;
+    last_at?: string;
     active?: boolean;
+    kind?: string;
+    kind_label?: string;
+    family?: Family;
+    in_group?: number;
+    undated_ads?: number;
+    tied?: boolean;
+    relation?: Relation;
+    probability?: number;
   };
 }
 
 export interface Timeline {
   group: string;
   events: TimelineEvent[];
+  undated: { ads: number[]; traces: number; links: number; certificates: number };
 }
 
 export interface Graph {

@@ -280,21 +280,21 @@ def operator_detail(request, pk):
     return Response(detail)
 
 
-def _timeline(group) -> dict:
+def _timeline(group, relations: list[str]) -> dict:
     ad_ids = list(group.memberships.values_list("ad_id", flat=True))
-    return {"group": group.key, "events": timeline.events_for(ad_ids)}
+    return {"group": group.key, **timeline.build(ad_ids, relations)}
 
 
 @api_view(["GET"])
 def campaign_timeline(request, pk):
-    """Zdarzenia kampanii w czasie: wystąpienia reklam, migawki, rejestracja domen, certyfikaty, wpisy CERT Polska."""
-    return Response(_timeline(get_object_or_404(Campaign, pk=pk)))
+    """Oś obserwacji kampanii: reklamy, ślady, powiązania, domeny, certyfikaty, wpisy CERT Polska. Każde zdarzenie z rodzajem czasu i źródłem."""
+    return Response(_timeline(get_object_or_404(Campaign, pk=pk), [Edge.Relation.SAME_CAMPAIGN]))
 
 
 @api_view(["GET"])
 def operator_timeline(request, pk):
-    """Zdarzenia operatora w czasie, w tym samym kształcie co oś kampanii."""
-    return Response(_timeline(get_object_or_404(Operator, pk=pk)))
+    """Oś obserwacji operatora, w tym samym kształcie co oś kampanii."""
+    return Response(_timeline(get_object_or_404(Operator, pk=pk), [Edge.Relation.SAME_CAMPAIGN, Edge.Relation.SAME_OPERATOR]))
 
 
 @api_view(["GET"])

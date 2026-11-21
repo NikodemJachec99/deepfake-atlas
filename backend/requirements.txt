@@ -9,7 +9,6 @@ dj-database-url>=2.3,<4
 # dane
 psycopg[binary]>=3.2,<4
 pgvector>=0.3.6,<1
-redis>=5.2,<8
 boto3>=1.35,<2
 neo4j>=5.26,<7
 opensearch-py>=2.8,<4

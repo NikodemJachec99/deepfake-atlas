@@ -1,6 +1,6 @@
 # Wymagania wyzwania i zgodność z regulaminem
 
-Źródła: opis wyzwania NASK "Kolekcjoner fejków" (pełna wersja z 21.11.2026: opis, kryteria, walidacja i zajawka "Follow the Fake", [docs/zrodla/opis-zadania.pdf](zrodla/opis-zadania.pdf)) i regulamin HackNation obowiązujący od 28.09.2026. Stan na 21.11.2026.
+Źródła: opis wyzwania NASK "Kolekcjoner fejków" (pełna wersja z 21.11.2026: opis, kryteria, walidacja i zajawka "Follow the Fake", [docs/zrodla/opis-zadania.pdf](zrodla/opis-zadania.pdf)) regulamin zadania konkursowego "Kolekcjoner fejków" z wzorem umowy przeniesienia praw ([docs/zrodla/regulamin-zadania.pdf](zrodla/regulamin-zadania.pdf)) i regulamin HackNation obowiązujący od 28.09.2026. Stan na 22.11.2026.
 
 ## Kryteria oceny (pkt 9 opisu wyzwania)
 
@@ -100,7 +100,26 @@ Do pilnowania:
 | 5.6 | etap I: ocena zgłoszeń na platformie HackTribe, 5 najlepszych zespołów do etapu II; etap II: 5 minut prezentacji i 5 minut pytań | slajdy i scenariusz w [prezentacja.md](prezentacja.md), PDF generowany do `data/zgloszenie/prezentacja.pdf` (poza gitem, zawiera dane organizatora) |
 | 5.9 | po terminie zakaz zmian w rozwiązaniu | po 22.11 11:00 nie ruszamy repo |
 | 6.1, 6.2 | uczestnik oświadcza, że jest twórcą swojego wkładu i że rozwiązanie nie narusza praw osób trzecich | biblioteki na licencjach otwartych, lista w [licencje.md](licencje.md); użycie asystenta AI ujawnione tamże |
-| 6.3 | regulamin konkursu może przewidywać przeniesienie praw do rozwiązania | regulamin zadania NASK §4 ust. 3 wymaga od zwycięzców zawarcia umowy przeniesienia praw do utworów wytworzonych w ramach zadania; §3 ust. 6–7 wiąże jej podpisanie z nagrodą. Sprawdzić wzór umowy z organizatorem ([regulamin zadania](https://mudnibfuppwadjkynscc.supabase.co/storage/v1/object/public/task-files/057d36b5-cb92-4062-9393-983cb8a96088/files/af08d8e1-d1ca-4f6a-96c6-9e1e99a26547.pdf)) |
+| 6.3 | regulamin konkursu może przewidywać przeniesienie praw do rozwiązania | regulamin zadania NASK §4 ust. 3 wymaga od zwycięzców zawarcia umowy przeniesienia praw do utworów wytworzonych w ramach zadania; §3 ust. 6–7 wiąże jej podpisanie z nagrodą. Wzór umowy jest w [regulaminie zadania](zrodla/regulamin-zadania.pdf), szczegóły niżej |
+
+## Regulamin zadania "Kolekcjoner fejków"
+
+Regulamin zadania ma pierwszeństwo przed regulaminem wydarzenia (§5 ust. 2). Przyrzekającym nagrodę i stroną umowy jest NASK-PIB.
+
+| Punkt | Treść | Jak spełniamy |
+|---|---|---|
+| §1 ust. 5 | udział tylko osób fizycznych zarejestrowanych na HackNation 2026 | Nikodem i Sokół, oboje zarejestrowani |
+| §2 | ocena jury według kryteriów z opisu zadania, decyzja ostateczna | kryteria i nasz stan: sekcja wyżej |
+| §3 ust. 5 | nagroda pieniężna dzielona po równo między członków zespołu, chyba że wspólne oświadczenie mówi inaczej | sprawa zespołu, bez wpływu na kod |
+| §3 ust. 6–7 | nagroda po podpisaniu umowy przeniesienia praw, na podpis 7 dni | sprawa zespołu po ogłoszeniu wyników |
+| §4 ust. 1 | każdy uczestnik jest twórcą swojego wkładu i ma do niego pełne prawa majątkowe | kod pisał zespół z asystentem Claude Code (Anthropic), co jest ujawnione w [licencje.md](licencje.md); kodu z innych projektów nie kopiowaliśmy, poza bibliotekami jako zależnościami |
+| §4 ust. 2, umowa §5 | rozwiązanie wolne od wad prawnych, bez naruszania praw osób trzecich, prawa nieobciążone | repozytorium **nie ma pliku licencji**: nie udzieliliśmy nikomu licencji (np. MIT), więc wyłączne prawa da się przenieść bez obciążeń. Zależności tylko na licencjach otwartych ([licencje.md](licencje.md)). Usługi na licencjach z warunkami (Neo4j GPL-3.0, ffmpeg LGPL/GPL) działają jako osobne procesy i nie są częścią naszego kodu. Redis (RSALv2/SSPLv1) usunięty 22.11, bo nie był używany. Modele: MIT (Whisper, CLIP), licencje modeli w licencje.md. Zdjęć osób w repo nie ma, są tylko wektory z plików Commons na wolnej licencji z autorem i licencją |
+| §4 ust. 3–8 | zwycięzcy przenoszą autorskie prawa majątkowe na NASK-PIB (art. 74 ust. 4 i art. 50 ustawy), wszyscy współtwórcy podpisują wspólnie | kod, dokumentacja i skrypty są w jednym repozytorium; po przeniesieniu NASK-PIB może je zmieniać, łączyć i wdrażać bez naszej zgody (umowa §1 ust. 3–5) |
+| umowa §1 ust. 1 pkt 4 | autor zamieszcza na platformie konkursowej kod źródłowy z dokumentacją w formie pozwalającej na jego wykorzystanie | **do zrobienia przez zespół**: repozytorium jest prywatne, więc w zgłoszeniu na HackTribe trzeba dać organizatorowi dostęp do repo albo dołączyć archiwum kodu; instalacja jednym poleceniem `python scripts/start.py`, dokumentacja w `README.md` i `docs/` |
+| umowa §6 ust. 3 | zgoda na korzystanie z utworu bez oznaczenia autorstwa | w kodzie i interfejsie nie ma wymaganych oznaczeń autorstwa |
+| §5 ust. 5 | organizator może zmienić regulamin, informując mailem | przy zmianie podmieniamy PDF w `docs/zrodla/` i tę tabelę |
+
+Zasady dla dalszej pracy są w `CLAUDE.md`, sekcja "Regulamin zadania".
 
 Z przewodnika uczestnika i FAQ (strona hacknation.pl, odczyt 21.11):
 

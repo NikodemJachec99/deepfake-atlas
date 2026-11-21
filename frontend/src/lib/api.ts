@@ -644,6 +644,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const artifactImageUrl = (sha256: string) => `${API_URL}/api/artifacts/${sha256}/image`;
 export const artifactDownloadUrl = (sha256: string) => `${API_URL}/api/artifacts/${sha256}`;
+// Wzbogacony korpus jako ZIP (reklamy z markerami, krawędzie z dowodami, grupy). source="capture": same materiały spraw.
+export const exportCorpusUrl = (source?: Source) => `${API_URL}/api/export${source ? `?source=${source}` : ""}`;
 
 export const api = {
   createAnalysis: (kind: "url" | "text", value: string) =>

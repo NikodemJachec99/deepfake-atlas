@@ -1,4 +1,5 @@
 import asyncio
+import io
 import json
 import re
 import tempfile
@@ -7,9 +8,11 @@ import zipfile
 from pathlib import Path
 
 from asgiref.sync import sync_to_async
+from django.core.management import call_command
 from django.db.models import Count, Q
 from django.http import Http404, HttpResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, parser_classes
@@ -285,6 +288,25 @@ def observations_compare(request):
         return Response({"detail": "Porównanie wymaga dwóch różnych reklam."}, status=400)
     a, b = get_object_or_404(Ad, pk=a_id), get_object_or_404(Ad, pk=b_id)
     return Response(observations.compare_with_links(a, b))
+
+
+@api_view(["GET"])
+def export_corpus(request):
+    """Wzbogacony korpus jako ZIP: reklamy z markerami, krawędzie z dowodami, grupy, opis. `?source=capture` zawęża do materiałów spraw."""
+    source = request.query_params.get("source") or None
+    if source and source not in {choice for choice, _label in Ad._meta.get_field("source").choices}:
+        return Response({"detail": f"Nieznane źródło: {source}"}, status=400)
+    with tempfile.TemporaryDirectory(prefix="scamdna-eksport-") as tmp:
+        folder = Path(tmp) / "korpus"
+        call_command("export_corpus", str(folder), **({"source": source} if source else {}))
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+            for item in sorted(folder.iterdir()):
+                archive.write(item, f"korpus/{item.name}")
+    name = f"scamdna-korpus-{source or 'wszystko'}-{timezone.now():%Y%m%d-%H%M}.zip"
+    response = HttpResponse(buffer.getvalue(), content_type="application/zip")
+    response["Content-Disposition"] = f'attachment; filename="{name}"'
+    return response
 
 
 def _group_detail(group, serializer, relations: list[str]) -> dict:

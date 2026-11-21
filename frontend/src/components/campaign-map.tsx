@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type Group, type Graph } from "@/lib/api";
+import { groupColor } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 
-function CampaignNode({ group, x, y, expanded, toggle }: {
-  group: Group; x: number; y: number; expanded: boolean; toggle: () => void;
+function CampaignNode({ group, x, y, color, expanded, toggle }: {
+  group: Group; x: number; y: number; color: string; expanded: boolean; toggle: () => void;
 }) {
   const result = useApi(expanded ? String(group.id) : null, () => api.graph(`?campaign=${group.id}`));
   const [all, setAll] = useState(false);
@@ -42,7 +43,7 @@ function CampaignNode({ group, x, y, expanded, toggle }: {
     <g role="button" tabIndex={0} aria-label={`Kampania ${group.key}, liczba reklam ${group.size}`} aria-expanded={expanded}
       className="cursor-pointer" onClick={toggle} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } }}>
       <title>{group.label || group.key} · {group.size} reklam</title>
-      <circle r="20" fill={expanded ? "var(--accent)" : "var(--raised)"} stroke="var(--accent)" strokeWidth="2" />
+      <circle r="20" fill={expanded ? color : "var(--raised)"} stroke={color} strokeWidth="2" />
       <text textAnchor="middle" dy="5" fill={expanded ? "white" : "var(--accent)"} fontSize="14" fontWeight="600">{group.size}</text>
       <text textAnchor="middle" y={expanded ? -88 : 38} fill="var(--fg)" fontSize="13">{group.key}</text>
     </g>
@@ -63,9 +64,17 @@ export function CampaignMap({ groups, expanded, onToggle }: {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const surface = useRef<SVGSVGElement>(null);
   const drag = useRef<{x:number; y:number} | null>(null);
-  const columns = Math.ceil(Math.sqrt(groups.length * 1.5));
-  const rows = Math.ceil(groups.length / columns);
-  const width = columns * 195 + 100, height = rows * 215 + 70;
+  const operators = useApi("map-operators", async () => {
+    const list = await api.operators();
+    return Promise.all(list.results.map(item => api.operator(item.id)));
+  });
+  const locations = groups.map((group, index) => ({
+    group, x: 125 + (index % Math.ceil(Math.sqrt(groups.length))) * 215,
+    y: 155 + Math.floor(index / Math.ceil(Math.sqrt(groups.length))) * 270,
+    owners: operators.data?.filter(operator => operator.campaigns.includes(group.key)) ?? [],
+  }));
+  const width = Math.max(...locations.map(item => item.x)) + 125;
+  const height = Math.max(...locations.map(item => item.y)) + 125;
   useEffect(() => {
     const svg = surface.current;
     if (!svg) return;
@@ -80,14 +89,28 @@ export function CampaignMap({ groups, expanded, onToggle }: {
       <button aria-label="Przybliż" onClick={() => setScale(v => Math.min(8,v*1.4))}>＋</button>
       <button onClick={() => {setScale(1);setAngle(0);setOffset({x:0,y:0});}}>Dopasuj</button>
     </div>
+    {operators.error && <button className="text-accent" onClick={operators.reload}>Ponów pobranie operatorów mapy</button>}
     <svg ref={surface} className="min-h-[48vh] w-full flex-1 touch-none cursor-grab" viewBox={`0 0 ${width} ${height}`} aria-label="Graf kampanii"
       onPointerDown={e => { if ((e.target as Element).closest('a,button,[role="button"]')) return; drag.current={x:e.clientX,y:e.clientY};e.currentTarget.setPointerCapture(e.pointerId); }}
       onPointerMove={e => { const prev=drag.current, matrix=e.currentTarget.getScreenCTM(); if (!prev || !matrix) return;
         const dx=(e.clientX-prev.x)/matrix.a, dy=(e.clientY-prev.y)/matrix.d; drag.current={x:e.clientX,y:e.clientY}; setOffset(v=>({x:v.x+dx,y:v.y+dy})); }}
       onLostPointerCapture={()=>{drag.current=null;}}>
       <g transform={`translate(${width/2+offset.x} ${height/2+offset.y}) rotate(${angle}) scale(${scale}) translate(${-width/2} ${-height/2})`}>
-        {groups.map((group,i) => <CampaignNode key={group.id} group={group} x={100+(i%columns)*195+(Math.floor(i/columns)%2)*75} y={115+Math.floor(i/columns)*215}
-          expanded={expanded.has(group.id)} toggle={() => onToggle(group.id)} />)}
+        {operators.data?.map(operator => {
+          const cells = locations.filter(item => item.owners.some(owner => owner.id === operator.id));
+          if (!cells.length) return null;
+          const x = cells[0].x, y = cells[0].y - 110;
+          const color = groupColor(operator.key, "light");
+          return <g key={operator.id}>
+            {cells.map(cell => <line key={cell.group.id} x1={x} y1={y} x2={cell.x} y2={cell.y} stroke={color} />)}
+            <Link href={`/operators/${operator.id}`} aria-label={`Operator ${operator.key}`}>
+              <rect x={x-40} y={y-12} width="80" height="24" rx="5" fill={color}/>
+              <text x={x} y={y+4} textAnchor="middle" fontSize="13" fill="white">{operator.key}</text>
+            </Link>
+          </g>;
+        })}
+        {locations.map(({group,x,y,owners}) => <CampaignNode key={group.id} group={group} x={x} y={y}
+          color={groupColor(owners[0]?.key, "light")} expanded={expanded.has(group.id)} toggle={() => onToggle(group.id)} />)}
       </g>
     </svg>
   </section>;

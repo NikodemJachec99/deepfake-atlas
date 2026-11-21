@@ -3,6 +3,9 @@
 // Minimalny ekran Discovery. Dowodzi, że API działa od wejścia do dowodów.
 // Docelowy interfejs (trzy tryby, graf, panel dowodów) powstaje według docs/design-prompt.md.
 
+import { FolderInput, ArrowUpRight } from "lucide-react";
+import { useApi } from "@/lib/hooks";
+import { adTitle } from "@/lib/format";
 import { GroupLink } from "./ui";
 import { LiveGraph } from "./live-graph";
 import { EdgePanel } from "./edge-panel";
@@ -32,6 +35,7 @@ function FamilyDot({ family }: { family: Family }) {
 }
 
 export function Discovery() {
+  const archive = useApi("discovery-materials", () => api.ads("?page_size=4"));
   const [kind, setKind] = useState<"url" | "text">("url");
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
@@ -156,12 +160,15 @@ export function Discovery() {
   const cluster = [...events].reverse().find(item => item.stage === "cluster" && item.status === "done")?.payload as Partial<ClusterResult> | undefined;
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 font-sans md:px-7">
+    <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-7 font-sans md:px-9">
       <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Analiza materiału</h1>
+        <h1 className="text-4xl font-semibold tracking-tight">Analiza materiału</h1>
         <p className="text-muted">Wrzuć adres reklamy albo jej tekst. System znajdzie ślady i pokaże, z czym się łączy.</p>
       </header>
 
+      <div className="grid overflow-hidden rounded-xl border border-line lg:grid-cols-[3fr_2fr]">
+      <section className="grid content-center gap-4 bg-panel p-5 md:p-7">
+      <h2 className="text-xl font-semibold">Adres lub treść reklamy</h2>
       <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row">
         <select
           id="input-kind"
@@ -186,11 +193,15 @@ export function Discovery() {
           {busy ? "Analiza trwa" : "Analizuj"}
         </button>
       </form>
+      </section>
 
-      <label onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); upload(Array.from(event.dataTransfer.files)); }} className="flex flex-wrap items-center gap-3 rounded border border-dashed border-line-strong bg-panel px-4 py-4">
+      <label onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); upload(Array.from(event.dataTransfer.files)); }} className="grid content-center justify-items-start gap-2 border-t border-line bg-raised p-5 md:p-7 lg:border-t-0 lg:border-l">
+        <FolderInput size={24} className="text-accent" aria-hidden />
+        <strong className="text-lg">Import plików</strong>
         <span className="text-muted">Upuść pliki lub wybierz je z dysku: zrzut ekranu reklamy, zapisana strona, HAR, ZIP ze sprawą.</span>
         <input id="input-files" type="file" multiple disabled={busy} onChange={event => { upload(Array.from(event.target.files ?? [])); event.target.value = ""; }} className="text-xs" />
       </label>
+      </div>
 
       {batch.length > 1 && <label className="flex items-center gap-2">Materiał z paczki
         <select className="min-w-0 max-w-full rounded border border-line bg-panel p-2" value={activeId} onChange={event => {
@@ -208,13 +219,16 @@ export function Discovery() {
       </div>}
       {error && <p className="rounded border border-rejected px-3 py-2 text-rejected">Analiza nie powiodła się: {error}</p>}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-[minmax(15rem,1fr)_minmax(0,2fr)]">
         <section className="flex min-w-0 flex-col gap-2">
           <h2 className="border-b border-line pb-2 text-lg font-semibold">Przebieg analizy</h2>
           <ol className="grid gap-1">
             {Object.entries(stageLabels).map(([stage, label]) => {
               const latest = [...events].reverse().find(event => event.stage === stage);
-              return <li key={stage}>{label} · {latest ? stateLabels[latest.status] : "oczekuje"}</li>;
+              return <li key={stage} className="flex items-center gap-3 border-b border-line py-2">
+                <span aria-hidden className={latest ? "size-2 rounded-full bg-accent" : "size-2 rounded-full border border-line-strong"} />
+                <span>{label}</span><span className="ml-auto text-xs text-muted">{latest ? stateLabels[latest.status] : "oczekuje"}</span>
+              </li>;
             })}
           </ol>
           {events.filter(event => event.stage === "crawl" && Array.isArray(event.payload.chain)).map(event =>
@@ -233,7 +247,14 @@ export function Discovery() {
         </section>
 
         <section className="flex min-w-0 flex-col gap-2">
-          <h2 className="font-semibold">{cluster?.assessment_label || assessment || "Powiązania"}</h2>
+          {!activeId && <section className="mb-4">
+            <div className="flex items-baseline justify-between border-b border-line pb-2"><h2 className="text-lg font-semibold">Materiały w archiwum</h2><Link href="/archive" className="text-accent underline">Całe archiwum</Link></div>
+            {archive.loading ? <p>Pobieranie materiałów…</p> : archive.error ? <button onClick={archive.reload} className="text-accent underline">Ponów pobranie materiałów</button> :
+              archive.data?.results.length ? archive.data.results.slice(0, 4).map(item => <Link key={item.id} href={`/ads/${item.id}`} className="flex items-center gap-4 border-b border-line py-3 hover:bg-panel">
+                <span className="font-mono text-muted">#{item.id}</span><strong className="min-w-0 flex-1 truncate">{adTitle(item)}</strong><span className="text-muted">{item.case}</span><ArrowUpRight size={16} aria-hidden />
+              </Link>) : <p>Archiwum jest puste.</p>}
+          </section>}
+          <h2 className="text-lg font-semibold">{cluster?.assessment_label || assessment || "Powiązania"}</h2>
           {(ad || cluster) && <p aria-label="Przypisanie do grup">
             Kampania <GroupLink group={ad ? ad.campaign : cluster?.campaign} /> · Operator <GroupLink group={ad ? ad.operator : cluster?.operator} />
           </p>}

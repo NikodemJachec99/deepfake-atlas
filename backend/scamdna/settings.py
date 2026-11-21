@@ -37,12 +37,20 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    # Pochodzenie zapisu, opcjonalny klucz i limit rozmiaru żądania (api/security.py, docs/bezpieczenstwo.md).
+    "api.security.ApiGuardMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+X_FRAME_OPTIONS = "DENY"
+# Opcjonalny klucz dla zapisu przez API. Pusty: wyłączony, jak dotąd.
+API_WRITE_KEY = env("API_WRITE_KEY", "")
+# Największe żądanie (sprawa jako ZIP). 2 GiB rozpakowanego archiwum plus zapas na kompresję i nagłówki.
+UPLOAD_MAX_BYTES = int(env("UPLOAD_MAX_BYTES", str(2 * 1024**3 + 64 * 1024**2)))
 
 ROOT_URLCONF = "scamdna.urls"
 ASGI_APPLICATION = "scamdna.asgi.application"
@@ -85,6 +93,10 @@ REST_FRAMEWORK = {
     # Na start API jest otwarte w sieci lokalnej. Role i klucze instytucji wchodzą w M10 do M12.
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
+    # Tylko JSON: formularz z obcej strony nie przejdzie jako "prosty" zapis bez preflightu CORS.
+    # Upload plików ma jawnie MultiPartParser i ochronę po nagłówku Origin.
+    "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
+    "DEFAULT_THROTTLE_RATES": {"analyses": env("ANALYSES_RATE", "60/min")},
 }
 SPECTACULAR_SETTINGS = {
     "TITLE": "SCAM DNA API",

@@ -39,6 +39,8 @@ export function Discovery() {
   const [edges, setEdges] = useState<Edge[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
   const [assessment, setAssessment] = useState("");
+  const [batch, setBatch] = useState<Analysis[]>([]);
+  const [activeId, setActiveId] = useState("");
   const stop = useRef<(() => void) | null>(null);
 
   const generation = useRef(0);
@@ -49,9 +51,10 @@ export function Discovery() {
     setBusy(false);
   }, []);
 
-  async function run(start: () => Promise<Analysis>) {
+  async function run(start: (() => Promise<Analysis | Analysis[]>) | Analysis) {
     const current = ++generation.current;
     stop.current?.();
+    if (typeof start === "function") setBatch([]);
     setBusy(true);
     setError("");
     setEvents([]);
@@ -60,11 +63,17 @@ export function Discovery() {
     setSelected(null);
     setAssessment("");
     try {
-      const analysis = await start();
+      const result = typeof start === "function" ? await start() : start;
       if (generation.current !== current) return;
+      const analysis = Array.isArray(result) ? result[0] : result;
+      if (!analysis) throw new Error("W przesłanych plikach nie znaleziono materiału do analizy.");
+      if (Array.isArray(result)) setBatch(result);
+      setActiveId(analysis.id);
       stop.current = streamAnalysis(
         analysis,
-        (item) => setEvents((previous) => [...previous, item]),
+        (item) => {
+          if (generation.current === current) setEvents(previous => [...previous, item]);
+        },
         async () => {
           try {
             const finished = await api.analysis(analysis.id);
@@ -98,11 +107,7 @@ export function Discovery() {
   }
 
   function upload(files: File[]) {
-    if (!busy && files.length) void run(async () => {
-      const [first] = await api.uploadCase(files);
-      if (!first) throw new Error("W przesłanych plikach nie znaleziono materiału do analizy.");
-      return first;
-    });
+    if (!busy && files.length) void run(() => api.uploadCase(files));
   }
 
   const strongest = events.filter(item => item.stage === "fuse" && item.status === "info")
@@ -145,6 +150,16 @@ export function Discovery() {
         <input id="input-files" type="file" multiple disabled={busy} onChange={event => { upload(Array.from(event.target.files ?? [])); event.target.value = ""; }} className="text-xs" />
       </label>
 
+      {batch.length > 1 && <label className="flex items-center gap-2">Materiał z paczki
+        <select className="min-w-0 max-w-full rounded border border-line bg-panel p-2" value={activeId} onChange={event => {
+          const analysis = batch.find(item => item.id === event.target.value);
+          if (analysis) void run(analysis);
+        }}>
+          {batch.map((item, index) => <option key={item.id} value={item.id}>
+            {index + 1}. {item.input_value || item.id}
+          </option>)}
+        </select>
+      </label>}
       {error && <p className="rounded border border-red-500 px-3 py-2 text-red-400">Analiza nie powiodła się: {error}</p>}
 
       <div className="grid gap-6 lg:grid-cols-2">

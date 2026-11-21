@@ -16,6 +16,8 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | GET | `/api/ads/{id}` | | `AdDetail`: genom, zrzuty reklamy, reklamodawca |
 | GET | `/api/ads/{id}/edges` | | lista `Edge` malejąco po pewności |
 | POST | `/api/ads/{id}/recluster` | | ponowne przypisanie do kampanii i operatora |
+| GET | `/api/ads/{id}/observations` | | obserwacja strony reklamy i strony do porównania (ten sam adres albo domena w sprawie) |
+| GET | `/api/observations/compare` | `?a=ID&b=ID` | `ObservationComparison`: dwie strony obok siebie, tylko do odczytu |
 | GET | `/api/edges/{id}` | | `EdgeDetail`: obie reklamy i lista dowodów |
 | POST | `/api/edges/{id}/verdict` | `{"verdict":"confirmed"\|"rejected"\|"unsure","reason":"...","note":""}` | `EdgeDetail`; wpis w historii decyzji z migawką i w dzienniku audytu |
 | GET | `/api/edges/{id}/decisions` | | `EdgeDecisions`: historia decyzji od najnowszej (opis niżej) |
@@ -169,7 +171,7 @@ Kampania (`K-0033`) to reklamy spięte krawędziami `same_campaign`. Operator (`
 ```
 
 - `exclude`: identyfikatory dowodów z `EdgeDetail.evidence[].id`. Pusta lista zwraca sam wynik bazowy.
-- `edge_version`: opcjonalne, `Edge.updated_at` z chwili wczytania. Jeśli krawędź zmieniła się od tego czasu, odpowiedź to `409` z bieżącym `edge_version`. Interfejs odświeża wtedy dowody.
+- `edge_version`: opcjonalne, `Edge.updated_at` z chwili wczytania, ISO 8601 ze strefą. Porównujemy chwile, nie napisy: `Z`, `+00:00` i `+01:00` dla tej samej chwili to ta sama wersja, mikrosekundy się liczą. Jeśli krawędź zmieniła się od tego czasu, odpowiedź to `409` z bieżącym `edge_version`, a interfejs odświeża wtedy dowody. Napis, który nie jest datą albo nie ma strefy: `400`. Tak samo w `weakest-link`.
 - Identyfikator dowodu z innej krawędzi: `400`, w polu `unknown` lista nieznanych identyfikatorów.
 
 Odpowiedź:
@@ -205,6 +207,49 @@ Odpowiedź:
 - `reasons`: zdania odpowiadające regułom z `similarity/fusion.py`, w kolejności sprawdzania.
 - `group_impact`: liczone tylko wtedy, gdy krawędź przestałaby spinać grupę. `pair_still_connected` mówi, czy obie reklamy łączy inna ścieżka z krawędzi tego samego rodzaju (bez odrzuconych). `false` oznacza, że grupa rozpadłaby się w tym miejscu na dwie, przy reszcie grafu bez zmian. Nie przeliczamy innych par.
 - Bity to wkład dowodów w skali logarytmicznej, nie procent i nie identyfikacja osoby.
+
+## Dwie twarze jednego linku (`ObservationComparison`)
+
+Porównanie dwóch przechwyconych stron, np. tego samego adresu widzianego dwa razy. Tylko do odczytu: nie zmienia krawędzi, grup ani decyzji i nie pobiera niczego z sieci. Opis audytu i progów: [dwie-twarze.md](dwie-twarze.md).
+
+`GET /api/ads/{id}/observations`:
+
+```json
+{
+  "ad": 12,
+  "observation": {"ad": 12, "external_id": "nask/61/strona-2-...", "title": "...", "exact_url": "https://.../?utm_id=...",
+                  "captured_at": "2026-10-20T12:03:42.174Z", "time_source": "har.entries",
+                  "context": {"browser": "Microsoft Edge", "platform": "Windows", "mobile": false, "accept_language": "pl,en;q=0.9",
+                              "cookies": false, "referer": false},
+                  "hosts": ["..."], "sources": ["..."], "creatives": ["<sha256>"]},
+  "artifacts": {"har": {"sha256": "...", "download": "/api/artifacts/<sha256>"}, "html": {"sha256": "...", "download": "/api/artifacts/<sha256>"},
+                "page_screenshot": null, "ad_creatives": [{"sha256": "...", "image": "/api/artifacts/<sha256>/image"}]},
+  "candidates": [{"ad": 13, "external_id": "...", "title": "...", "url_match": "exact", "url_match_label": "identyczny adres", "captured_at": "..."}],
+  "message": ""
+}
+```
+
+`GET /api/observations/compare?a=12&b=13`:
+
+| Pole | Znaczenie |
+|---|---|
+| `a`, `b` | jak `observation` wyżej, plus `artifacts` |
+| `url_match` | `exact`, `normalized` (ta sama po normalizacji: kolejność parametrów, wielkość liter, port, fragment), `domain`, `different`, `unknown` |
+| `seconds_between` | odstęp między przechwyceniami albo `null`, gdy którejś daty nie znamy |
+| `content` | podobieństwo z istniejących sygnatur: `page_text_minhash`, `dom_minhash`, `image_set`; `null`, gdy brak sygnatury |
+| `trackers_only_a`, `trackers_only_b`, `hosts_only_a`, `hosts_only_b` | czego jedna strona używa, a druga nie |
+| `verdict` | `identical`, `similar`, `different`, `insufficient`, z etykietą `verdict_label` |
+| `differences` | konkretne zaobserwowane różnice zdaniami |
+| `hypotheses` | tylko przy zgodnym adresie i różnej treści: cloaking, jednorazowy token wizyty, inny kontekst przeglądarki, zmiana w czasie |
+| `limitations` | czego nie wiemy; zawsze zawiera zdanie, że kontekst odbiorcy jest nieznany |
+| `edge` | krawędź między tymi reklamami (`id`, `relation`, `detail`) albo `null` |
+| `graph` | adres grafu wokół reklamy A |
+| `thresholds` | progi oceny (opis skali, nie pewność) |
+
+- `context: null` i `captured_at: null` znaczą "nieznane". Reklamy zaimportowane przed tą funkcją nie mają zapisu obserwacji; ponowny import go uzupełnia.
+- `page_screenshot` jest zawsze `null`: zrzutów stron nie mamy, a zrzut reklamy (`ad_creatives`) to reklama, nie strona docelowa.
+- HAR i HTML są tylko do pobrania (`/api/artifacts/{sha256}`), nigdy do renderowania. Odpowiedź nie zawiera HTML ani skryptów, adresy mają zredagowane sekrety.
+- Błędy: brak albo zły parametr `400`, ta sama reklama dwa razy `400`, nieistniejąca reklama `404`.
 
 ## Test najsłabszego ogniwa (`WeakestLink`)
 

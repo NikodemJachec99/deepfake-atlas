@@ -22,7 +22,7 @@ from evidence.kinds import BAND_KINDS, FAMILIES, KINDS
 from evidence.models import AdMarker, Artifact
 from extractors.url import redact_url
 from people.display import display_value, person_names
-from similarity import decisions, precedents, simulation, suggestions, timeline, weakest
+from similarity import decisions, observations, precedents, simulation, suggestions, timeline, weakest
 from similarity.models import Campaign, Edge, EdgeDecision, Operator
 from similarity.service import assign_campaign, assign_operator
 from workflows import runner
@@ -249,6 +249,33 @@ def edge_weakest_link(request, pk):
     except simulation.SimulationError as exc:
         return Response({"detail": str(exc), **exc.extra}, status=exc.status)
     return Response(result)
+
+
+@api_view(["GET"])
+def ad_observations(request, pk):
+    """Obserwacja strony tej reklamy i strony, z którymi da się ją porównać (ten sam adres albo ta sama domena w sprawie)."""
+    ad = get_object_or_404(Ad, pk=pk)
+    found = observations.candidates(ad)
+    own = observations.observation(ad)
+    message = ""
+    if not own:
+        message = "Ta reklama nie ma zapisu obserwacji: materiał bez strony albo import sprzed tej funkcji."
+    elif not found:
+        message = "Brak innych przechwyceń tego samego adresu ani tej samej domeny w tej sprawie."
+    return Response({"ad": ad.pk, "observation": observations.side(ad, own), "artifacts": observations.artifacts(ad), "candidates": found, "message": message})
+
+
+@api_view(["GET"])
+def observations_compare(request):
+    """Porównanie dwóch obserwacji stron: `?a=ID&b=ID`. Tylko do odczytu, bez sieci."""
+    try:
+        a_id, b_id = int(request.query_params["a"]), int(request.query_params["b"])
+    except (KeyError, ValueError):
+        return Response({"detail": "Podaj dwa identyfikatory reklam: ?a=ID&b=ID."}, status=400)
+    if a_id == b_id:
+        return Response({"detail": "Porównanie wymaga dwóch różnych reklam."}, status=400)
+    a, b = get_object_or_404(Ad, pk=a_id), get_object_or_404(Ad, pk=b_id)
+    return Response(observations.compare_with_links(a, b))
 
 
 def _group_detail(group, serializer, relations: list[str]) -> dict:

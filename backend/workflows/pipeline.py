@@ -33,8 +33,9 @@ from extractors.text import extract_text
 from extractors.url import host_of, redact_url, registered_domain, url_observations
 from people.matching import find_people
 from people.models import Person
+from similarity import alerts as alerting
 from similarity import service as linking
-from similarity.models import Edge
+from similarity.models import CampaignMembership, Edge, OperatorMembership
 
 STAGES = ["ingest", "crawl", "extract", "enrich", "fuse", "cluster"]
 STAGE_LABELS = {
@@ -336,7 +337,13 @@ ASSESSMENTS = {
 
 
 def stage_cluster(analysis: Analysis) -> dict:
-    result = {**linking.assign_campaign(analysis.ad), **linking.assign_operator(analysis.ad)}
+    ad = analysis.ad
+    was_in_campaign = CampaignMembership.objects.filter(ad=ad).exists()
+    was_in_operator = OperatorMembership.objects.filter(ad=ad).exists()
+    campaign, operator = linking.assign_campaign(ad), linking.assign_operator(ad)
+    result = {**campaign, **operator}
+    alerts = alerting.record(ad, was_in_campaign=was_in_campaign, was_in_operator=was_in_operator, campaign=campaign, operator=operator)
+    result["alerts"] = [a.kind for a in alerts]
     fused = analysis.result.get("fuse", {})
     if fused.get("duplicates"):
         assessment = "duplicate"

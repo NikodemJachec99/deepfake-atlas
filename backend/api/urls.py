@@ -27,6 +27,8 @@ urlpatterns = [
     path("operators", views.OperatorList.as_view()),
     path("operators/<int:pk>", views.operator_detail),
     path("operators/<int:pk>/timeline", views.operator_timeline),
+    path("alerts", views.AlertList.as_view()),
+    path("alerts/<int:pk>/seen", views.alert_seen),
     path("graph", views.graph),
     path("kinds", views.kinds),
     path("stats", views.stats),

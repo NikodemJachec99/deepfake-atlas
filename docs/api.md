@@ -32,9 +32,11 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | GET | `/api/operators/{id}` | | jak kampania, plus lista `campaigns` operatora |
 | GET | `/api/campaigns/{id}/timeline` | | `Timeline`: oś obserwacji kampanii (opis niżej) |
 | GET | `/api/operators/{id}/timeline` | | `Timeline` operatora, ten sam kształt (opis niżej) |
+| GET | `/api/alerts` | `?page=`, `?unseen=1` | strona `Alert`, najnowsze pierwsze: nowa reklama dołączyła do kampanii albo operatora, które były w korpusie wcześniej (opis niżej) |
+| POST | `/api/alerts/{id}/seen` | `{"seen":true}` (opcjonalne, `false` cofa) | `Alert`; idempotentne; zapis chroniony jak inne (`API_WRITE_KEY`, Origin) |
 | GET | `/api/graph` | `?campaign=` \| `?operator=` \| `?ad=`, `?relation=a,b`, `?limit=` | `{nodes, edges}` dla Sigma.js |
 | GET | `/api/kinds` | | słownik 7 rodzin i typów markerów |
-| GET | `/api/stats` | | liczby do paska stanu |
+| GET | `/api/stats` | | liczby do paska stanu, w tym `alerts_unseen` (liczba nieprzejrzanych alertów) |
 | GET | `/api/export/stix` | `?operator=ID` \| `?campaign=ID` (opcjonalnie) | bundle STIX 2.1 (`application/stix+json`): operator jako `intrusion-set`, kampania jako `campaign` z `attributed-to`, wskaźniki (`indicator`) dla domen, adresów IP, numerów certyfikatów i hostów zasobów z relacją `indicates`; identyfikatory trackerów i paneli lejka w `x_scamdna_identifiers`. Tylko grupy z materiałów zgłoszonych jako podejrzane (przechwycenia, zgłoszenia ręczne), bez reklam z bibliotek, osób i tokenów. Identyfikatory deterministyczne |
 | GET | `/api/export` | `?source=capture` (opcjonalnie) | ZIP z wzbogaconym korpusem: `korpus/reklamy.jsonl` (reklamy z markerami), `korpus/krawedzie.jsonl` (krawędzie z dowodami), `korpus/grupy.csv`, `korpus/opis.json`; tokeny tylko jako skróty; nieznane źródło `400` |
 | GET | `/api/artifacts/{sha256}` | | surowy dowód jako załącznik (nigdy się nie renderuje) |
@@ -361,6 +363,24 @@ Pełny słownik zwraca `/api/kinds`. Najważniejsze:
 | Osoby i marki | `person_mention`, `brand_impersonated`, `page_name`, `advertiser_id`, `payer`, `meta_ad_ref` |
 | Zachowanie | `ad_naming`, `lang_trace` |
 
+## Alerty (`Alert`)
+
+Alert powstaje w etapie `cluster`, gdy reklama (import paczki, upload, skan biblioteki, zgłoszenie URL) dołącza do grupy, która istniała przed nią i miała już inne reklamy. Pierwsza reklama nowej kampanii alertu nie daje, a kampania powstała z dwóch dotąd niepowiązanych reklam nie jest "znana". Ponowne uruchomienie etapów nie dubluje alertów (unikalność: reklama i rodzaj).
+
+| Pole | Znaczenie |
+|---|---|
+| `id`, `created_at` | identyfikator i czas zapisu |
+| `kind` | `joined_campaign` (nowa odsłona znanej kampanii), `new_campaign_known_operator` (reklama bez kampanii albo z nową, ale ze znanym operatorem; ta sama sytuacja co ocena `known_operator`), `joined_operator` (reklama dołączyła do znanej kampanii i scaliła dwie grupy operatora) |
+| `kind_label` | polski opis rodzaju |
+| `ad`, `ad_title` | reklama, która wywołała alert |
+| `campaign`, `campaign_id` | klucz `K-0001` i identyfikator kampanii; `null`, gdy reklama nie ma kampanii |
+| `operator`, `operator_id` | klucz `O-0001` i identyfikator operatora; `null`, gdy go nie ma |
+| `description` | jedno zdanie po polsku |
+| `evidence` | najwyżej 3 najmocniejsze typy markerów łączące reklamę z grupą: `{kind, label, family, bits, value}`, malejąco po `bits` |
+| `seen`, `seen_at` | czy przejrzany i kiedy |
+
+Lista jest stronicowana jak inne (`count`, `next`, `previous`, `results`). `?unseen=1` zostawia nieprzejrzane.
+
 ## Czego API jeszcze nie ma
 
-Stan źródeł i skanów, przegląd bazy osób, kolejka etykietowania, alerty, raporty, role i klucze. Interfejs nie powinien udawać tych danych.
+Stan źródeł i skanów, przegląd bazy osób, kolejka etykietowania, raporty, role i klucze. Interfejs nie powinien udawać tych danych.

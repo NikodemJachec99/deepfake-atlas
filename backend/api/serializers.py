@@ -97,6 +97,7 @@ class AdDetailSerializer(AdListSerializer):
                 "height": entry.get("height"),
                 "poster": {**poster, "url": f"/api/artifacts/{poster['artifact']}/image"} if isinstance(poster, dict) else None,
                 "original": entry.get("original") or {"duration_s": None, "clip": None},
+                "speech": {k: entry["speech"].get(k) for k in ("source", "text", "language", "model", "audio_s", "truncated")} if isinstance(entry.get("speech"), dict) else None,
                 "missing": entry.get("missing") or ([] if "duration_s" in entry else ["nagranie zaimportowane przed odczytem metadanych"]),
             })
         return out

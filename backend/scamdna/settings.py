@@ -150,6 +150,13 @@ ARTIFACT_DIR = Path(env("ARTIFACT_DIR", str(BASE_DIR.parent / "data" / "artifact
 MODELS_DIR = Path(env("MODELS_DIR", str(BASE_DIR.parent / "data" / "models")))
 FACE_MODELS_DOWNLOAD = env("FACE_MODELS_DOWNLOAD", "1") == "1"
 EMBEDDINGS_DOWNLOAD = env("EMBEDDINGS_DOWNLOAD", "1") == "1"
+# Mowa z nagrań (faster-whisper na CPU). TRANSCRIBE: off | on | auto (auto: tylko gdy biblioteka jest zainstalowana).
+TRANSCRIBE = env("TRANSCRIBE", "auto")
+TRANSCRIBE_MODEL = env("TRANSCRIBE_MODEL", "small")
+TRANSCRIBE_LANGUAGE = env("TRANSCRIBE_LANGUAGE", "pl")
+TRANSCRIBE_MAX_S = int(env("TRANSCRIBE_MAX_S", "120"))
+TRANSCRIBE_TIMEOUT_S = int(env("TRANSCRIBE_TIMEOUT_S", "600"))
+TRANSCRIBE_DOWNLOAD = env("TRANSCRIBE_DOWNLOAD", "1") == "1"
 S3_ENDPOINT_URL = env("S3_ENDPOINT_URL", "http://localhost:9000")
 S3_ACCESS_KEY = env("S3_ACCESS_KEY", "scamdna")
 S3_SECRET_KEY = env("S3_SECRET_KEY", "scamdna-secret")

@@ -33,6 +33,10 @@ Kolumna "Źródło" mówi, skąd pochodzi informacja o licencji: **pakiet** ozna
 | tokenizers | 0.x | Apache-2.0 | pakiet |
 | opencv-python-headless (zależność rapidocr) | 5.1.0.95 | Apache-2.0 | pakiet |
 | Pillow | 13.0.0 | MIT-CMU | pakiet |
+| faster-whisper (transkrypcja mowy) | 1.2.1 | MIT | pakiet |
+| ctranslate2 (silnik wnioskowania modelu mowy, CPU) | 4.9.0 | MIT | pakiet |
+| av (zależność faster-whisper, dołącza biblioteki FFmpeg na LGPL) | 19.0.2 | BSD-3-Clause | pakiet |
+| imageio-ffmpeg (wykonywalny ffmpeg do wyciągania dźwięku, uruchamiany jako osobny proces) | 0.8.1 | BSD-2-Clause (opakowanie; sam ffmpeg na LGPL/GPL) | pakiet |
 | numpy | 2.5.5 | BSD-3-Clause i pokrewne | pakiet |
 | pytest, pytest-django, ruff | 9.2.0, 4.14.0, 0.17.6 | MIT, BSD-3-Clause, MIT | pakiet |
 
@@ -56,9 +60,10 @@ psycopg jest na LGPL: używamy go jako biblioteki bez modyfikacji, co nie nakła
 | YuNet (`face_detection_yunet_2023mar.onnx`, OpenCV Zoo) | wykrywanie twarzy na zrzutach reklam | MIT | pobierany przy pierwszym użyciu do `data/models/`, działa lokalnie na CPU |
 | paraphrase-multilingual-MiniLM-L12-v2 (sentence-transformers), wersja ONNX int8 z `Xenova/paraphrase-multilingual-MiniLM-L12-v2` | wektor znaczenia treści strony (384 liczby), podobieństwo parafraz | Apache-2.0 | pobierany przy pierwszym użyciu do `data/models/minilm/` (118 MB), działa lokalnie na CPU; `EMBEDDINGS_DOWNLOAD=0` wyłącza pobieranie |
 | CLIP ViT-B/32 (OpenAI), część obrazowa w ONNX int8 z `Xenova/clip-vit-base-patch32` (`onnx/vision_model_quantized.onnx`) | wektor obrazu reklamy (512 liczb), podobne ujęcie | MIT | pobierany przy pierwszym użyciu do `data/models/clip/` (89 MB), działa lokalnie na CPU; `EMBEDDINGS_DOWNLOAD=0` wyłącza pobieranie; bez nowych bibliotek (onnxruntime, Pillow, numpy); zero-shot do logo marek nie działa na naszych danych, więc części tekstowej modelu nie używamy |
+| Whisper `small` (OpenAI, wagi 244 mln parametrów) w konwersji CTranslate2 `Systran/faster-whisper-small`, język `pl` | transkrypcja mowy z nagrań reklam do tekstu reklamy | MIT (wagi OpenAI i konwersja Systran) | pobierany przy pierwszym użyciu do `data/models/whisper/` (ok. 0,5 GB), działa lokalnie na CPU w int8; `TRANSCRIBE=off` wyłącza kanał, `TRANSCRIBE_DOWNLOAD=0` wyłącza pobieranie; model `base` (`TRANSCRIBE_MODEL=base`) jest 2,5 razy szybszy, ale myli się wyraźnie częściej; Whisper bywa, że halucynuje na ciszy i muzyce, więc odrzucamy segmenty o wysokim prawdopodobieństwie braku mowy |
 | SFace (`face_recognition_sface_2021dec.onnx`, OpenCV Zoo) | wektor twarzy do porównania z bazą referencyjną | Apache-2.0 | jak wyżej; bez modelu analiza działa, tylko bez twarzy (`FACE_MODELS_DOWNLOAD=0` wyłącza pobieranie) |
 
-Nie ma modeli głosu ani modeli językowych.
+Model mowy działa lokalnie i niczego nie wysyła na zewnątrz. Nie ma modeli rozpoznawania mówcy (klonu głosu) ani generatywnych modeli językowych.
 
 ### Baza referencyjna twarzy
 

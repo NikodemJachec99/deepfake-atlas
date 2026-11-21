@@ -26,6 +26,8 @@ rapidocr>=3,<4
 onnxruntime>=1.20,<2
 tokenizers>=0.20,<1
 pillow>=11,<13
+faster-whisper>=1.1,<2
+imageio-ffmpeg>=0.5,<1
 
 # testy i jakość
 pytest>=8.3,<10

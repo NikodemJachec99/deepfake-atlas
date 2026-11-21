@@ -40,7 +40,7 @@ Działa całość od wczytania materiału do wyniku: import przechwyceń i uploa
 |---|---|
 | twarze z bazy referencyjnej 10 osób, także na klatkach nagrań; 8 klatek z każdego nagrania (OCR, hash) | baza osób z zespołem NASK, rozpoznawanie deepfake'ów (cechy generowanego obrazu i głosu) |
 | znaczenie treści lokalnym modelem wielojęzycznym (przepisany artykuł 0,98 przy MinHash 0,39) | model dostrojony na polskich artykułach oszustów |
-| podobne ujęcie z embeddingu obrazu CLIP ([#209](https://github.com/NikodemJachec99/deepfake-atlas/issues/209)); logo zero-shot sprawdzone i odrzucone (przewaga nad drugą marką do 0,03), transkrypcja mowy ([#210](https://github.com/NikodemJachec99/deepfake-atlas/issues/210)) | logo przez detekcję i wycinek wokół znaku, klon głosu (porównanie mówcy), ruch w nagraniu |
+| podobne ujęcie z embeddingu obrazu CLIP ([#209](https://github.com/NikodemJachec99/deepfake-atlas/issues/209)); logo zero-shot sprawdzone i odrzucone (przewaga nad drugą marką do 0,03), transkrypcja mowy ([#210](https://github.com/NikodemJachec99/deepfake-atlas/issues/210)): Whisper `small` lokalnie na CPU, 120 s dźwięku w ok. 12 s, wynik w tekście reklamy i `Ad.raw["videos"]` | logo przez detekcję i wycinek wokół znaku, klon głosu (porównanie mówcy), ruch w nagraniu |
 
 ## Etap 4: wdrożenie i wymiana (kwartał 4)
 

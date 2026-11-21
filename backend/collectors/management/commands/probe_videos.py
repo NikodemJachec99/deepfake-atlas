@@ -33,7 +33,7 @@ class Command(BaseCommand):
                 if not isinstance(entry, dict) or not entry.get("sha256") or ("duration_s" in entry and not options["all"]):
                     continue
                 sha = entry["sha256"]
-                base = {k: entry[k] for k in ("name", "size", "sha256") if k in entry}
+                base = {k: entry[k] for k in ("name", "size", "sha256", "speech") if k in entry}
                 base["stored"] = Artifact.objects.filter(pk=sha, kind="creative_video").exists()
                 if base["stored"]:
                     with tempfile.TemporaryDirectory() as tmp:

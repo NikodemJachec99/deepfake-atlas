@@ -21,7 +21,7 @@ from ads.models import Analysis, Source
 from ads.services import upsert_ad
 from collectors.observation import observation_info
 from evidence import store
-from extractors import images, ocr
+from extractors import images, ocr, speech
 from extractors import video as video_meta
 from extractors.har import image_blobs, is_cloudflare, parse_har
 from extractors.url import host_of, redact_url, registered_domain
@@ -328,6 +328,11 @@ def import_case(case_dir: Path, bundle: str = "upload", case: str | None = None)
         if frame_text:
             ocr_texts.append(frame_text)
         creative_obs += frame_faces
+        # Mowa z nagrania trafia do tekstu reklamy jak OCR (adresy po redakcji), a osobno do opisu nagrania z oznaczeniem źródła.
+        transcript = speech.transcribe(str(item))
+        if transcript:
+            video_files[-1]["speech"] = speech.describe(transcript)
+            ocr_texts.append(transcript.text)
 
     for info in capture.infos:
         library_id = str(info.get("playlist_id") or info.get("id") or "").split("_")[0]

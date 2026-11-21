@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, campaignPackageUrl, operatorPackageUrl } from "@/lib/api";
 import { markerValue, adTitle, hostOf, SOURCE_LABELS } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 import { ObservationTimeline } from "./observation-timeline";
@@ -40,6 +40,7 @@ function HuntProfile({ id }: { id: number }) {
 
 export function GroupCard({ kind }: { kind: GroupKind }) {
   const { id } = useParams<{id: string}>();
+  const [includeRaw, setIncludeRaw] = useState(false);
   const valid = /^[1-9]\d*$/.test(id) && Number.isSafeInteger(Number(id));
   const operator = kind === "operators";
   const result = useApi(valid ? kind + id : null, () => operator ? api.operator(Number(id)) : api.campaign(Number(id)));
@@ -79,6 +80,11 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
     <ObservationTimeline key={kind + id} id={Number(id)} operator={operator} />
     {"campaigns" in group && Array.isArray(group.campaigns) && <section><h2>Kampanie operatora</h2>
       {group.campaigns.length ? <ul>{group.campaigns.map(key => <li key={key}><GroupLink group={key} /></li>)}</ul> : <p>Brak przypisanych kampanii.</p>}</section>}
+    <section className="grid justify-items-start gap-2">
+      <h2>Pakiet dowodowy</h2>
+      <label><input type="checkbox" checked={includeRaw} onChange={e => setIncludeRaw(e.target.checked)} /> Dołącz surowe artefakty</label>
+      <a className="rounded-md border border-line-strong px-3 py-2 text-accent" href={(operator ? operatorPackageUrl : campaignPackageUrl)(Number(id), { raw: includeRaw })} download>Pobierz pakiet ZIP</a>
+    </section>
     <section><h2>Reklamy ({group.size})</h2><ul>{group.ads.map(ad =>
       <li key={ad.id}><Link className="text-accent" href={`/ads/${ad.id}`}>#{ad.id} · {adTitle(ad)}</Link></li>)}</ul></section>
   </main>;

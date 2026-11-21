@@ -22,6 +22,7 @@ from ads.services import upsert_ad
 from collectors.observation import observation_info
 from evidence import store
 from extractors import images, ocr
+from extractors import video as video_meta
 from extractors.har import image_blobs, is_cloudflare, parse_har
 from extractors.url import host_of, redact_url, registered_domain
 from people import faces
@@ -192,9 +193,12 @@ def discover(case_dir: Path, case: str | None = None) -> CaseCapture:
                 capture.videos.append(item)
             elif item.is_file() and item.name.endswith(".info.json"):
                 try:
-                    capture.infos.append(json.loads(item.read_text(encoding="utf-8", errors="replace")))
+                    info = json.loads(item.read_text(encoding="utf-8", errors="replace"))
                 except ValueError:
-                    pass
+                    continue
+                if isinstance(info, dict):
+                    info["_file"] = item.name  # łączymy z plikiem nagrania po nazwie
+                    capture.infos.append(info)
 
         for sub in sorted(p for p in directory.iterdir() if p.is_dir() and not p.name.endswith("_files")):
             manifest_path = _capture_manifest(sub)
@@ -233,6 +237,21 @@ def _first_seen(value: str):
     return parsed if parsed.tzinfo else timezone.make_aware(parsed)
 
 
+def describe_video(path: Path, entry: dict, infos: list[dict]) -> dict:
+    """Metadane nagrania, klatka poglądowa w magazynie i długość oryginału z metadanych pobrania, jeśli jest."""
+    probed = video_meta.probe(str(path))
+    poster = None
+    if probed and probed.poster_jpeg:
+        poster = store.put(probed.poster_jpeg, kind="video_frame", content_type="image/jpeg", source_url=f"{path.name}#t={probed.poster_at_s}").sha256
+    info = next((i for i in infos if i.get("_file", "").removesuffix(".info.json") == path.stem), None)
+    duration = info.get("duration") if info else None
+    original = float(duration) if isinstance(duration, int | float) and not isinstance(duration, bool) and duration > 0 else None
+    described = video_meta.describe(entry, probed, poster, original)
+    if not entry["stored"]:
+        described.setdefault("missing", []).append(f"plik ma {entry['size'] // (1024 * 1024)} MB, ponad limit magazynu, więc nie da się go odtworzyć")
+    return described
+
+
 def _file_sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -266,13 +285,13 @@ def import_case(case_dir: Path, bundle: str = "upload", case: str | None = None)
             creative_obs.append(["face_match", person.marker_value, detail])
 
     video_files = []
-    for video in capture.videos:
-        size = video.stat().st_size
-        entry = {"name": video.name, "size": size, "sha256": _file_sha256(video)}
-        if size <= MAX_UPLOAD_ARTIFACT:
-            store.put(video.read_bytes(), kind="creative_video", source_url=video.name)
-        video_files.append(entry)
-        creative_obs.append(["creative_sha256", entry["sha256"], {"file": video.name}])
+    for item in capture.videos:
+        size = item.stat().st_size
+        entry = {"name": item.name, "size": size, "sha256": _file_sha256(item), "stored": size <= MAX_UPLOAD_ARTIFACT}
+        if entry["stored"]:
+            store.put(item.read_bytes(), kind="creative_video", source_url=item.name)
+        video_files.append(describe_video(item, entry, capture.infos))
+        creative_obs.append(["creative_sha256", entry["sha256"], {"file": item.name}])
 
     for info in capture.infos:
         library_id = str(info.get("playlist_id") or info.get("id") or "").split("_")[0]

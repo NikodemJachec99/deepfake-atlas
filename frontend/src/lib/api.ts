@@ -110,7 +110,27 @@ export interface AdDetail extends AdSummary {
   creative_url: string;
   advertiser: { id: number | null; external_id: string; name: string; payer: string } | null;
   creatives: string[]; // sha256 zrzutów reklamy, obraz: artifactImageUrl(sha)
+  videos: VideoMaterial[];
   genome: { family: Family; label: string; markers: Marker[] }[];
+}
+
+// Nagranie reklamy albo ekranu. Pola, których nie da się ustalić, są null; powód jest w `missing`.
+export interface VideoMaterial {
+  sha256: string;
+  name: string;
+  size: number | null;
+  playable: boolean; // false: plik ponad limit magazynu, nie da się go odtworzyć
+  url: string | null; // ścieżka API do <video>, obsługuje zakresy bajtów
+  duration_s: number | null;
+  fps: number | null;
+  frames: number | null;
+  width: number | null;
+  height: number | null;
+  // klatka poglądowa: sekunda według dekodera i jej położenie w nagraniu (0..1)
+  poster: { artifact: string; at_s: number; position: number | null; url: string } | null;
+  // długość oryginału z metadanych pobrania; clip: czy plik jest krótszym wycinkiem (null: nie wiadomo)
+  original: { duration_s: number | null; clip: boolean | null };
+  missing: string[];
 }
 
 export interface Edge {

@@ -32,4 +32,5 @@ urlpatterns = [
     path("stats", views.stats),
     path("artifacts/<str:sha256>", views.artifact),
     path("artifacts/<str:sha256>/image", views.artifact_image),
+    path("artifacts/<str:sha256>/video", views.artifact_video),
 ]

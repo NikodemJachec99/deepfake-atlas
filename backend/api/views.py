@@ -1,5 +1,6 @@
 import asyncio
 import json
+import re
 import tempfile
 import uuid
 import zipfile
@@ -20,6 +21,7 @@ from collectors import bundle
 from evidence import store
 from evidence.kinds import BAND_KINDS, FAMILIES, KINDS
 from evidence.models import AdMarker, Artifact
+from extractors import video
 from extractors.url import redact_url
 from people.display import display_value, person_names
 from similarity import assist_view, decisions, observations, precedents, simulation, suggestions, timeline, weakest
@@ -466,13 +468,48 @@ IMAGE_SIGNATURES = {b"\x89PNG": "image/png", b"\xff\xd8\xff": "image/jpeg", b"RI
 
 def artifact_image(request, sha256):
     """Zrzut reklamy do wyświetlenia. Tylko artefakty obrazów i tylko, gdy bajty faktycznie są obrazem."""
-    item = get_object_or_404(Artifact, pk=sha256, kind="creative_image")
+    item = get_object_or_404(Artifact, pk=sha256, kind__in=("creative_image", "video_frame"))
     data = store.get(item.sha256)
     content_type = next((mime for magic, mime in IMAGE_SIGNATURES.items() if data.startswith(magic)), None)
     if content_type is None:
         raise Http404
     response = HttpResponse(data, content_type=content_type)
     response["X-Content-Type-Options"] = "nosniff"
+    response["Cache-Control"] = "public, max-age=31536000, immutable"
+    return response
+
+
+_RANGE = re.compile(r"^bytes=(\d*)-(\d*)$")
+
+
+def artifact_video(request, sha256):
+    """Nagranie reklamy albo ekranu do odtworzenia w <video>. Tylko artefakty nagrań i tylko, gdy bajty to MP4,
+    MOV albo WebM. Obsługuje pojedynczy zakres bajtów, żeby odtwarzacz mógł przewijać."""
+    item = get_object_or_404(Artifact, pk=sha256, kind="creative_video")
+    data = store.get(item.sha256)
+    mime = video.content_type(data[:16])
+    if mime is None:
+        raise Http404
+    total = len(data)
+    start, end, status_code = 0, total - 1, 200
+    match = _RANGE.match(request.headers.get("Range", "").strip())
+    if match and (match.group(1) or match.group(2)):
+        if match.group(1):
+            start = int(match.group(1))
+            end = min(int(match.group(2)), total - 1) if match.group(2) else total - 1
+        else:
+            start = max(0, total - int(match.group(2)))
+        if start > end or start >= total:
+            response = HttpResponse(status=416)
+            response["Content-Range"] = f"bytes */{total}"
+            return response
+        status_code = 206
+    response = HttpResponse(data[start : end + 1], content_type=mime, status=status_code)
+    if status_code == 206:
+        response["Content-Range"] = f"bytes {start}-{end}/{total}"
+    response["Accept-Ranges"] = "bytes"
+    response["X-Content-Type-Options"] = "nosniff"
+    response["Content-Security-Policy"] = "sandbox; default-src 'none'"
     response["Cache-Control"] = "public, max-age=31536000, immutable"
     return response
 

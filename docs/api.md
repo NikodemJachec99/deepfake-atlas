@@ -171,7 +171,7 @@ Kampania (`K-0033`) to reklamy spięte krawędziami `same_campaign`. Operator (`
 ```
 
 - `exclude`: identyfikatory dowodów z `EdgeDetail.evidence[].id`. Pusta lista zwraca sam wynik bazowy.
-- `edge_version`: opcjonalne, `Edge.updated_at` z chwili wczytania. Jeśli krawędź zmieniła się od tego czasu, odpowiedź to `409` z bieżącym `edge_version`. Interfejs odświeża wtedy dowody.
+- `edge_version`: opcjonalne, `Edge.updated_at` z chwili wczytania, ISO 8601 ze strefą. Porównujemy chwile, nie napisy: `Z`, `+00:00` i `+01:00` dla tej samej chwili to ta sama wersja, mikrosekundy się liczą. Jeśli krawędź zmieniła się od tego czasu, odpowiedź to `409` z bieżącym `edge_version`, a interfejs odświeża wtedy dowody. Napis, który nie jest datą albo nie ma strefy: `400`. Tak samo w `weakest-link`.
 - Identyfikator dowodu z innej krawędzi: `400`, w polu `unknown` lista nieznanych identyfikatorów.
 
 Odpowiedź:

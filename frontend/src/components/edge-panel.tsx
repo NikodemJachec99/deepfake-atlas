@@ -7,6 +7,8 @@ import { Check, ChevronDown, ChevronRight, Download, HelpCircle, X } from "lucid
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { EdgeSuggestions } from "./edge-suggestions";
+import { DecisionHistory } from "./decision-history";
+import type { VerdictReason } from "@/lib/api";
 import { EvidenceLab } from "./evidence-lab";
 import { useState } from "react";
 
@@ -173,6 +175,10 @@ const DECISIONS: { verdict: Exclude<Verdict, "">; label: string; key: string; ic
 ];
 
 function Decision({ edge, onSaved }: { edge: EdgeDetail; onSaved: (edge: EdgeDetail) => void }) {
+  const reasons = useApi("verdict-reasons", api.kinds);
+  const [reason, setReason] = useState<Exclude<VerdictReason, "unknown"> | "">(
+    edge.verdict_reason && edge.verdict_reason !== "unknown" ? edge.verdict_reason : ""
+  );
   const [note, setNote] = useState(edge.verdict_note);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -181,7 +187,7 @@ function Decision({ edge, onSaved }: { edge: EdgeDetail; onSaved: (edge: EdgeDet
     setBusy(true);
     setError("");
     try {
-      onSaved(await api.setVerdict(edge.id, verdict, note));
+      onSaved(await api.setVerdict(edge.id, verdict, note, reason || undefined));
     } catch (reason) {
       setError(errorText(reason));
     } finally {
@@ -204,6 +210,14 @@ function Decision({ edge, onSaved }: { edge: EdgeDetail; onSaved: (edge: EdgeDet
           {edge.verdict_at && <Mono>{dateTime(edge.verdict_at)}</Mono>}
         </span>
       </div>
+      <label className="flex flex-wrap items-center gap-2 py-1">Powód decyzji
+        <select className="max-w-full border border-line bg-panel p-1" value={reason}
+          disabled={!reasons.data?.verdict_reasons?.length || busy}
+          onChange={event => setReason(event.target.value as typeof reason)}>
+          <option value="">{reasons.loading ? "Pobieranie powodów…" : reasons.data?.verdict_reasons?.length ? "Bez podanego powodu" : "Lista powodów niedostępna"}</option>
+          {reasons.data?.verdict_reasons?.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+        </select>
+      </label>
       <textarea
         value={note}
         onChange={(event) => setNote(event.target.value)}
@@ -277,6 +291,7 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict }: { edgeId: number; onO
           {b && <AdSide ad={b} detail={adB.data} side="B" onOpenAd={onOpenAd} />}
         </div>
 
+        <DecisionHistory edge={data} />
         <EdgeSuggestions key={data.id} edgeId={data.id} />
         <EvidenceLab key={data.id + ":" + data.updated_at} edge={data} refresh={edge.reload} />
         <div className="flex h-7 items-center justify-between border-b border-line px-2">

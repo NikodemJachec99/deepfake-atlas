@@ -84,11 +84,7 @@ def group_label(group: str) -> str:
 
 def weakest_link(edge: Edge, max_group_size: int = MAX_GROUP_SIZE, max_scenarios: int = DEFAULT_SCENARIOS,
                  time_limit_ms: int = DEFAULT_TIME_MS, edge_version: str | None = None, clock=time.monotonic) -> dict:
-    current_version = edge.updated_at.isoformat()
-    if edge_version and edge_version != current_version:
-        raise simulation.SimulationError(
-            "Krawędź zmieniła się od chwili, w której ją wczytano. Odśwież dowody i powtórz test.", status=409, edge_version=current_version
-        )
+    current_version = simulation.check_version(edge, edge_version, "test")
     rows = list(edge.evidence.all())
     corpus_n = max((r.corpus_n for r in rows), default=0)
     base = simulation.score(rows, corpus_n)

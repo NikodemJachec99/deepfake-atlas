@@ -11,7 +11,7 @@ from ads.models import Ad
 from evidence.kinds import FAMILIES, KINDS
 from evidence.models import AdMarker
 from extractors.url import redact_url
-from similarity.fusion import MODEL_VERSION
+from similarity.fusion import model_version
 from similarity.models import Edge, EdgeEvidence
 
 # Pasma LSH to klucze wyszukiwania, nie cechy. W eksporcie tylko zaśmiecają.
@@ -65,7 +65,7 @@ class Command(BaseCommand):
 
         summary = {
             "utworzono": datetime.now(UTC).isoformat(timespec="seconds"),
-            "model": MODEL_VERSION,
+            "model": model_version(),
             "reklamy": len(ads),
             "krawedzie": dict(Counter(e.relation for e in edges)),
             "kampanie": len({campaign_key(a) for a in ads} - {""}),

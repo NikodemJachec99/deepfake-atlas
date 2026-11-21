@@ -31,6 +31,7 @@ urlpatterns = [
     path("alerts/<int:pk>/seen", views.alert_seen),
     path("graph", views.graph),
     path("kinds", views.kinds),
+    path("weights", views.weights),
     path("stats", views.stats),
     path("export", views.export_corpus),
     path("export/stix", views.export_stix),

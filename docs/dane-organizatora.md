@@ -136,6 +136,35 @@ Wagi są eksperckie, więc sprawdziliśmy, jak bardzo wynik od nich zależy (202
 - **Ruszają się 4 pary graniczne, zawsze te same.** Drugi HAR sprawy 2 z p5 (operator B na jednym hoście zasobów), dwie strony sprawy 61 (zrzut reklamy i nazwa reklamodawcy), sprawa 48 ze sprawą 61 i p11 z p8 (ta sama treść albo ten sam silnik na innym zapleczu). To dokładnie pary, które laboratorium dowodów i przegląd krawędzi opisują jako kruche albo celowo tylko "podobne".
 - **Słabsze wagi niczego nie sklejają, mocniejsze sklejają tylko pary graniczne.** Przy wagach ×1,5 albo progu 3 bitów kopie treści stałyby się kampaniami, dlatego zostawiamy próg 4 bity i obecne wagi.
 
+### Wagi uczone (EM) zamiast eksperckich
+
+Zadanie #207, 2026-11-21, `python manage.py estimate_weights` (tylko odczyt bazy, wynik w `data/models/wagi.json`, poza gitem). EM Fellegi-Sunter bez etykiet na parach kandydatów, tych samych, które ocenia `link_ad`. Start z wag eksperckich. Powtórzenie pomiaru: ta sama komenda, `--source capture --bootstrap 30 --seed 7`.
+
+**Dane.** 28 reklam z materiałów spraw (`source=capture`), 151 par kandydatów, 150 ze zgodnością na jakimś markerze. Typów markerów 57, z czego 23 miało zgodność w co najmniej 5 parach i tylko te zostały uczone. Pozostałe 34 (m.in. `domain`, `tls_serial`, `google_ads`, `dom_hash`, `creative_phash`, `ad_naming`) zostają przy wartościach eksperckich, bo 0 do 4 par to za mało. Uczone są więc głównie markery o średniej i niskiej wadze oraz treść, a rzadkie markery rozstrzygające nie.
+
+**Dwie klasy ukryte, nie jedna.** Pierwsza wersja miała jedną klasę "ta sama grupa" na wszystkie typy. EM dopasował ją do wspólnej opowieści (16 par zgodnej treści), a pary operatora A, który ma różne kampanie i różną treść, uznał w większości za niepasujące: `funnel_id` spadł z 18 do 5 bitów, a `kit_path` z 8 do 3,3. To skutek założenia niezależności typów: operator z inną treścią płaci karę za niezgodność na treści. Dlatego szacujemy osobno klasę zaplecza (infrastruktura, tracking, szablon, zachowanie: 31,4 oczekiwanej pary pasującej, 18 iteracji) i klasę opowieści (narracja, kreacja, osoby: 18,0 pary, 11 iteracji). Obie zbiegły się.
+
+**Porównanie na tych samych 151 parach (expert `fs-5` i learned `fs-6`).**
+
+| | expert | learned |
+|---|---|---|
+| pary z relacją | 67 | 63 |
+| wspólne źródło (`same_campaign`, `same_operator`) | 33 | 33 |
+| grupy wspólnego źródła | 3 | 3 |
+
+- Relacja zmienia się w 4 parach, zawsze `similar` na brak relacji: nask/2 z nask/48, nask/3 z nask/48, nask/2 z backup/p4 i nask/3 z backup/p4. Wszystkie 4 miały pewność poniżej 0,02 i stały na samych motywach (podszycie pod markę, tematyka, ślad językowy) plus podobieństwie znaczenia treści.
+- Utrata wspólnego źródła: 0. Nowe wspólne źródło: 0, czyli bez fałszywych połączeń. Żadna grupa się nie rozpadła i żadne dwie się nie scaliły.
+- **Rdzeń operatora A zostaje:** 28 z 28 par spiętych `funnel_id` lub `meta_pixel` zachowuje relację. Oba typy zostają przy 18 bitach, bo w próbie żadna para niepasująca ich nie dzieli (u bliskie 0).
+- Pary graniczne (pewność od 0,5 do 0,99 w którymkolwiek zestawie albo zmiana relacji): 17. Najmocniej tracą pary tylko `similar`: nask/48 z backup/p11 oraz p11 z p3 i p4 (silnik lejka bez śladu operatora) z pewności 0,986 na 0,122, nask/48 z backup/p4 z 0,999 na 0,693 i nask/3 z backup/p5 z 0,834 na 0,544. Relacja `similar` zostaje, bo opiera się na regułach (ścieżki zaplecza, zgodna treść), nie na progu pewności.
+
+**Typy z największą zmianą wagi (bity, ekspercka do uczonej).** `kit_path` 8,0 do 3,95, `page_name` 8,0 do 4,93 (6 par), `asset_host` 9,0 do 7,36, `url_param_keys` 4,0 do 2,80, `lang_trace` 1,5 do 0,50, `topic` 1,5 do 0,59, `url_path_tpl` 4,0 do 3,39. Kierunek zgadza się z przeglądem krawędzi: ślady silnika lejka (`kit_path`, `url_param_keys`) są słabsze, niż zakładaliśmy, bo zgadzają się też na parach niepasujących (u 0,06 i 0,14).
+
+**Stabilność.** Bootstrap po reklamach (30 prób) daje odchylenie wagi powyżej 3 bitów dla 1 z 23 uczonych typów: `funnel_id` (5,8 bita, m 0,89). Ocena komendy: stabilne. To nie dowód, że wagi są dobre: 28 reklam i 151 par to mało, m typów rzadkich (`page_name`, `url_path_tpl`: po 6 par) opiera się na garści par, a operatorów w próbie jest 3.
+
+**Ten sam EM na całym korpusie (327 reklam, 7474 pary, w tym ok. 300 reklam Microsoft; 10 prób bootstrapu).** Kontrola przenoszenia, nie wynik do użycia: 68 zmian relacji, wspólne źródło 3024 do 2987 (utrata 37, nowe 0), rdzeń operatora A 89 z 101 par, grup wspólnego źródła 34 do 36 i 5 rozpadniętych. `funnel_id` spada do 0,7 bita, `kit_path` do 0, `advertiser_id` z 18 do 7,9. Powód: reklamy Microsoft tworzą ok. 3000 par o tym samym `advertiser_id` i EM dopasowuje klasy do tej struktury, a nie do operatorów z materiałów spraw. Metoda jest wrażliwa na skład korpusu.
+
+**Decyzja.** Domyślnie zostają wagi eksperckie (`MODEL_WEIGHTS=expert`, `fs-5`). Uczone dają to samo grupowanie na danych organizatora i nie łączą niczego nowego, ale na 28 reklamach nie ma dowodu, że są lepsze, a na korpusie z Microsoftem łamią rdzeń operatora A. Włączenie (`MODEL_WEIGHTS=learned`) ma sens po zebraniu kilkuset decyzji analityków. **Kalibracja: brak, 0 decyzji** w bazie, więc skalibrowanej pewności nie ma. Po zebraniu decyzji (min. 20, po 5 z każdej klasy) ta sama komenda dopasuje regresję logistyczną na bitach i rodzinach i zapisze współczynniki w tym samym pliku.
+
 ### Ślad językowy
 
 W sprawach nask/14, nask/47 i backup/p9 nazwy zestawów reklam w parametrach adresu zawierają litery cyrylicy wmieszane w łaciński tekst (np. `сс`, `С4`). To słaby marker (`lang_trace`), ale spójny z tym, co o operatorach takich kampanii piszą raporty branżowe.

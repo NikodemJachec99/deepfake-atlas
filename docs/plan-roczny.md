@@ -27,7 +27,7 @@ Działa całość od wczytania materiału do wyniku: import przechwyceń i uploa
 | Do 22.11 | Dalej |
 |---|---|
 | pomiar odporności na brak materiału i wrażliwości na wagi ([dane-organizatora.md](dane-organizatora.md)) | ten sam pomiar co miesiąc na rosnącym korpusie |
-| EM Fellegi-Sunter bez etykiet, przełącznik wag eksperckie i uczone, kalibracja na decyzjach analityka, gdy są ([#207](https://github.com/NikodemJachec99/deepfake-atlas/issues/207)) | kolejka etykietowania par granicznych (aktywne uczenie), model uczony na decyzjach, precyzja i czułość |
+| EM Fellegi-Sunter bez etykiet (dwie klasy: zaplecze i opowieść), przełącznik `MODEL_WEIGHTS` ekspercki i uczony (domyślnie ekspercki), widok `GET /api/weights`, kalibracja logistyczna na decyzjach analityka, gdy są (dziś 0 decyzji). Na 28 reklamach uczone dają to samo grupowanie i rdzeń operatora A, na korpusie z Microsoftem go łamią, więc nie są domyślne ([#207](https://github.com/NikodemJachec99/deepfake-atlas/issues/207)) | kolejka etykietowania par granicznych (aktywne uczenie), model uczony na decyzjach, precyzja i czułość |
 | laboratorium dowodów, test najsłabszego ogniwa, wskazówki, pamięć decyzji analityka | precedensy decyzji jako cecha modelu, przegląd krawędzi przez drugi zespół |
 
 ## Etap 3: analiza wizualna i dźwięk (kwartał 3)

@@ -6,12 +6,17 @@ Wyjście: relacja, pewność i lista dowodów z wkładem każdego w bitach.
 Moduł nie zna bazy ani Django. Całą logikę łączenia da się uruchomić na liczbach z ręki.
 """
 
+import json
 import math
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from evidence.kinds import CONCEPT_FAMILIES, KINDS
 
-MODEL_VERSION = "fs-5"  # fs-5: podobieństwo treści odporne na doklejoną sekcję
+EXPERT_VERSION = "fs-5"  # fs-5: podobieństwo treści odporne na doklejoną sekcję
+LEARNED_VERSION = "fs-6"  # fs-6: m, u i limity typów markerów z EM (similarity/learning.py)
 
 PRIOR = 1e-4  # szansa, że dwie losowe reklamy z korpusu należą do jednej kampanii
 PRIOR_STRENGTH = 1000  # ile "wirtualnych reklam" waży częstość bazowa typu markera
@@ -75,6 +80,88 @@ class PairResult:
     checks: dict = field(default_factory=dict)
 
 
+class WeightsError(RuntimeError):
+    """MODEL_WEIGHTS=learned, ale nie ma poprawnego pliku z wagami. Nie wracamy po cichu do eksperckich."""
+
+
+@dataclass(frozen=True)
+class KindWeight:
+    m: float  # P(zgodność | ta sama grupa)
+    u: float  # P(zgodność | różne grupy), na całej populacji par
+    bits: float  # log2(m/u) obcięte do 0..cap: waga typu, gdy nie liczymy rzadkości wartości
+    source: str  # "em": policzone z par, "expert": za mało par, zostaje wartość ekspercka
+
+
+@dataclass(frozen=True)
+class Weights:
+    kinds: dict[str, KindWeight]
+    meta: dict = field(default_factory=dict)
+
+
+def load_weights(path) -> Weights:
+    """Czyta plik z `estimate_weights`. Błędny albo nieczytelny plik to WeightsError z powodem."""
+    path = Path(path)
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        kinds = {
+            code: KindWeight(float(v["m"]), float(v["u"]), float(v["bits"]), str(v.get("source", "em")))
+            for code, v in data["kinds"].items()
+            if code in KINDS
+        }
+    except FileNotFoundError:
+        raise WeightsError(
+            f"MODEL_WEIGHTS=learned, ale brak pliku z wagami: {path}. Uruchom `manage.py estimate_weights` albo ustaw MODEL_WEIGHTS=expert."
+        ) from None
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise WeightsError(f"Plik z wagami {path} jest nieczytelny: {exc!r}.") from None
+    return Weights(kinds, data.get("meta", {}))
+
+
+_override: ContextVar = ContextVar("fusion_weights_override", default=False)
+_cache: dict = {}
+
+
+def active_weights() -> Weights | None:
+    """Wagi używane teraz: None to ekspertyzy. Wybór z ustawień MODEL_WEIGHTS, chyba że `use_weights` go przesłania."""
+    forced = _override.get()
+    if forced is not False:
+        return forced
+    from django.conf import settings
+
+    if getattr(settings, "MODEL_WEIGHTS", "expert") != "learned":
+        return None
+    path = Path(settings.MODEL_WEIGHTS_PATH)
+    try:
+        stamp = (str(path), path.stat().st_mtime_ns)
+    except OSError:
+        stamp = (str(path), None)
+    if _cache.get("stamp") != stamp:
+        _cache["weights"] = load_weights(path)
+        _cache["stamp"] = stamp
+    return _cache["weights"]
+
+
+@contextmanager
+def use_weights(weights: Weights | None):
+    """Liczy w bloku podanymi wagami (None: eksperckie), niezależnie od ustawień."""
+    token = _override.set(weights)
+    try:
+        yield
+    finally:
+        _override.reset(token)
+
+
+def model_version() -> str:
+    return EXPERT_VERSION if active_weights() is None else LEARNED_VERSION
+
+
+def __getattr__(name: str):
+    # `fusion.MODEL_VERSION` zależy od ustawienia, więc liczymy go przy każdym odczycie.
+    if name == "MODEL_VERSION":
+        return model_version()
+    raise AttributeError(name)
+
+
 def frequency(df: int, corpus_n: int, f0: float) -> float:
     """Częstość wartości wśród pozostałych reklam, wygładzona częstością bazową typu.
 
@@ -90,15 +177,25 @@ def exact_bits(kind_code: str, df: int, corpus_n: int) -> float:
     k = KINDS[kind_code]
     if k.cap <= 0:
         return 0.0
-    f = frequency(df, corpus_n, k.f0)
-    return max(0.0, min(k.cap, math.log2(k.m / f)))
+    m, f0 = k.m, k.f0
+    weights = active_weights()
+    learned = weights.kinds.get(kind_code) if weights else None
+    if learned and learned.source == "em":
+        m, f0 = learned.m, learned.u
+    f = frequency(df, corpus_n, f0)
+    return max(0.0, min(k.cap, math.log2(m / f)))
 
 
 def soft_bits(kind_code: str, similarity: float) -> float:
     k = KINDS[kind_code]
     if similarity < k.lo:
         return 0.0
-    return k.cap * min(1.0, (similarity - k.lo) / (k.hi - k.lo))
+    cap = k.cap
+    weights = active_weights()
+    learned = weights.kinds.get(kind_code) if weights else None
+    if learned and learned.source == "em":
+        cap = min(k.cap, learned.bits)
+    return cap * min(1.0, (similarity - k.lo) / (k.hi - k.lo))
 
 
 def score_pair(shared: list[Shared], soft: list[Soft], corpus_n: int) -> PairResult:

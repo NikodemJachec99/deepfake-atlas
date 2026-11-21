@@ -364,6 +364,22 @@ Pełny słownik zwraca `/api/kinds`. Najważniejsze:
 | Osoby i marki | `person_mention`, `brand_impersonated`, `page_name`, `advertiser_id`, `payer`, `meta_ad_ref` |
 | Zachowanie | `ad_naming`, `lang_trace` |
 
+## Wagi modelu (`Weights`)
+
+`GET /api/weights`: wagi eksperckie i uczone (EM, `manage.py estimate_weights`) każdego typu markera obok siebie. Tylko odczyt. Plik z wagami to `MODEL_WEIGHTS_PATH` (domyślnie `data/models/wagi.json`).
+
+| Pole | Znaczenie |
+|---|---|
+| `active` | `expert` albo `learned`: wagi, którymi silnik liczy teraz (ustawienie `MODEL_WEIGHTS`) |
+| `model_version` | `fs-5` przy `expert`, `fs-6` przy `learned` |
+| `learned_available` | czy jest czytelny plik z wagami uczonymi |
+| `learned_error` | `null` albo powód: plik nieczytelny, albo `learned` bez pliku |
+| `meta` | `null` albo metadane uczenia: `ads`, `pairs`, `iterations`, `converged`, `created`, `stable`, `unstable_kinds`, `classes` (osobno `source` i `story`: `match_share`, `expected_matches`) |
+| `calibration` | `null` albo `{fitted, decisions, confirmed, rejected, note, coefficients?}`. Bez decyzji `fitted: false` i `note: "brak kalibracji: 0 decyzji"` |
+| `kinds[]` | `{code, label, family, family_label, soft, decisive, cap, expert, learned}` |
+| `kinds[].expert` | `{m, f0, bits}` z `evidence/kinds.py`. `m` i `f0` są `null` dla typów miękkich. `bits` to `min(cap, log2(m/f0))` albo `cap` |
+| `kinds[].learned` | `null` bez pliku, inaczej `{source, m, u, u_basis, bits, pairs_agree, bits_std}`. `source`: `em` albo `expert` (za mało par, wartość ekspercka). `u_basis`: `population` albo `candidates`. `bits_std`: odchylenie z bootstrapu po reklamach, `null` dla `expert` |
+
 ## Alerty (`Alert`)
 
 Alert powstaje w etapie `cluster`, gdy reklama (import paczki, upload, skan biblioteki, zgłoszenie URL) dołącza do grupy, która istniała przed nią i miała już inne reklamy. Pierwsza reklama nowej kampanii alertu nie daje, a kampania powstała z dwóch dotąd niepowiązanych reklam nie jest "znana". Ponowne uruchomienie etapów nie dubluje alertów (unikalność: reklama i rodzaj).

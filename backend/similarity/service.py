@@ -1,6 +1,7 @@
 """Łączenie reklamy z resztą korpusu: kandydaci z indeksu markerów, ocena par, zapis krawędzi z dowodami."""
 
 from collections import defaultdict
+from dataclasses import dataclass
 
 from django.db import transaction
 from django.db.models import BigIntegerField, Count, F, Q, Value
@@ -62,10 +63,23 @@ def source_counts(marker_ids) -> dict[int, int]:
     return {row["marker_id"]: row["n"] for row in rows}
 
 
-@transaction.atomic
-def link_ad(ad: Ad) -> list[Edge]:
-    """Liczy krawędzie reklamy do wszystkich kandydatów. Bezpieczne do ponownego uruchomienia."""
-    corpus_n = corpus_size()
+@dataclass
+class PairInputs:
+    """Wejście modelu dla jednej pary (reklama, kandydat): wspólne markery i podobieństwa miękkie."""
+
+    other_id: int
+    shared: list[fusion.Shared]
+    soft: list[fusion.Soft]
+    artifacts: dict
+
+
+def pair_inputs(ad: Ad, corpus_n: int | None = None) -> list[PairInputs]:
+    """Kandydaci reklamy z indeksu markerów, HNSW i pasm LSH, z wejściem modelu. Tylko odczyt.
+
+    Tę samą listę liczy `link_ad` przy zapisie krawędzi i `similarity.learning` przy uczeniu wag,
+    więc model uczy się na dokładnie tych parach, które potem ocenia.
+    """
+    corpus_n = corpus_size() if corpus_n is None else corpus_n
     own = {am.marker_id: am for am in AdMarker.objects.filter(ad=ad).select_related("marker")}
     sources = source_counts(own.keys())
     limit = hub_limit(corpus_n)
@@ -118,7 +132,7 @@ def link_ad(ad: Ad) -> list[Edge]:
         for s in AdSignature.objects.filter(ad_id__in=candidates, kind__in=own_signatures.keys()):
             other_signatures[s.ad_id][s.kind] = s.values
 
-    edges = []
+    out = []
     for other_id in sorted(candidates):
         theirs = shared_by_ad.get(other_id, [])
         # Model odejmuje parę jako dwa źródła. Gdy obie reklamy są już w jednej kampanii, to jedno źródło.
@@ -137,9 +151,19 @@ def link_ad(ad: Ad) -> list[Edge]:
             soft.append(fusion.Soft("text_embedding", semantic[other_id]))
         if other_id in visual:
             soft.append(fusion.Soft("image_embedding", visual[other_id]))
-        result = fusion.score_pair(shared, soft, corpus_n)
         artifacts = {am.marker.kind: (own[am.marker_id].artifact_id, am.artifact_id) for am in theirs}
-        edge = _store_edge(ad.pk, other_id, result, artifacts)
+        out.append(PairInputs(other_id, shared, soft, artifacts))
+    return out
+
+
+@transaction.atomic
+def link_ad(ad: Ad) -> list[Edge]:
+    """Liczy krawędzie reklamy do wszystkich kandydatów. Bezpieczne do ponownego uruchomienia."""
+    corpus_n = corpus_size()
+    edges = []
+    for pair in pair_inputs(ad, corpus_n):
+        result = fusion.score_pair(pair.shared, pair.soft, corpus_n)
+        edge = _store_edge(ad.pk, pair.other_id, result, pair.artifacts)
         if edge:
             edges.append(edge)
     return edges

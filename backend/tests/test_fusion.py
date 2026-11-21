@@ -60,13 +60,17 @@ def test_single_non_decisive_family_is_not_enough():
     assert result.relation is None
 
 
+ENGINE = [
+    Shared("kit_path", "POST /api/v1/trigger/field/{id}/", df=2),
+    Shared("kit_path", "GET /aio-static/sdk/main.js", df=2),
+    Shared("kit_path", "POST /api/v1/agent/persist-session-record/{id}/{id}", df=2),
+    Shared("url_param_keys", "utm_id,utm_visit", df=2),
+]
+OPERATOR_TRACE = Shared("funnel_id", "11111111-2222-4333-8444-555555555555", df=2)
+
+
 def test_same_source_with_the_same_story_is_same_campaign():
-    shared = [
-        Shared("kit_path", "POST /api/v1/trigger/field/{id}/", df=2),
-        Shared("kit_path", "GET /aio-static/sdk/main.js", df=2),
-        Shared("kit_path", "POST /api/v1/agent/persist-session-record/{id}/{id}", df=2),
-        Shared("url_param_keys", "utm_id,utm_visit", df=2),
-    ]
+    shared = [*ENGINE, OPERATOR_TRACE]
     same_story = score_pair(shared=shared, soft=[Soft("page_text_minhash", 1.0)], corpus_n=N)
     assert same_story.relation == "same_campaign"
     other_story = score_pair(shared=shared, soft=[Soft("page_text_minhash", 0.2)], corpus_n=N)
@@ -130,10 +134,8 @@ def test_connected_components():
 def test_shared_theme_does_not_turn_an_operator_link_into_a_campaign():
     # Ten sam silnik lejka, ta sama osoba, marka i tematyka, ale inny artykuł: operator, nie kampania.
     shared = [
-        Shared("kit_path", "POST /api/v1/trigger/field/{id}/", df=2),
-        Shared("kit_path", "GET /aio-static/sdk/main.js", df=2),
-        Shared("kit_path", "POST /api/v1/agent/persist-session-record/{id}/{id}", df=2),
-        Shared("url_param_keys", "utm_id,utm_visit", df=2),
+        *ENGINE,
+        OPERATOR_TRACE,
         Shared("person_mention", "Q1", df=2),
         Shared("brand_impersonated", "Gazeta.pl", df=2),
         Shared("topic", "sensacja", df=2),
@@ -167,3 +169,30 @@ def test_copied_content_alone_is_similar_not_the_same_source():
 def test_the_same_ad_creative_is_the_same_campaign():
     result = score_pair(shared=[Shared("creative_phash", "c41e0f0f3c3c7e7e", df=2)], soft=[Soft("text_minhash", 1.0)], corpus_n=N)
     assert result.decisive is True and result.relation == "same_campaign"
+
+
+def test_the_same_funnel_engine_alone_is_not_the_same_operator():
+    # Ścieżki zaplecza i zestaw parametrów ustawia ten sam program. To jedno potwierdzenie, nie dwa:
+    # silnik lejka mógł kupić każdy. Bez śladu konta albo infrastruktury pokazujemy tylko podobieństwo.
+    result = score_pair(shared=ENGINE, soft=[Soft("page_text_minhash", 0.2)], corpus_n=N)
+    assert result.relation == "similar"
+    assert {e.family for e in result.evidence} == {"tmpl", "infra"}
+
+
+def test_the_same_funnel_engine_plus_own_asset_host_is_the_same_operator():
+    # Silnik plus własny host zasobów operatora: dwa niezależne ślady zaplecza.
+    shared = [*ENGINE, Shared("asset_host", "zasoby-operatora.example", df=2)]
+    assert score_pair(shared=shared, soft=[], corpus_n=N).relation == "same_operator"
+
+
+def test_the_same_funnel_engine_and_the_same_article_is_the_same_campaign():
+    # Silnik i ten sam artykuł na obu stronach: niezależne zaplecze i treść.
+    result = score_pair(shared=[*ENGINE, Shared("page_title", "trudna odpowiedź", df=2)], soft=[Soft("page_text_minhash", 0.95)], corpus_n=N)
+    assert result.relation == "same_campaign"
+
+
+def test_the_same_funnel_engine_and_shared_motifs_are_not_the_same_operator():
+    motifs = [Shared("person_mention", "Q1", df=2), Shared("person_mention", "Q2", df=2), Shared("brand_impersonated", "TVN24", df=2)]
+    result = score_pair(shared=[*ENGINE, *motifs], soft=[], corpus_n=N)
+    assert result.families["pers"] >= 4
+    assert result.relation == "similar"

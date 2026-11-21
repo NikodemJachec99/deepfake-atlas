@@ -64,9 +64,9 @@ Zdarzenie `crawl/info` niesie łańcuch przekierowań (`payload.chain`), `extrac
 
 | Relacja | Znaczenie | Warunek |
 |---|---|---|
-| `same_campaign` | to samo źródło i ta sama opowieść | pewność co najmniej 0,9, marker rozstrzygający albo dwie niezależne rodziny, zgodna narracja |
+| `same_campaign` | to samo źródło i ta sama opowieść | pewność co najmniej 0,9, marker rozstrzygający albo dwa niezależne potwierdzenia, zgodna narracja |
 | `same_operator` | to samo zaplecze, inna opowieść | jak wyżej, bez zgodnej narracji |
-| `similar` | podobna koncepcja | zgodna narracja, kreacja albo osoby, bez dowodu wspólnego zaplecza |
+| `similar` | podobna koncepcja | zgodna narracja, kreacja albo osoby, albo ten sam silnik lejka bez śladu operatora; brak dowodu wspólnego zaplecza |
 
 Kampania (`K-0033`) to reklamy spięte krawędziami `same_campaign`. Operator (`O-0001`) to reklamy spięte `same_campaign` albo `same_operator`, więc jeden operator ma zwykle kilka kampanii.
 

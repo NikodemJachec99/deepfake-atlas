@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 
 from evidence.kinds import CONCEPT_FAMILIES, KINDS
 
-MODEL_VERSION = "fs-3"
+MODEL_VERSION = "fs-4"
 
 PRIOR = 1e-4  # szansa, że dwie losowe reklamy z korpusu należą do jednej kampanii
 PRIOR_STRENGTH = 1000  # ile "wirtualnych reklam" waży częstość bazowa typu markera
@@ -145,7 +145,16 @@ def score_pair(shared: list[Shared], soft: list[Soft], corpus_n: int) -> PairRes
     same_shape = any(e.kind == "dom_hash" for e in items) or best.get("dom_minhash", 0.0) >= DUPLICATE_DOM
     result.duplicate = same_text and same_shape
 
-    strong_families = [f for f, bits in families.items() if bits >= FAMILY_MIN_BITS]
+    # Niezależność liczymy osobno od wag. Ślady silnika lejka z różnych rodzin (ścieżki zaplecza,
+    # zestaw parametrów, szablon ścieżki) to jedno potwierdzenie: ten sam program, który mógł kupić
+    # każdy. Operatora wskazuje dopiero ślad jego konta albo infrastruktury.
+    independent: dict[str, float] = {}
+    for item in items:
+        if KINDS[item.kind].motif:
+            continue
+        group = "kit" if KINDS[item.kind].kit else item.family
+        independent[group] = independent.get(group, 0.0) + item.weight_bits
+    strong_families = [f for f, bits in independent.items() if bits >= FAMILY_MIN_BITS]
     # Ta sama opowieść: zgodna treść, obraz albo kontakt. Sam wspólny motyw (tematyka, osoba, marka)
     # to za mało, bo różni operatorzy grają na tych samych nazwiskach i tych samych redakcjach.
     story_bits = sum(e.weight_bits for e in items if KINDS[e.kind].story)
@@ -162,6 +171,10 @@ def score_pair(shared: list[Shared], soft: list[Soft], corpus_n: int) -> PairRes
         # to ten sam operator, który prowadzi kilka kampanii na wspólnym zapleczu.
         result.relation = "same_campaign" if story_bits >= SIMILAR_MIN_BITS else "same_operator"
     elif story_bits >= SIMILAR_MIN_BITS or concept_bits >= WEAK_SIMILAR_MIN_BITS:
+        result.relation = "similar"
+    elif sum(e.weight_bits for e in items if e.kind == "kit_path") >= FAMILY_MIN_BITS:
+        # Te same ścieżki zaplecza bez śladu konkretnego operatora: ten sam silnik lejka.
+        # Warto to pokazać, ale nie scalać. Sam szablon ścieżki albo zestaw parametrów to za mało.
         result.relation = "similar"
     return result
 

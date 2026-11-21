@@ -15,18 +15,25 @@ System łączy pozornie niezależne fałszywe reklamy w kampanie i operatorów n
 
 ## Start
 
+Paczki organizatora rozpakuj do `data/raw/<nazwa>/` (np. `data/raw/nask/`, `data/raw/nask-backup/`), potem jedno polecenie:
+
+```bash
+python scripts/start.py          # na macOS i Linuksie: python3 scripts/start.py
+```
+
+Skrypt tworzy `.env` z `.env.example`, stawia wszystkie usługi (`docker compose up -d --build`, razem z crawlerem w piaskownicy), czeka na backend, wczytuje bazę osób, zakłada harmonogramy Temporala (skany bibliotek wstrzymane, `--skan` je zostawia), importuje każdą paczkę z `data/raw/`, której jeszcze nie ma, i wypisuje adresy. `--cert` dociąga Listę Ostrzeżeń CERT Polska (ok. 127 tys. domen). Ponowne uruchomienie nie dubluje danych. Sprawdzone 21.11.2026 na świeżym klonie z obiema paczkami: 28 reklam, 4 kampanie, 3 operatorów, wszystkie ekrany i endpointy odpowiadają.
+
+Interfejs: http://localhost:3000, API: http://localhost:8000/api/, dokumentacja API: http://localhost:8000/api/docs/.
+
+To samo ręcznie:
+
 ```bash
 cp .env.example .env
 docker compose up -d --build
-curl localhost:8000/health                                           # {"status": "ok"}
-
-docker compose exec backend python manage.py seed_people            # baza referencyjna osób
-docker compose exec backend python manage.py collect cert_pl        # Lista Ostrzeżeń CERT Polska, ok. 127 tys. domen
-docker compose exec backend python manage.py import_bundle /data/raw/nask --name nask   # paczka organizatora
-
+docker compose exec backend python manage.py seed_people
+docker compose exec backend python manage.py import_bundle /data/raw/nask --name nask
+docker compose exec backend python manage.py collect cert_pl        # opcjonalnie
 ```
-
-Interfejs: http://localhost:3000 (kontener `frontend`).
 
 Wymagania: Docker z Compose, ok. 6 GB RAM na wszystkie usługi, ok. 8 GB miejsca na obrazy, dostęp do internetu przy pierwszym budowaniu obrazów i przy pierwszym użyciu OCR (pobranie modelu). Pierwsze `up --build` pobiera obrazy usług i paczki Pythona (m.in. onnxruntime, OpenCV, numpy). Sprawdzone 2026-11-21 na świeżym klonie z pustymi wolumenami: na Windowsie przy łączu ok. 100 KB/s `up --build` trwało 31 minut, import paczki `nask` (13 stron) 58 sekund; na Linuksie (Ubuntu 24.04 w WSL2, klon w systemie plików Linuksa, bash) 16 minut i 161 sekund, z tym samym wynikiem. Na macOS nie sprawdzaliśmy. CI przy każdym PR stawia cały stos na ubuntu i importuje zmyśloną sprawę (`backend/tests/smoke_compose.py`).
 

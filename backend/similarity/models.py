@@ -27,6 +27,7 @@ class Edge(models.Model):
     model_version = models.CharField(max_length=16)
     verdict = models.CharField(max_length=10, choices=Verdict.choices, blank=True, default="")
     verdict_note = models.TextField(blank=True)
+    verdict_reason = models.CharField(max_length=32, blank=True, default="")
     verdict_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
     verdict_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -101,3 +102,38 @@ class OperatorMembership(models.Model):
     ad = models.OneToOneField("ads.Ad", on_delete=models.CASCADE, related_name="operator_membership")
     operator = models.ForeignKey(Operator, on_delete=models.CASCADE, related_name="memberships")
     joined_at = models.DateTimeField(auto_now_add=True)
+
+
+class EdgeDecision(models.Model):
+    """Jedna decyzja analityka o krawędzi, z powodem i migawką tego, co wtedy widział.
+
+    Dowody krawędzi (`EdgeEvidence`) są przebudowywane przy każdym przeliczeniu, więc migawka jest
+    jedynym trwałym zapisem podstawy decyzji. Wpis jest niezmienny: kolejna decyzja to nowy wiersz.
+    Krawędź może zniknąć przy przeliczeniu korpusu, dlatego para reklam jest zapisana osobno.
+    """
+
+    class Reason(models.TextChoices):
+        SHARED_TOOL = "shared_tool", "Wspólne narzędzie albo silnik, nie ślad operatora"
+        SHARED_INFRASTRUCTURE = "shared_infrastructure", "Współdzielona infrastruktura (CDN, hosting, rejestrator)"
+        EXTRACTION_ERROR = "extraction_error", "Błędna ekstrakcja śladu"
+        NO_INDEPENDENT_CONFIRMATION = "no_independent_confirmation", "Brak niezależnego potwierdzenia"
+        CONFIRMED_BY_ANALYST = "confirmed_by_analyst", "Analityk potwierdził wspólne źródło"
+        OTHER = "other", "Inny powód (w notatce)"
+        UNKNOWN = "unknown", "Nieznany (decyzja bez podanego powodu)"
+
+    edge = models.ForeignKey(Edge, null=True, blank=True, on_delete=models.SET_NULL, related_name="decisions")
+    ad_a = models.ForeignKey("ads.Ad", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    ad_b = models.ForeignKey("ads.Ad", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    verdict = models.CharField(max_length=10, choices=Edge.Verdict.choices)
+    previous_verdict = models.CharField(max_length=10, choices=Edge.Verdict.choices, blank=True, default="")
+    reason = models.CharField(max_length=32, choices=Reason.choices, default=Reason.UNKNOWN)
+    note = models.TextField(blank=True)
+    # Pusta migawka oznacza wpis sprzed pamięci sprzeciwu: wiemy, co zdecydowano, ale nie na jakiej podstawie.
+    snapshot = models.JSONField(default=dict, blank=True)
+    legacy = models.BooleanField(default=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    created_at = models.DateTimeField()
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [models.Index(fields=["edge", "created_at"])]

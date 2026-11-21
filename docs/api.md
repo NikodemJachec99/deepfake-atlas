@@ -17,7 +17,8 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | GET | `/api/ads/{id}/edges` | | lista `Edge` malejąco po pewności |
 | POST | `/api/ads/{id}/recluster` | | ponowne przypisanie do kampanii i operatora |
 | GET | `/api/edges/{id}` | | `EdgeDetail`: obie reklamy i lista dowodów |
-| POST | `/api/edges/{id}/verdict` | `{"verdict":"confirmed"\|"rejected"\|"unsure","note":""}` | `EdgeDetail`, wpis w dzienniku audytu |
+| POST | `/api/edges/{id}/verdict` | `{"verdict":"confirmed"\|"rejected"\|"unsure","reason":"...","note":""}` | `EdgeDetail`; wpis w historii decyzji z migawką i w dzienniku audytu |
+| GET | `/api/edges/{id}/decisions` | | `EdgeDecisions`: historia decyzji od najnowszej (opis niżej) |
 | POST | `/api/edges/{id}/simulate` | `{"exclude":[<id dowodu>],"edge_version":"<Edge.updated_at>"}` | `Simulation`: krawędź przed i po wyłączeniu dowodów, nic nie zapisuje |
 | GET | `/api/edges/{id}/suggestions` | | `Suggestions`: co sprawdzić dalej, z brakujących dowodów tej pary |
 | POST | `/api/edges/{id}/weakest-link` | `{"max_group_size":2,"max_scenarios":500,"time_limit_ms":3000,"edge_version":"..."}` | `WeakestLink`: najmniejsze zestawy grup śladów, których utrata zmienia relację |
@@ -63,6 +64,18 @@ Zasady:
 - Oś nie twierdzi, że jedna domena zastąpiła drugą ani że operator zmienił taktykę. Pokazuje kolejność obserwacji.
 - Ostatnie wystąpienie i migawki są tylko dla reklam z bibliotek, bo dla przechwyceń i zgłoszeń ręcznych to data importu. Z tego samego powodu pomijamy pierwsze wystąpienie przechwycenia, które w paczce nie miało daty.
 - `undated` liczy to, czego nie da się umieścić w czasie: `ads` (reklamy bez daty), `traces` (ślady tylko w takich reklamach), `links` (krawędzie z taką reklamą), `certificates` (numery certyfikatów bez daty wystawienia, np. z `dns_ssl.json`).
+
+## Pamięć sprzeciwu
+
+Decyzja analityka (`POST /api/edges/{id}/verdict`) ma powód i notatkę. Zmienia tylko werdykt krawędzi: relacja, bity, dowody i grupy zostają takie, jakie policzył silnik. Każda decyzja to nowy, niezmienny wpis historii.
+
+Powody (`reason`, lista z etykietami w `GET /api/kinds` jako `verdict_reasons`): `shared_tool` (wspólne narzędzie albo silnik), `shared_infrastructure` (współdzielona infrastruktura), `extraction_error` (błędna ekstrakcja), `no_independent_confirmation` (brak niezależnego potwierdzenia), `confirmed_by_analyst`, `other` (powód w notatce). Bez `reason` decyzja zapisuje się z powodem `unknown`, więc stary klient działa. `unknown` mają też wszystkie decyzje sprzed pamięci sprzeciwu, przeniesione z dziennika audytu jako `legacy` bez migawki. Uzasadnień nie wyciągamy z notatek.
+
+`GET /api/edges/{id}/decisions` zwraca `{"edge": 12, "current": "rejected", "decisions": [EdgeDecision]}`. `EdgeDecision`: `id`, `edge` (null, gdy krawędź zniknęła przy przeliczeniu), `ad_a`, `ad_b`, `verdict`, `previous_verdict`, `reason`, `reason_label`, `note`, `legacy`, `user`, `created_at`, `has_snapshot`, `snapshot`.
+
+`snapshot` to stan z chwili decyzji, bo dowody krawędzi są przebudowywane przy każdym przeliczeniu: `relation`, `bits`, `probability`, `decisive`, `duplicate`, `families`, `model_version`, `edge_version` (wersja dowodów, ta sama co w Laboratorium dowodów), `evidence` (rodzaj, rodzina, wartości po redakcji do 300 znaków, podobieństwo, `df`, `corpus_n`, wkład w bitach, `decisive`, `kit`, `motif`), `groups` (kampania i operator obu reklam), `ads` (źródło, sprawa, adres po redakcji).
+
+API nie ma uwierzytelniania, więc notatka jest widoczna dla każdego z dostępem do API, tak jak wcześniej `verdict_note`. Przed zapisem sekrety w notatce są zamieniane na skróty: parametry z tokenami w adresach i tokeny dostępu Mety pod dowolną nazwą. Danych osobowych notatka nie powinna zawierać, system ich nie wykrywa.
 
 ## Wejście plikami
 

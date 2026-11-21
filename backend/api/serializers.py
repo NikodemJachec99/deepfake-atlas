@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from ads.models import Ad, Analysis, AnalysisEvent
 from evidence.kinds import BAND_KINDS, FAMILIES, KINDS
-from similarity.models import Campaign, Edge, EdgeEvidence, Operator
+from similarity.models import Campaign, Edge, EdgeDecision, EdgeEvidence, Operator
 
 
 class AnalysisCreateSerializer(serializers.Serializer):
@@ -122,7 +122,7 @@ class EdgeDetailSerializer(EdgeSerializer):
     ads = serializers.SerializerMethodField()
 
     class Meta(EdgeSerializer.Meta):
-        fields = [*EdgeSerializer.Meta.fields, "verdict_note", "verdict_at", "ads", "evidence"]
+        fields = [*EdgeSerializer.Meta.fields, "verdict_note", "verdict_reason", "verdict_at", "ads", "evidence"]
 
     def get_ads(self, obj) -> list[dict]:
         return AdListSerializer([obj.ad_a, obj.ad_b], many=True).data
@@ -130,6 +130,8 @@ class EdgeDetailSerializer(EdgeSerializer):
 
 class VerdictSerializer(serializers.Serializer):
     verdict = serializers.ChoiceField(choices=[Edge.Verdict.CONFIRMED, Edge.Verdict.REJECTED, Edge.Verdict.UNSURE])
+    # Bez powodu decyzja zapisuje się z powodem "nieznany", żeby stary klient dalej działał.
+    reason = serializers.ChoiceField(choices=[c for c, _ in EdgeDecision.Reason.choices if c != EdgeDecision.Reason.UNKNOWN], required=False)
     note = serializers.CharField(required=False, allow_blank=True, max_length=4000)
 
 

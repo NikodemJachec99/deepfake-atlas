@@ -25,7 +25,7 @@ export interface GNode {
   campaign: string | null;
   operator: string | null;
   case: string | null;
-  listed: boolean;
+  listed?: boolean;
   focus?: boolean; // analizowany materiał w Discovery
 }
 
@@ -34,10 +34,10 @@ export interface GEdge {
   source: number;
   target: number;
   relation: Relation;
-  duplicate: boolean;
+  duplicate?: boolean;
   probability: number;
   family: Family | null;
-  verdict: Verdict;
+  verdict?: Verdict;
   hidden?: boolean; // odfiltrowana: zostaje w układzie, znika z widoku
 }
 

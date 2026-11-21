@@ -32,7 +32,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     void refresh();
     return () => { active = false; clearTimeout(timer); };
   }, []);
-  return <div className="flex h-dvh flex-col bg-bg text-fg">
+  return <div data-theme={root === "/ads" ? "light" : undefined} className="flex h-dvh flex-col bg-bg text-fg">
     <div className="flex min-h-0 flex-1">
       <nav aria-label="Nawigacja główna" className="flex shrink-0 flex-col gap-1 overflow-auto border-r border-line bg-panel p-2">
         <strong className="px-2 py-3">SCAM DNA</strong>

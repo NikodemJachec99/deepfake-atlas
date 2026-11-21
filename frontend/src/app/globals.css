@@ -31,7 +31,7 @@
   --st-new: #4fc3d6;
 }
 
-:root[data-theme="light"] {
+[data-theme="light"] {
   color-scheme: light;
   --bg: #e9ecf0;
   --panel: #f4f5f7;

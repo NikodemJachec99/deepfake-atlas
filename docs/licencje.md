@@ -57,7 +57,7 @@ Nie ma modeli głosu ani modeli językowych.
 
 ### Baza referencyjna twarzy
 
-`backend/people/face_refs.json`: dla każdej osoby nazwisko, identyfikator Wikidata, plik z Wikimedia Commons, strona pliku, licencja, autor i wektor SFace (128 liczb). Samych zdjęć w repozytorium nie ma. Zdjęcie bierzemy z właściwości P18 w Wikidata i tylko wtedy, gdy licencja na Commons jest wolna (CC0, CC BY, CC BY-SA, GFDL, domena publiczna). Bazę odtwarza `python manage.py build_face_refs`.
+`backend/people/face_refs.json`: dla każdej osoby nazwisko, identyfikator Wikidata, plik z Wikimedia Commons, strona pliku, licencja, autor i wektor SFace (128 liczb). Samych zdjęć w repozytorium nie ma. Zdjęcie bierzemy z właściwości P18 w Wikidata i tylko wtedy, gdy licencja na Commons jest wolna (CC0, CC BY, CC BY-SA, GFDL, domena publiczna). Bazę odtwarza `python manage.py build_face_refs`. Gdy zdjęcie z Wikidata nie ma wolnej licencji, builder szuka w kategorii osoby na Commons (z podkategoriami) portretu z jedną twarzą na wolnej licencji i przyjmuje go tylko wtedy, gdy zgadza się z drugim niezależnym zdjęciem. Plik można też wskazać ręcznie: `--file "Osoba=File:..."`.
 
 Porównujemy wyłącznie z tą bazą osób publicznych, jak dopuszcza opis wyzwania (pkt 5). Wektorów twarzy spoza bazy nie zapisujemy, zostaje tylko marker "twarz osoby X" z wynikiem podobieństwa. Przed użyciem poza konkursem trzeba ustalić podstawę prawną przetwarzania danych biometrycznych (RODO art. 9).
 

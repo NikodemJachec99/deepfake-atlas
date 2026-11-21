@@ -63,7 +63,7 @@ def kind_groups() -> dict[str, list[str]]:
 
 def is_blocking(code: str) -> bool:
     """Po tym typie szukamy kandydatów, więc zgodność w zbiorze kandydatów jest zawyżona."""
-    return KINDS[code].candidate or code in BAND_OF or code == "text_embedding"
+    return KINDS[code].candidate or code in BAND_OF or code in ("text_embedding", "image_embedding")
 
 
 def prior_params(code: str) -> tuple[float, float]:

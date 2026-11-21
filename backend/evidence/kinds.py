@@ -95,6 +95,10 @@ _KINDS = [
     Kind("video_band", "crea", "Klucz wyszukiwania klatek nagrania", m=0.0, f0=1.0, cap=0),
     # Te same klatki w dwóch nagraniach: ten sam materiał wideo, także po ponownym zakodowaniu albo przycięciu.
     Kind("video_frames", "crea", "Wspólne klatki nagrania reklamy", m=0.0, f0=1.0, cap=10, soft=True, lo=0.25, hi=0.6, candidate=False, story=True),
+    # To samo ujęcie, inny plik: przycięty, przeskalowany albo wycinek innej wersji reklamy. Progi z danych organizatora:
+    # wersje jednego ujęcia 0,86 do 0,95, a różne zrzuty z tego samego interfejsu Facebooka do 0,80 (docs/metodyka.md).
+    # Wagę daje dopiero podobieństwo powyżej 0,82, pełną od 0,95. Opowieść, nigdy zaplecze.
+    Kind("image_embedding", "crea", "Podobne ujęcie obrazu reklamy", m=0.0, f0=1.0, cap=5, soft=True, lo=0.82, hi=0.95, candidate=False, story=True),
     # Narracja
     Kind("phone", "narr", "Telefon", m=0.9, f0=1e-6, cap=18, decisive=True, story=True),
     Kind("email", "narr", "E-mail", m=0.9, f0=1e-6, cap=18, decisive=True, story=True),

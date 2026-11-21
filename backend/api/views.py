@@ -351,9 +351,11 @@ def _package_response(request, kind: str, model, pk: int):
         return Response({"detail": f"{group.key} nie ma żadnej reklamy, więc nie ma z czego zrobić pakietu"}, status=404)
     AuditLog.objects.create(
         action="package", object_type=kind, object_id=group.key,
-        payload={"file": built.filename, "files": built.files, "bytes": built.size, "skipped": built.skipped, "raw": raw == "1"},
+        payload={"file": built.filename, "files": built.files, "bytes": built.size, "skipped": built.skipped, "raw": raw == "1", "sha256": built.sha256},
     )
-    return FileResponse(built.file, as_attachment=True, filename=built.filename, content_type="application/zip")
+    response = FileResponse(built.file, as_attachment=True, filename=built.filename, content_type="application/zip")
+    response["X-Package-SHA256"] = built.sha256
+    return response
 
 
 @extend_schema(responses={(200, "application/zip"): OpenApiTypes.BINARY})

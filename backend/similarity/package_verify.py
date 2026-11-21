@@ -6,11 +6,12 @@ Użycie, z katalogu pakietu albo z podaniem go jako argumentu:
     python weryfikuj.py
     python weryfikuj.py /ścieżka/do/rozpakowanego/pakietu
 
-Skrypt sprawdza dwie rzeczy:
+Skrypt sprawdza trzy rzeczy:
 1. SHA256SUMS: każdy wymieniony plik istnieje i ma podaną sumę SHA-256, a w katalogu nie ma plików spoza listy.
 2. manifest.json: każdy dowód z katalogu dowody/ istnieje, ma zgodny rozmiar i sumę SHA-256, a nazwa pliku zaczyna się
    od tej sumy (plik jest adresowany swoją treścią). Pliki wygenerowane razem z pakietem (raport, STIX, krawędzie,
    oś czasu) też mają w manifeście sumy.
+3. krawedzie.jsonl: każdy artefakt wskazany jako dowód jest w pakiecie albo na liście pominięć z powodem.
 
 Kod wyjścia: 0 gdy wszystko się zgadza, 1 gdy cokolwiek się nie zgadza, 2 gdy nie da się odczytać SHA256SUMS albo
 manifestu. Skrypt niczego nie zmienia ani nie pobiera z sieci. Pliki z katalogu dowody/surowe/ są tylko czytane
@@ -24,6 +25,7 @@ import sys
 
 SUMS = "SHA256SUMS"
 MANIFEST = "manifest.json"
+EDGES = "krawedzie.jsonl"
 
 
 def sha256_of(path):
@@ -120,6 +122,37 @@ def check_manifest(root, manifest, sums, problems):
     return checked
 
 
+def check_edges(root, manifest, problems):
+    """Każdy artefakt wskazany jako dowód w krawedzie.jsonl ma być w pakiecie albo na liście pominięć z powodem."""
+    stored = {item.get("sha256") for item in manifest.get("pliki", [])}
+    skipped = {item.get("sha256") for item in manifest.get("pominiete", []) if item.get("powod")}
+    path = os.path.join(root, EDGES)
+    if not os.path.isfile(path):
+        problems.append(f"BRAK PLIKU: {EDGES}")
+        return 0
+    checked = 0
+    with open(path, encoding="utf-8") as handle:
+        for number, line in enumerate(handle, 1):
+            if not line.strip():
+                continue
+            try:
+                row = json.loads(line)
+            except ValueError:
+                problems.append(f"{EDGES}, wiersz {number}: to nie jest JSON")
+                continue
+            for item in row.get("evidence", []):
+                for side in ("artifact_a", "artifact_b"):
+                    sha = item.get(side)
+                    if not sha:
+                        continue
+                    checked += 1
+                    if sha not in stored and sha not in skipped:
+                        problems.append(
+                            f"{EDGES}, wiersz {number}: dowód wskazuje artefakt {sha}, którego nie ma w pakiecie ani na liście pominięć"
+                        )
+    return checked
+
+
 def main(argv):
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -134,10 +167,12 @@ def main(argv):
         return 2
     sums_checked = check_sums(root, entries, problems)
     manifest_checked = check_manifest(root, manifest, entries, problems)
+    edges_checked = check_edges(root, manifest, problems)
     skipped = manifest.get("pominiete", [])
     print("Pakiet: {}".format(manifest.get("grupa", {}).get("klucz", "?")))
     print(f"{SUMS}: sprawdzono {sums_checked} plików")
     print(f"{MANIFEST}: sprawdzono {manifest_checked} plików")
+    print(f"{EDGES}: sprawdzono {edges_checked} odwołań do artefaktów")
     if skipped:
         print(f"Pominięte przy tworzeniu pakietu (to nie błąd, powody w manifeście): {len(skipped)}")
     if problems:
@@ -147,7 +182,9 @@ def main(argv):
             print(" - " + problem)
         return 1
     print("")
-    print("WYNIK: ZGODNE. Zawartość pakietu jest taka, jak w chwili jego utworzenia.")
+    print("WYNIK: ZGODNE. Zawartość pakietu jest zgodna z chwilą utworzenia pakietu.")
+    print("Niezmienność od chwili utworzenia potwierdza dopiero skrót SHA-256 całego pliku ZIP,")
+    print("przekazany osobno (nagłówek X-Package-SHA256 odpowiedzi API i raport): porównaj go ze skrótem pliku ZIP.")
     return 0
 
 

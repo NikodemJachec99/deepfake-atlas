@@ -270,3 +270,61 @@ def test_download_is_written_to_the_audit_log(operator):
     row = AuditLog.objects.get(action="package")
     assert row.object_type == "operator" and row.object_id == operator.key
     assert row.payload["files"] > 5 and row.payload["raw"] is True
+
+
+def favicon_on_edge(operator):
+    """Dowód krawędzi z faviconami, których nie ma w polach reklam (tylko w EdgeEvidence)."""
+    from similarity.models import Edge, EdgeEvidence
+
+    edge = Edge.objects.filter(ad_a__operator_membership__operator=operator, ad_b__operator_membership__operator=operator).first()
+    assert edge is not None
+    ico = b"\x00\x00\x01\x00" + b"ikona-a" * 4
+    icon_a = store.put(ico, kind="favicon", source_url="https://civic.example/favicon.ico")
+    icon_b = store.put(ico + b"b", kind="favicon", source_url="https://across.example/favicon.ico")
+    EdgeEvidence.objects.create(
+        edge=edge, family="infra", kind="favicon_hash", value_a="aa", value_b="aa",
+        raw_bits=7.0, weight_bits=3.0, artifact_a=icon_a, artifact_b=icon_b,
+    )
+    return icon_a, icon_b, edge
+
+
+def test_edge_evidence_artifacts_such_as_favicons_are_packaged(operator, tmp_path):
+    icon_a, icon_b, edge = favicon_on_edge(operator)
+    content, _ = fetch(APIClient(), f"/api/operators/{operator.pk}/package")
+    root, _ = unpack(content, tmp_path / "out")
+    manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+    stored = {p["sha256"]: p for p in manifest["pliki"]}
+    for icon, ad in ((icon_a, edge.ad_a_id), (icon_b, edge.ad_b_id)):
+        assert icon.sha256 in stored and stored[icon.sha256]["rodzaj"] == "favicon"
+        assert (root / stored[icon.sha256]["sciezka"]).read_bytes() == store.get(icon.sha256)
+        assert ad in [r["id"] for r in stored[icon.sha256]["reklamy"]]
+    rows = [json.loads(line) for line in (root / "krawedzie.jsonl").read_text(encoding="utf-8").splitlines()]
+    fav = [e for row in rows for e in row["evidence"] if e["artifact_a"] == icon_a.sha256]
+    assert fav and fav[0]["artifact_a_file"] == stored[icon_a.sha256]["sciezka"]
+    result = verify(root)
+    assert result.returncode == 0, result.stdout
+    assert "zgodna z chwilą utworzenia pakietu" in result.stdout and "X-Package-SHA256" in result.stdout
+
+
+def test_verify_script_fails_when_edge_evidence_points_outside_the_package(operator, tmp_path):
+    icon_a, _, _ = favicon_on_edge(operator)
+    content, _ = fetch(APIClient(), f"/api/operators/{operator.pk}/package")
+    root, _ = unpack(content, tmp_path / "out")
+    assert verify(root).returncode == 0
+    # Dowód wskazuje artefakt, którego nie ma ani w pliku, ani w pominiętych.
+    manifest_path = root / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["pliki"] = [p for p in manifest["pliki"] if p["sha256"] != icon_a.sha256]
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    result = verify(root)
+    assert result.returncode == 1 and icon_a.sha256 in result.stdout and "nie ma go" not in result.stdout.split("NIEZGODNOŚCI")[0]
+    # Z powodem na liście pominięć to już nie błąd tego rodzaju.
+    manifest["pominiete"].append({"sha256": icon_a.sha256, "rodzaj": "favicon", "rozmiar": 1, "powod": "test"})
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    assert "dowód wskazuje artefakt" not in verify(root).stdout
+
+
+def test_whole_zip_sha256_is_in_the_header_and_audit_log(operator):
+    content, response = fetch(APIClient(), f"/api/operators/{operator.pk}/package")
+    assert response["X-Package-SHA256"] == hashlib.sha256(content).hexdigest()
+    assert AuditLog.objects.filter(action="package").latest("pk").payload["sha256"] == response["X-Package-SHA256"]

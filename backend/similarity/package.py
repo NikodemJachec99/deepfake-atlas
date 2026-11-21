@@ -42,7 +42,7 @@ from extractors.url import redact_url
 from people.display import display_value, person_names
 from similarity import fusion, simulation, stix, timeline, weakest
 from similarity.management.commands.export_corpus import edge_row
-from similarity.models import Campaign, CampaignMembership, Edge, Operator, OperatorMembership
+from similarity.models import Campaign, CampaignMembership, Edge, EdgeEvidence, Operator, OperatorMembership
 
 FORMAT_VERSION = 1
 MAX_FILE_BYTES = 50 * 1024 * 1024
@@ -59,13 +59,16 @@ WEAKEST_SCENARIOS = 500
 WEAKEST_TIME_MS = 2000
 
 IMAGE_KINDS = ("creative_image", "video_frame", "page_screenshot")
-IMAGE_SIGNATURES = ((b"\x89PNG", "png"), (b"\xff\xd8\xff", "jpg"), (b"RIFF", "webp"), (b"GIF8", "gif"))
+STORED_IMAGE_KINDS = (*IMAGE_KINDS, "favicon")  # favicona jest dowodem krawedzi, ale nie wchodzi do galerii zrzutow
+IMAGE_SIGNATURES = ((b"\x00\x00\x01\x00", "ico"), (b"\x89PNG", "png"), (b"\xff\xd8\xff", "jpg"), (b"RIFF", "webp"), (b"GIF8", "gif"))
 VIDEO_EXT = {"video/mp4": "mp4", "video/quicktime": "mov", "video/webm": "webm"}
 ROLE_LABELS = {
     "creative_image": "kreacja reklamy",
     "creative_video": "nagranie reklamy",
     "video_frame": "klatka nagrania",
     "page_screenshot": "zrzut strony",
+    "favicon": "favicona",
+    "edge_evidence": "artefakt dowodu powiązania",
     "har": "HAR (ruch sieciowy)",
     "html_victim": "HTML strony (profil ofiary)",
     "html_bot": "HTML strony (profil bota)",
@@ -122,6 +125,7 @@ class Package:
     files: int
     size: int
     skipped: int
+    sha256: str = ""  # skrót całego ZIP, do przekazania odbiorcy osobnym kanałem
 
 
 def spec_for(kind: str, obj) -> GroupSpec:
@@ -233,8 +237,25 @@ def latest_states(ad_ids: list[int]) -> dict[int, dict]:
     return {a.ad_id: a.state or {} for a in rows}
 
 
-def collect_refs(ads: list[Ad], states: dict[int, dict]) -> dict[str, Entry]:
-    """Które artefakty należą do reklam grupy i w jakiej roli, w kolejności reklam (od najstarszej)."""
+def edge_artifact_refs(spec: GroupSpec) -> list[tuple[str, int]]:
+    """Artefakty wskazane jako dowód na krawędziach grupy: (suma, id reklamy, do której należą)."""
+    rows = (
+        EdgeEvidence.objects.filter(edge__ad_a_id__in=spec.ad_ids, edge__ad_b_id__in=spec.ad_ids, edge__relation__in=spec.relations)
+        .order_by("edge_id", "pk")
+        .values_list("artifact_a_id", "artifact_b_id", "edge__ad_a_id", "edge__ad_b_id")
+    )
+    found: list[tuple[str, int]] = []
+    for sha_a, sha_b, ad_a, ad_b in rows.iterator(chunk_size=1000):
+        found.append((sha_a, ad_a))
+        found.append((sha_b, ad_b))
+    return found
+
+
+def collect_refs(ads: list[Ad], states: dict[int, dict], edge_artifacts: list[tuple[str, int]] | None = None) -> dict[str, Entry]:
+    """Które artefakty należą do reklam grupy i w jakiej roli, w kolejności reklam (od najstarszej).
+
+    `edge_artifacts` to artefakty z dowodów na krawędziach grupy (np. favicony): też wchodzą do pakietu,
+    żeby każdy dowód z `krawedzie.jsonl` miał plik albo wpis w `pominiete`."""
     refs: dict[str, Entry] = {}
 
     def ref(sha: str | None, kind: str, ad: Ad) -> None:
@@ -263,6 +284,10 @@ def collect_refs(ads: list[Ad], states: dict[int, dict]) -> dict[str, Entry]:
         ref((state.get("capture") or {}).get("har"), "har", ad)
         ref(victim.get("html_sha"), "html_victim", ad)
         ref(bot.get("html_sha"), "html_bot", ad)
+    by_pk = {ad.pk: ad for ad in ads}
+    for sha, ad_id in edge_artifacts or []:
+        if ad_id in by_pk:
+            ref(sha, "edge_evidence", by_pk[ad_id])
     return refs
 
 
@@ -303,7 +328,7 @@ def write_evidence(archive: Archive, refs: dict[str, Entry], include_raw: bool) 
             entry.skipped = "suma SHA-256 odczytanego pliku nie zgadza się z zapisaną: plik w magazynie jest uszkodzony"
             entries.append(entry)
             continue
-        if artifact.kind in IMAGE_KINDS:
+        if artifact.kind in STORED_IMAGE_KINDS:
             folder, ext, compress = "obrazy", image_ext(data) or "bin", False
         elif artifact.kind == "creative_video":
             folder, ext, compress = "wideo", VIDEO_EXT.get(video.content_type(data[:16]) or "", "bin"), False
@@ -645,7 +670,7 @@ def build(kind: str, obj, include_raw: bool = True) -> Package:
     target = tempfile.TemporaryFile()
     archive = Archive(target, root)
     try:
-        refs = collect_refs(ads, states)
+        refs = collect_refs(ads, states, edge_artifact_refs(spec))
         entries, thumbs = write_evidence(archive, refs, include_raw)
         paths = {e.sha256: e.path for e in entries if e.path}
         if any(e.path.startswith("dowody/surowe/") for e in entries):
@@ -745,7 +770,11 @@ def build(kind: str, obj, include_raw: bool = True) -> Package:
     archive.close()
     size = target.seek(0, 2)
     target.seek(0)
-    return Package(target, f"{root}.zip", len(archive.sums) + 1, size, len(skipped))
+    whole = hashlib.sha256()
+    for chunk in iter(lambda: target.read(1 << 20), b""):
+        whole.update(chunk)
+    target.seek(0)
+    return Package(target, f"{root}.zip", len(archive.sums) + 1, size, len(skipped), whole.hexdigest())
 
 
 _engine = None

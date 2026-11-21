@@ -67,7 +67,9 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | `krawedzie.jsonl` | krawędzie grupy (kształt jak w `export_corpus`, plus `raw_bits`, `artifact_a`, `artifact_b` i ścieżki plików w `dowody/` przy każdym dowodzie), także odrzucone (`verdict: rejected`), które nie liczą się w raporcie |
 | `os-czasu.json` | pełna oś obserwacji (`Timeline`) |
 
-Limity: artefakt większy niż 50 MB, ponad łączny limit 1 GiB, brakujący w magazynie albo z sumą niezgodną z zapisaną (uszkodzony) nie wchodzi do pakietu i ma wpis w `pominiete` z powodem. Surowe pliki nie są redagowane, bo redakcja zmieniłaby sumę i zerwała łańcuch dowodu; wszystko, co generujemy (raport, manifest, krawędzie, STIX, oś czasu), ma adresy po `redact_url`. Pakiet nie jest podpisany elektronicznie: sumy dowodzą niezmienności po utworzeniu, nie autentyczności oryginału.
+Limity: artefakt większy niż 50 MB, ponad łączny limit 1 GiB, brakujący w magazynie albo z sumą niezgodną z zapisaną (uszkodzony) nie wchodzi do pakietu i ma wpis w `pominiete` z powodem. Surowe pliki nie są redagowane, bo redakcja zmieniłaby sumę i zerwała łańcuch dowodu; wszystko, co generujemy (raport, manifest, krawędzie, STIX, oś czasu), ma adresy po `redact_url`. Pakiet nie jest podpisany elektronicznie: sumy w pakiecie potwierdzają zgodność zawartości z chwilą utworzenia pakietu, nie autentyczność oryginału. Niezmienność od tej chwili potwierdza dopiero skrót SHA-256 całego ZIP, przekazany osobno: odpowiedź ma nagłówek `X-Package-SHA256` (to samo jest w `AuditLog`). Odbiorca porównuje go ze skrótem pobranego pliku (`sha256sum plik.zip`).
+
+Artefakty z dowodów na krawędziach grupy (np. favicony, rodzaj `favicon`) wchodzą do pakietu w `dowody/obrazy/` tak samo jak zrzuty. `weryfikuj.py` sprawdza też `krawedzie.jsonl`: dowód wskazujący artefakt, którego nie ma w pakiecie ani w `pominiete` z powodem, to błąd.
 
 ## Błędy
 

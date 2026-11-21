@@ -206,7 +206,7 @@ Bez daty, więc poza osią: {{ timeline_undated.ads|length }} reklam, {{ timelin
   <li><b>Daty to obserwacje.</b> Okres obserwacji i oś czasu mówią, kiedy zobaczyliśmy materiał, a nie kiedy oszust zaczął lub skończył. Rzeczy bez daty nie są na osi.</li>
   <li><b>Tylko to, co przechwycono.</b> Treść strony mogła wyglądać inaczej dla innego odbiorcy (moderacja, ofiara). Różnica treści pod jednym adresem to obserwacja, nie dowód cloakingu.</li>
   <li><b>Test najsłabszego punktu</b> dotyczy pojedynczych par, nie spójności całej grupy, i jest ograniczony liczbą scenariuszy i czasem.</li>
-  <li><b>Sumy kontrolne dowodzą niezmienności po utworzeniu pakietu</b>, nie autentyczności oryginału ani czasu jego powstania. Czas pozyskania to czas zapisu w SCAM DNA. Pakiet nie jest podpisany elektronicznie.</li>
+  <li><b>Sumy w pakiecie potwierdzają, że zawartość jest zgodna z chwilą utworzenia pakietu</b>. Niezmienność od tej chwili potwierdza dopiero skrót SHA-256 całego pliku ZIP, przekazany osobno (nagłówek <code>X-Package-SHA256</code> odpowiedzi API). Sumy nie dowodzą autentyczności oryginału ani czasu jego powstania. Czas pozyskania to czas zapisu w SCAM DNA. Pakiet nie jest podpisany elektronicznie.</li>
   <li><b>Pliki surowe nie są redagowane</b> i mogą zawierać dane z przechwycenia, w tym tokeny dostępu. Raport, manifest, krawędzie, STIX i oś czasu mają adresy po redakcji.</li>
   <li>Raport nie zastępuje opinii biegłego ani analizy analityka. Odrzucone przez analityka powiązania nie są w nim dowodem.</li>
 </ul>

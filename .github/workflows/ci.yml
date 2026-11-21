@@ -33,3 +33,27 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build
+
+  # Uruchomienie od zera jak w README, na Linuksie: wszystkie kontenery, migracje, import zmyślonej sprawy, interfejs.
+  uruchomienie:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - run: cp .env.example .env
+      - run: docker compose up -d --build
+      - name: health
+        run: for i in $(seq 1 60); do curl -fsS localhost:8000/health && exit 0; sleep 3; done; exit 1
+      - run: docker compose exec -T backend python manage.py seed_people
+      - name: import zmyślonej sprawy (Postgres, S3)
+        run: docker compose exec -T backend python manage.py shell -c "exec(open('tests/smoke_compose.py', encoding='utf-8').read())"
+      - name: API i interfejs
+        run: |
+          curl -fsS localhost:8000/api/stats
+          for i in $(seq 1 30); do curl -fsS -o /dev/null localhost:3000/ && exit 0; sleep 2; done; exit 1
+      - name: logi przy błędzie
+        if: failure()
+        run: docker compose logs --tail 80
+      - if: always()
+        run: docker compose down -v
+

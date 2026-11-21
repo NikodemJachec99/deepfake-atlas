@@ -3,19 +3,19 @@
 // Minimalny ekran Discovery. Dowodzi, że API działa od wejścia do dowodów.
 // Docelowy interfejs (trzy tryby, graf, panel dowodów) powstaje według docs/design-prompt.md.
 
+import { EdgePanel } from "./edge-panel";
 import { useRef, useState } from "react";
 
 import {
   api,
   type Analysis,
   type ClusterResult,
-  FAMILY_LABELS,
   RELATION_LABELS,
   streamAnalysis,
   type AdDetail,
   type AnalysisEvent,
   type Edge,
-  type EdgeDetail,
+
   type Family,
   type FuseEventPayload,
 } from "@/lib/api";
@@ -35,7 +35,7 @@ export function Discovery() {
   const [events, setEvents] = useState<AnalysisEvent[]>([]);
   const [ad, setAd] = useState<AdDetail | null>(null);
   const [edges, setEdges] = useState<Edge[]>([]);
-  const [selected, setSelected] = useState<EdgeDetail | null>(null);
+  const [selected, setSelected] = useState<number | null>(null);
   const [assessment, setAssessment] = useState("");
   const stop = useRef<(() => void) | null>(null);
 
@@ -93,14 +93,6 @@ export function Discovery() {
     .flatMap(item => (item.payload as Partial<FuseEventPayload>).top_evidence ?? [])
     .sort((a, b) => b.bits - a.bits).slice(0, 5);
   const cluster = [...events].reverse().find(item => item.stage === "cluster" && item.status === "done")?.payload as Partial<ClusterResult> | undefined;
-
-  async function openEdge(id: number) {
-    setSelected(await api.edge(id));
-  }
-
-  async function decide(verdict: "confirmed" | "rejected" | "unsure") {
-    if (selected) setSelected(await api.setVerdict(selected.id, verdict));
-  }
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 font-sans text-sm">
@@ -184,7 +176,7 @@ export function Discovery() {
             {edges.map((edge) => (
               <li key={edge.id}>
                 <button
-                  onClick={() => openEdge(edge.id)}
+                  onClick={() => setSelected(edge.id)}
                   className="flex w-full items-center justify-between gap-3 rounded border border-neutral-700 px-3 py-2 text-left hover:border-sky-500"
                 >
                   <span>
@@ -199,61 +191,7 @@ export function Discovery() {
         </section>
       </div>
 
-      {selected && (
-        <section className="flex flex-col gap-3 rounded border border-neutral-700 p-4">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="font-semibold">
-              Dowody: #{selected.ad_a} ↔ #{selected.ad_b} · {RELATION_LABELS[selected.relation]} · pewność{" "}
-              <span className="font-mono">{selected.probability.toFixed(2)}</span>
-            </h2>
-            <div className="flex gap-2">
-              {(["confirmed", "unsure", "rejected"] as const).map((verdict) => (
-                <button
-                  key={verdict}
-                  onClick={() => decide(verdict)}
-                  className={`rounded border px-2 py-1 ${selected.verdict === verdict ? "border-sky-500 text-sky-400" : "border-neutral-600"}`}
-                >
-                  {verdict === "confirmed" ? "Potwierdź" : verdict === "unsure" ? "Niepewne" : "Odrzuć"}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] border-collapse text-left">
-              <thead className="text-xs uppercase opacity-60">
-                <tr>
-                  <th className="py-1 pr-3">Rodzina</th>
-                  <th className="py-1 pr-3">Marker</th>
-                  <th className="py-1 pr-3">Wartość</th>
-                  <th className="py-1 pr-3">Źródła</th>
-                  <th className="py-1 text-right">Bity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {selected.evidence.map((item, index) => (
-                  <tr key={index} className="border-t border-neutral-800 align-top">
-                    <td className="py-1.5 pr-3">
-                      <span className="flex items-center gap-2">
-                        <FamilyDot family={item.family} />
-                        {FAMILY_LABELS[item.family]}
-                      </span>
-                    </td>
-                    <td className="py-1.5 pr-3">
-                      {item.label}
-                      {item.decisive && <span className="ml-2 rounded bg-sky-900 px-1 text-xs text-sky-200">rozstrzyga</span>}
-                    </td>
-                    <td className="max-w-xs break-all py-1.5 pr-3 font-mono text-xs">
-                      {item.df > 0 ? item.value_a : `podobieństwo ${item.similarity.toFixed(2)}`}
-                    </td>
-                    <td className="py-1.5 pr-3 font-mono text-xs">{item.df > 0 ? `${item.df} z ${item.corpus_n}` : ""}</td>
-                    <td className="py-1.5 text-right font-mono">{item.weight_bits.toFixed(1)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
+      {selected !== null && <EdgePanel key={selected} edgeId={selected} />}
     </main>
   );
 }

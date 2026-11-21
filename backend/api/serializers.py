@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from ads.models import Ad, Analysis, AnalysisEvent
 from evidence.kinds import BAND_KINDS, FAMILIES, KINDS
+from people.display import PERSON_KINDS, display_value, person_names
 from similarity.models import Campaign, Edge, EdgeDecision, EdgeEvidence, Operator
 
 
@@ -75,6 +76,7 @@ class AdDetailSerializer(AdListSerializer):
     def get_genome(self, obj) -> list[dict]:
         """Markery reklamy pogrupowane w siedem rodzin. Pasma LSH są techniczne, więc ich nie pokazujemy."""
         by_family: dict[str, list[dict]] = {code: [] for code in FAMILIES}
+        names = person_names()
         for am in obj.ad_markers.select_related("marker").all():
             marker = am.marker
             if marker.kind in BAND_KINDS:
@@ -84,6 +86,7 @@ class AdDetailSerializer(AdListSerializer):
                     "kind": marker.kind,
                     "label": KINDS[marker.kind].label,
                     "value": marker.value,
+                    "display_value": display_value(marker.kind, marker.value, names),
                     "ad_count": marker.ad_count,
                     "decisive": KINDS[marker.kind].decisive,
                     "artifact": am.artifact_id,
@@ -96,16 +99,21 @@ class AdDetailSerializer(AdListSerializer):
 class EdgeEvidenceSerializer(serializers.ModelSerializer):
     label = serializers.SerializerMethodField()
     family_label = serializers.SerializerMethodField()
+    display_value = serializers.SerializerMethodField()
 
     class Meta:
         model = EdgeEvidence
         fields = [
-            "id", "family", "family_label", "kind", "label", "value_a", "value_b", "similarity", "df", "corpus_n",
+            "id", "family", "family_label", "kind", "label", "value_a", "value_b", "display_value", "similarity", "df", "corpus_n",
             "raw_bits", "weight_bits", "decisive", "artifact_a", "artifact_b",
         ]
 
     def get_label(self, obj) -> str:
         return KINDS[obj.kind].label
+
+    def get_display_value(self, obj) -> str:
+        names = self.context.setdefault("person_names", person_names()) if obj.kind in PERSON_KINDS else {}
+        return display_value(obj.kind, obj.value_a, names)
 
     def get_family_label(self, obj) -> str:
         return FAMILIES[obj.family]

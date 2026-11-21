@@ -21,6 +21,7 @@ from evidence import store
 from evidence.kinds import BAND_KINDS, FAMILIES, KINDS
 from evidence.models import AdMarker, Artifact
 from extractors.url import redact_url
+from people.display import display_value, person_names
 from similarity import decisions, precedents, simulation, suggestions, timeline, weakest
 from similarity.models import Campaign, Edge, EdgeDecision, Operator
 from similarity.service import assign_campaign, assign_operator
@@ -263,6 +264,7 @@ def _group_detail(group, serializer, relations: list[str]) -> dict:
         .filter(in_group__gte=2)
         .order_by("-in_group")[:80]
     )
+    names = person_names()
     return {
         **serializer(group).data,
         "ads": s.AdListSerializer(ads, many=True).data,
@@ -274,6 +276,7 @@ def _group_detail(group, serializer, relations: list[str]) -> dict:
                 "family": KINDS[row["marker__kind"]].family,
                 "decisive": KINDS[row["marker__kind"]].decisive,
                 "value": row["marker__value"],
+                "display_value": display_value(row["marker__kind"], row["marker__value"], names),
                 "in_group": row["in_group"],
                 "ad_count": row["marker__ad_count"],
             }

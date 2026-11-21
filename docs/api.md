@@ -155,6 +155,7 @@ Kampania (`K-0033`) to reklamy spięte krawędziami `same_campaign`. Operator (`
 - `weight_bits`: wkład dowodu po zniżce za korelację w rodzinie. Suma wkładów to `Edge.bits`.
 - Markery miękkie (`dom_minhash`, `text_minhash`, `page_text_minhash`) mają `df = 0` i podobieństwo w `similarity`.
 - `decisive`: rzadki marker rozstrzygający.
+- `display_value`: wartość do pokazania. Dla osób (`person_mention`, `face_match`) to nazwisko z bazy referencyjnej zamiast `person:<id>`, dla pozostałych typów to samo co `value_a`. To samo pole mają markery w genomie reklamy (`AdDetail.genome[].markers[]`), markery rdzeniowe kampanii i operatora oraz `Simulation.excluded[]`.
 - `id`: stały identyfikator dowodu w obrębie krawędzi. Zmienia się, gdy krawędź jest przeliczana na nowo (wtedy zmienia się też `Edge.updated_at`).
 
 ## Laboratorium dowodów (`Simulation`)

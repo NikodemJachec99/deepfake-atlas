@@ -46,7 +46,8 @@ export default function Alerts() {
         <h2 className="text-lg font-semibold">{item.kind_label}</h2>
         <p>{item.description}</p>
         <p className="flex flex-wrap gap-3 text-accent underline">
-          <Link href={`/ads/${item.ad}`}>Reklama #{item.ad} {item.ad_title}</Link>
+          {item.ad != null && <Link href={`/ads/${item.ad}`}>Reklama #{item.ad} {item.ad_title}</Link>}
+          {item.hunt_candidate != null && <Link href={`/hunt#kandydat-${item.hunt_candidate}`}>{item.domain || "Kandydat domenowy"}</Link>}
           {item.campaign_id != null && <Link href={`/campaigns/${item.campaign_id}`}>Kampania {item.campaign ?? item.campaign_id}</Link>}
           {item.operator_id != null && <Link href={`/operators/${item.operator_id}`}>Operator {item.operator ?? item.operator_id}</Link>}
         </p>

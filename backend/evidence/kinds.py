@@ -106,6 +106,10 @@ _KINDS = [
     Kind("page_title", "narr", "Tytuł strony", m=0.7, f0=1e-4, cap=7, story=True),
     Kind("page_text_band", "narr", "Pasmo LSH treści strony", m=0.0, f0=1.0, cap=0),
     Kind("page_text_minhash", "narr", "Podobieństwo treści strony", m=0.0, f0=1.0, cap=8, soft=True, lo=0.5, hi=0.9, candidate=False, story=True),
+    # Ta sama opowieść innymi słowami: przepisany artykuł, którego MinHash nie złapie. Progi z danych organizatora:
+    # przepisany artykuł (sprawa 48 i strona 1 sprawy 61) 0,98 przy MinHash 0,39, a różne artykuły z tego samego
+    # gatunku oszustw 0,51 do 0,68. Wagę daje dopiero podobieństwo powyżej 0,75, pełną od 0,92.
+    Kind("text_embedding", "narr", "Podobieństwo znaczenia treści", m=0.0, f0=1.0, cap=5, soft=True, lo=0.75, hi=0.92, candidate=False, story=True),
     Kind("topic", "narr", "Tematyka", m=0.6, f0=0.15, cap=1.5, candidate=False, motif=True),
     Kind("text_band", "narr", "Pasmo LSH tekstu", m=0.0, f0=1.0, cap=0),
     Kind("text_minhash", "narr", "Podobieństwo tekstu", m=0.0, f0=1.0, cap=6, soft=True, lo=0.5, hi=0.85, candidate=False, story=True),

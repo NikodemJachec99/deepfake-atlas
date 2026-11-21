@@ -132,7 +132,6 @@ Jeszcze nie ma:
 - Głosu. Z nagrań reklam bierzemy 8 klatek: hasze, tekst z OCR i twarze, bez dźwięku i ruchu. Twarze rozpoznajemy tylko dla osób z małej bazy referencyjnej (`python manage.py build_face_refs` ją odbudowuje, modele pobierają się przy pierwszym użyciu). Obrazy porównujemy hashem percepcyjnym, reklamodawcę i tekst ze zrzutu czyta OCR.
 - Crawler na żywo to klient HTTP. Widzi przekierowania 3xx i meta refresh, nie wykonuje JavaScriptu. Playwright w piaskownicy wchodzi pod ten sam interfejs.
 - Konektor Mety jest napisany według dokumentacji, nie był uruchomiony na żywym tokenie.
-- Embeddingi tekstu: kolumna i indeks HNSW są, model nie jest podpięty. Podobieństwo tekstu liczy MinHash.
 - Wagi modelu par są eksperckie, nie uczone.
 - API nie ma uwierzytelniania. Do pracy lokalnej i demo, nie do wystawienia w sieci.
 

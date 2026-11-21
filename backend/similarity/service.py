@@ -5,6 +5,7 @@ from collections import defaultdict
 from django.db import transaction
 from django.db.models import BigIntegerField, Count, F, Q, Value
 from django.db.models.functions import Coalesce
+from pgvector.django import CosineDistance
 
 from ads.models import Ad
 from evidence.kinds import BAND_KINDS, BAND_OF, KINDS
@@ -15,6 +16,9 @@ from . import fusion
 from .models import Campaign, CampaignMembership, Edge, EdgeEvidence, Operator, OperatorMembership
 
 MAX_CANDIDATES = 500
+# Sąsiedzi z indeksu HNSW po znaczeniu treści: najwyżej tylu, i tylko bliżsi niż ten dystans kosinusowy.
+SEMANTIC_NEIGHBOURS = 20
+SEMANTIC_MAX_DISTANCE = 0.25  # poniżej progu lo=0,75 marker i tak nic nie wnosi
 # Zbiory obrazów porównujemy po odległości Hamminga, pozostałe sygnatury to MinHash.
 # Treść jest odporna na doklejoną sekcję: zapis strony z komentarzami to wciąż ten sam artykuł.
 SOFT_SIMILARITY = {
@@ -64,15 +68,26 @@ def link_ad(ad: Ad) -> list[Edge]:
     sources = source_counts(own.keys())
     limit = hub_limit(corpus_n)
     search_ids = [mid for mid, am in own.items() if KINDS[am.marker.kind].candidate and sources.get(mid, 1) <= limit]
-    if not search_ids:
-        return []
     candidates = list(
         AdMarker.objects.filter(marker_id__in=search_ids)
         .exclude(ad=ad)
         .values_list("ad_id", flat=True)
         .distinct()
         .order_by("-ad_id")[:MAX_CANDIDATES]
-    )
+    ) if search_ids else []
+    own_vector = ad.text_embedding
+    semantic: dict[int, float] = {}
+    if own_vector is not None:
+        neighbours = (
+            Ad.objects.exclude(pk=ad.pk)
+            .filter(text_embedding__isnull=False)
+            .annotate(distance=CosineDistance("text_embedding", own_vector))
+            .filter(distance__lt=SEMANTIC_MAX_DISTANCE)
+            .order_by("distance")
+            .values_list("pk", "distance")[:SEMANTIC_NEIGHBOURS]
+        )
+        semantic = {pk: 1.0 - float(distance) for pk, distance in neighbours}
+        candidates = list(dict.fromkeys([*candidates, *semantic]))
     if not candidates:
         return []
 
@@ -104,6 +119,8 @@ def link_ad(ad: Ad) -> list[Edge]:
             for kind, values in own_signatures.items()
             if kind in BAND_OF and kind in other_signatures.get(other_id, {})
         ]
+        if other_id in semantic:
+            soft.append(fusion.Soft("text_embedding", semantic[other_id]))
         result = fusion.score_pair(shared, soft, corpus_n)
         artifacts = {am.marker.kind: (own[am.marker_id].artifact_id, am.artifact_id) for am in theirs}
         edge = _store_edge(ad.pk, other_id, result, artifacts)

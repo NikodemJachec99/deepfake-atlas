@@ -28,6 +28,7 @@ Kolumna "Źródło" mówi, skąd pochodzi informacja o licencji: **pakiet** ozna
 | mmh3 | 5.3.1 | MIT | pakiet |
 | rapidocr | 3.10.0 | Apache-2.0 | pakiet |
 | onnxruntime | 1.32.0 | MIT | pakiet |
+| tokenizers | 0.x | Apache-2.0 | pakiet |
 | opencv-python-headless (zależność rapidocr) | 5.1.0.95 | Apache-2.0 | pakiet |
 | Pillow | 13.0.0 | MIT-CMU | pakiet |
 | numpy | 2.5.5 | BSD-3-Clause i pokrewne | pakiet |
@@ -51,6 +52,7 @@ psycopg jest na LGPL: używamy go jako biblioteki bez modyfikacji, co nie nakła
 |---|---|---|---|
 | PP-OCRv5 (detekcja i rozpoznawanie, alfabet łaciński), przez RapidOCR | tekst ze zrzutów reklam | Apache-2.0 (projekt) | pobierany przy pierwszym użyciu, działa lokalnie, niczego nie wysyła na zewnątrz |
 | YuNet (`face_detection_yunet_2023mar.onnx`, OpenCV Zoo) | wykrywanie twarzy na zrzutach reklam | MIT | pobierany przy pierwszym użyciu do `data/models/`, działa lokalnie na CPU |
+| paraphrase-multilingual-MiniLM-L12-v2 (sentence-transformers), wersja ONNX int8 z `Xenova/paraphrase-multilingual-MiniLM-L12-v2` | wektor znaczenia treści strony (384 liczby), podobieństwo parafraz | Apache-2.0 | pobierany przy pierwszym użyciu do `data/models/minilm/` (118 MB), działa lokalnie na CPU; `EMBEDDINGS_DOWNLOAD=0` wyłącza pobieranie |
 | SFace (`face_recognition_sface_2021dec.onnx`, OpenCV Zoo) | wektor twarzy do porównania z bazą referencyjną | Apache-2.0 | jak wyżej; bez modelu analiza działa, tylko bez twarzy (`FACE_MODELS_DOWNLOAD=0` wyłącza pobieranie) |
 
 Nie ma modeli głosu ani modeli językowych.

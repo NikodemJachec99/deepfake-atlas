@@ -20,7 +20,9 @@ PIXEL_PARAMS = {"pxl", "fbpx", "fbpixel", "pixel", "px", "fb_pixel"}
 FUNNEL_PARAMS = {"key", "lpkey", "acc", "land_id", "_camp_id", "affid", "aff_id", "offer_id", "flow", "stream"}
 AD_REF_PARAMS = {"ad_id", "adset_id", "campaign_id", "utm_id", "utm_content", "utm_term"}
 AD_NAMING_PARAMS = {"ad_name", "adset_name", "campaign_name", "utm_campaign"}
-SECRET_PARAMS = {"access_token"}
+SECRET_PARAMS = {"access_token", "token", "auth_token", "id_token", "api_key", "apikey", "secret", "signature"}
+# Token dostępu Mety ma stały przedrostek. Łapiemy go pod każdą nazwą parametru.
+_META_TOKEN = re.compile(r"^EAA[A-Za-z0-9]{30,}$")
 
 _NUM = re.compile(r"^\d+$")
 _TOKEN = re.compile(r"^(?=.*\d)[A-Za-z0-9_-]{12,}$|^[0-9a-fA-F]{8,}$")
@@ -70,12 +72,17 @@ def secret_hash(value: str) -> str:
     return "sha256-" + hashlib.sha256(value.encode()).hexdigest()[:16]
 
 
+def is_secret(name: str, value: str) -> bool:
+    return name.lower() in SECRET_PARAMS or bool(_META_TOKEN.match(value.strip()))
+
+
 def redact_url(url: str) -> str:
     """Zamienia sekrety w adresie na skróty. Tokeny dostępu z cudzych kont nie mogą trafić do bazy ani do API."""
     parts = urlsplit(url)
-    if not any(name in parts.query.lower() for name in SECRET_PARAMS):
+    params = parse_qsl(parts.query, keep_blank_values=True)
+    if not any(is_secret(k, v) for k, v in params):
         return url
-    pairs = [(k, secret_hash(v) if k.lower() in SECRET_PARAMS else v) for k, v in parse_qsl(parts.query, keep_blank_values=True)]
+    pairs = [(k, secret_hash(v) if is_secret(k, v) else v) for k, v in params]
     return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(pairs), parts.fragment))
 
 
@@ -101,8 +108,10 @@ def url_observations(url: str) -> list[Observation]:
         value = value.strip()
         if not value or _PLACEHOLDER.search(value):
             continue
-        if name in SECRET_PARAMS:
-            observations.append(Observation("capi_token", secret_hash(value)))
+        if is_secret(name, value):
+            # Marker tokenu Mety tylko dla tokenów Mety. Inne sekrety po prostu nie trafiają do bazy.
+            if name == "access_token" or _META_TOKEN.match(value) or value.startswith("sha256-"):
+                observations.append(Observation("capi_token", secret_hash(value)))
         elif name in PIXEL_PARAMS and _PIXEL_ID.match(value):
             observations.append(Observation("meta_pixel", value, {"param": name}))
         elif name in AD_REF_PARAMS and _META_ID.match(value):

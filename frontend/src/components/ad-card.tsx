@@ -9,6 +9,7 @@ import { api, artifactImageUrl, type AdDetail, type Edge } from "@/lib/api";
 import { SOURCE_LABELS, adTitle, dateTime, day, hostOf } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 
+import { ObservationPanel } from "./observation-panel";
 import { GenomeBands, MarkerList } from "./genome";
 import { Empty, ErrorBox, Field, GroupLink, Loading, Meter, Mono, RelationTag, Tag, VerdictTag } from "./ui";
 
@@ -141,6 +142,7 @@ export function AdCard({ adId, onEdge, selectedEdge, full = false }: { adId: num
         <Labels ad={data} />
         <Creatives shas={data.creatives} size="h-32" />
         <AdMeta ad={data} />
+        {full && <ObservationPanel key={adId} adId={adId} />}
         {data.text && <p className="max-h-24 overflow-auto border-l border-line-strong pl-2 whitespace-pre-wrap text-muted">{data.text}</p>}
       </div>
       <div className="border-b border-line p-2">

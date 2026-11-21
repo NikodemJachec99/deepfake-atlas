@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 
 from evidence.kinds import CONCEPT_FAMILIES, KINDS
 
-MODEL_VERSION = "fs-4"
+MODEL_VERSION = "fs-5"  # fs-5: podobieństwo treści odporne na doklejoną sekcję
 
 PRIOR = 1e-4  # szansa, że dwie losowe reklamy z korpusu należą do jednej kampanii
 PRIOR_STRENGTH = 1000  # ile "wirtualnych reklam" waży częstość bazowa typu markera

@@ -133,3 +133,49 @@ def test_text_contacts():
     assert kinds["telegram"] == {"szybki_zysk"}
     assert kinds["whatsapp"] == {"48600700800"}
     assert kinds["email"] == {"a.b@firma.example"}
+
+
+def _article(seed: int, words: int) -> str:
+    """Zmyślony tekst z losowych sylab. Każde ziarno daje inne słowa."""
+    import random
+
+    rng = random.Random(seed)
+    syllables = [c + v for c in "bcdfghjklmnprstwz" for v in "aeiouy"]
+    return " ".join("".join(rng.choice(syllables) for _ in range(rng.randint(2, 4))) for _ in range(words))
+
+
+def test_same_article_with_appended_section_is_caught():
+    """Zapis strony z doklejoną sekcją (komentarze, stopka) to wciąż ten sam artykuł."""
+    article = _article(1, 600)
+    saved = article + " " + _article(2, 500)
+    a, b = extract_text(article), extract_text(saved)
+    assert minhash.similarity(a.signature, b.signature) < 0.7  # sam Jaccard tego nie łapie
+    assert minhash.text_similarity(a.signature, b.signature) > 0.9
+
+
+def test_short_text_inside_long_page_is_not_the_same_text():
+    """Krótki fragment (baner, stopka) zawarty w długiej stronie nie czyni stron tym samym tekstem."""
+    banner = _article(3, 40)
+    page = _article(4, 1500) + " " + banner
+    a, b = extract_text(banner), extract_text(page)
+    assert minhash.text_similarity(a.signature, b.signature) < 0.5
+
+
+def test_different_articles_stay_apart_in_text_similarity():
+    a, b = extract_text(_article(5, 600)), extract_text(_article(6, 600) + " " + _article(7, 400))
+    assert minhash.text_similarity(a.signature, b.signature) < 0.5
+
+
+def test_partly_shared_texts_of_equal_size_keep_jaccard():
+    """Dwa teksty podobnej długości ze wspólną połową to nie zawieranie. Wynik zostaje przy Jaccardzie."""
+    shared = _article(9, 300)
+    a = extract_text(shared + " " + _article(13, 300)).signature
+    b = extract_text(shared + " " + _article(14, 300)).signature
+    assert minhash.text_similarity(a, b) == minhash.similarity(a, b)
+
+
+def test_old_signature_without_size_still_compares():
+    a = extract_text(_article(8, 300)).signature
+    assert minhash.similarity(a[: minhash.NUM_PERM], a) == 1.0
+    assert minhash.text_similarity(a[: minhash.NUM_PERM], a) == 1.0
+    assert len(minhash.bands(a[: minhash.NUM_PERM])) == minhash.BANDS

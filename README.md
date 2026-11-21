@@ -15,7 +15,7 @@ System łączy pozornie niezależne fałszywe reklamy w kampanie i operatorów n
 ```bash
 cp .env.example .env
 docker compose up -d --build
-curl localhost:8000/health                                           # {"status":"ok"}
+curl localhost:8000/health                                           # {"status": "ok"}
 
 docker compose exec backend python manage.py seed_people            # baza referencyjna osób
 docker compose exec backend python manage.py collect cert_pl        # Lista Ostrzeżeń CERT Polska, ok. 127 tys. domen
@@ -23,9 +23,13 @@ docker compose exec backend python manage.py import_bundle /data/raw/nask --name
 
 ```
 
-Interfejs: http://localhost:3000 (kontener `frontend`). Wymagania: Docker z Compose, ok. 6 GB RAM na wszystkie usługi, dostęp do internetu przy pierwszym budowaniu obrazów i pierwszym użyciu OCR (pobranie modelu).
+Interfejs: http://localhost:3000 (kontener `frontend`).
 
-Porty zmienisz w `.env`: `BACKEND_PORT`, `FRONTEND_PORT`. Praca nad interfejsem bez kontenera:
+Wymagania: Docker z Compose, ok. 6 GB RAM na wszystkie usługi, ok. 8 GB miejsca na obrazy, dostęp do internetu przy pierwszym budowaniu obrazów i przy pierwszym użyciu OCR (pobranie modelu). Pierwsze `up --build` pobiera obrazy usług i paczki Pythona (m.in. onnxruntime, OpenCV, numpy). Sprawdzone 2026-11-21 na świeżym klonie z pustymi wolumenami: przy łączu ok. 100 KB/s trwało 31 minut, import paczki `nask` (13 stron) 58 sekund.
+
+Porty zmienisz w `.env`: `BACKEND_PORT`, `FRONTEND_PORT`, a jeśli masz zajęte porty usług pomocniczych (np. własny Postgres na 5432), także `DB_PORT`, `REDIS_PORT`, `TEMPORAL_PORT`, `S3_PORT`, `NEO4J_HTTP_PORT`, `OPENSEARCH_PORT` i pozostałe z `.env.example`. Po zmianie `FRONTEND_PORT` dopisz nowy adres interfejsu do `CORS_ALLOWED_ORIGINS`, a po zmianie `BACKEND_PORT` przebuduj interfejs (`docker compose up -d --build frontend`), bo adres API jest wkompilowany w czasie budowania.
+
+Windows z Git Bash: przed poleceniami z `/data/...` ustaw `export MSYS_NO_PATHCONV=1`, inaczej Git Bash zamieni ścieżkę kontenera na ścieżkę Windows i `import_bundle` nie znajdzie katalogu. W PowerShellu i cmd ten problem nie występuje. Praca nad interfejsem bez kontenera:
 
 ```bash
 cd frontend && cp .env.local.example .env.local && npm install && npm run dev

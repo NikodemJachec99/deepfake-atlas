@@ -60,6 +60,19 @@ Przed prezentacją sprawdź je jeszcze raz: `curl localhost:8000/api/stats`. Je�
 - Strony na żywo pobieramy bez JavaScriptu. Pełny zestaw cech dają przechwycenia z HAR.
 - Działa jako `docker compose up`, z Temporalem, Postgresem i projekcją do Neo4j, sprawdzone na Windowsie i Linuksie, CI stawia cały stos przy każdym PR. Harmonogram skanuje bibliotekę reklam Microsoft. Wzbogacony korpus do pobrania jednym kliknięciem (`GET /api/export`).
 
+## Plik PDF do zgłoszenia
+
+Slajdy do zgłoszenia generujemy z prawdziwego interfejsu i API, a nie ręcznie. Zrzuty i liczby pochodzą z działającego stosu, więc PDF zawiera dane organizatora i leży tylko w `data/zgloszenie/` (poza gitem).
+
+```powershell
+uv run --no-project --with playwright python scripts/prezentacja/zrzuty.py --base http://localhost:3010 --api http://localhost:8010 --out data/zgloszenie/zrzuty
+uv run --no-project --with playwright python scripts/prezentacja/pdf.py --api http://localhost:8010 --shots data/zgloszenie/zrzuty --out data/zgloszenie/prezentacja.pdf
+```
+
+- `zrzuty.py` otwiera graf operatora A, krawędzie spraw 1 i 2 oraz 2 i p3, laboratorium z testem najsłabszego ogniwa, dwie twarze sprawy 61 i kartę reklamy p3. Identyfikatory reklam i krawędzi szuka przez API po numerach spraw, bo zmieniają się przy imporcie. Tylko czyta.
+- `pdf.py` liczy wynik z API z filtrem `source=capture` (same paczki organizatora): strony, sprawy, kampanie, operatorów, krawędzie między stronami z paczek i strony z Listy CERT. Wstawia liczby i zrzuty do `scripts/prezentacja/slajdy.html` i drukuje 10 slajdów 1280x720. Przerywa, gdy PDF ma ponad 10 MB.
+- Treść slajdów (poza liczbami ze slajdu z wynikiem) jest w szablonie. Zmiana opisu metody wymaga zmiany w `slajdy.html` i tutaj.
+
 ## Scenariusz demo (2 min)
 
 Cel: pokazać pełny proces na nowym materiale i dołączenie do znanego operatora jako nowej kampanii. Kampania B operatora A (sprawy p3 i p4 z drugiej paczki) zostaje poza importem.

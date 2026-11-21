@@ -32,7 +32,7 @@
 | Duplikaty i warianty tego samego przekazu | jest | znacznik `duplicate`, relacja `same_campaign` |
 | Metoda podobieństwa i grupowania w kampanie lub grupy podobnych kampanii | jest | kampania, operator, relacja `similar` |
 | Analiza nowego materiału względem zbioru, wskazanie nowych kampanii | jest | ocena: `duplicate`, `known_campaign`, `known_operator`, `similar_only`, `new_pattern` |
-| Prezentacja zależności w czytelnej formie | częściowo | lista powiązań i panel dowodów działają; graf jest w API (`/api/graph`), w interfejsie w budowie |
+| Prezentacja zależności w czytelnej formie | tak | graf sąsiedztwa reklamy, kampanii i operatora w interfejsie (`/investigation`, z API `/api/graph`), lista powiązań, panel dowodów z wkładem rodzin, karta operatora |
 | Wskazanie cech i przesłanek powiązania | jest | `GET /api/edges/{id}` |
 | Prosty interfejs graficzny | jest | Next.js, ekran Discovery |
 | Udokumentowana metodyka | jest | [metodyka.md](metodyka.md) |
@@ -97,7 +97,7 @@ Do pilnowania:
 |---|---|---|
 | 4.3 | rozwiązania przesyła się 21.11 11:00 do 22.11 11:00 | **do zrobienia przez zespół** |
 | 4.6 | zespół do 6 osób | zespół dwuosobowy: Nikodem i Sokół |
-| 5.6 | etap I: ocena zgłoszeń na platformie HackTribe, 5 najlepszych zespołów do etapu II; etap II: 5 minut prezentacji i 5 minut pytań | prezentacja do przygotowania |
+| 5.6 | etap I: ocena zgłoszeń na platformie HackTribe, 5 najlepszych zespołów do etapu II; etap II: 5 minut prezentacji i 5 minut pytań | slajdy i scenariusz w [prezentacja.md](prezentacja.md), PDF generowany do `data/zgloszenie/prezentacja.pdf` (poza gitem, zawiera dane organizatora) |
 | 5.9 | po terminie zakaz zmian w rozwiązaniu | po 22.11 11:00 nie ruszamy repo |
 | 6.1, 6.2 | uczestnik oświadcza, że jest twórcą swojego wkładu i że rozwiązanie nie narusza praw osób trzecich | biblioteki na licencjach otwartych, lista w [licencje.md](licencje.md); użycie asystenta AI ujawnione tamże |
 | 6.3 | regulamin konkursu może przewidywać przeniesienie praw do rozwiązania | regulamin zadania NASK §4 ust. 3 wymaga od zwycięzców zawarcia umowy przeniesienia praw do utworów wytworzonych w ramach zadania; §3 ust. 6–7 wiąże jej podpisanie z nagrodą. Sprawdzić wzór umowy z organizatorem ([regulamin zadania](https://mudnibfuppwadjkynscc.supabase.co/storage/v1/object/public/task-files/057d36b5-cb92-4062-9393-983cb8a96088/files/af08d8e1-d1ca-4f6a-96c6-9e1e99a26547.pdf)) |

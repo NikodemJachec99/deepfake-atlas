@@ -10,7 +10,7 @@ services:
   db:
     image: pgvector/pgvector:pg16
     env_file: .env
-    ports: ["5432:5432"]
+    ports: ["${DB_PORT:-5432}:5432"]
     volumes: [dbdata:/var/lib/postgresql/data]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
@@ -19,13 +19,13 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports: ["6380:6379"]
+    ports: ["${REDIS_PORT:-6380}:6379"]
 
   temporal:
     image: temporalio/temporal:latest
     user: "0:0"  # serwer deweloperski zapisuje historię do pliku SQLite na wolumenie
     command: ["server", "start-dev", "--ip", "0.0.0.0", "--db-filename", "/data/temporal.db"]
-    ports: ["7233:7233", "8233:8233"]
+    ports: ["${TEMPORAL_PORT:-7233}:7233", "${TEMPORAL_UI_PORT:-8233}:8233"]
     volumes: [temporaldata:/data]
 
   # Magazyn dowodów zgodny z S3. MinIO przestało publikować obrazy, stąd RustFS (Apache-2.0).
@@ -37,14 +37,14 @@ services:
       RUSTFS_VOLUMES: /data
       RUSTFS_ADDRESS: ":9000"
       RUSTFS_CONSOLE_ENABLE: "true"
-    ports: ["9000:9000", "9001:9001"]
+    ports: ["${S3_PORT:-9000}:9000", "${S3_CONSOLE_PORT:-9001}:9001"]
     volumes: [s3data:/data]
 
   neo4j:
     image: neo4j:5-community
     environment:
       NEO4J_AUTH: neo4j/scamdna-neo4j
-    ports: ["7474:7474", "7687:7687"]
+    ports: ["${NEO4J_HTTP_PORT:-7474}:7474", "${NEO4J_BOLT_PORT:-7687}:7687"]
     volumes: [neo4jdata:/data]
 
   opensearch:
@@ -54,7 +54,7 @@ services:
       DISABLE_SECURITY_PLUGIN: "true"
       DISABLE_INSTALL_DEMO_CONFIG: "true"
       OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
-    ports: ["9200:9200"]
+    ports: ["${OPENSEARCH_PORT:-9200}:9200"]
     volumes: [osdata:/usr/share/opensearch/data]
 
   backend:

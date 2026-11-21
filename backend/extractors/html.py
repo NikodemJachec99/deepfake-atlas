@@ -57,6 +57,10 @@ MIN_DOM_TOKENS = 20
 MIN_TITLE = 12
 MIN_NAME = 5
 _SKIP_TEXT = {"script", "style", "noscript", "template"}
+# Listy wyboru (kraj w polu telefonu, waluta, język) to nie treść strony. Tekst z nich zaśmiecał słowa
+# kluczowe i zawyżał podobieństwo treści stron z tym samym formularzem lejka.
+_CHOICE_TAGS = {"select", "option", "datalist"}
+_CHOICE_ROLES = {"listbox", "option"}
 
 
 class _Collector(HTMLParser):
@@ -70,12 +74,15 @@ class _Collector(HTMLParser):
         self.favicon: str | None = None
         self.title = ""
         self._stack: list[str] = []
+        self._choice: list[bool] = []  # równolegle do _stack: czy element leży w liście wyboru
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         attr = {k: (v or "") for k, v in attrs}
         classes = ".".join(sorted(attr.get("class", "").split())[:4])
         self.tokens.append(f"{tag}.{classes}" if classes else tag)
+        inside = bool(self._choice and self._choice[-1])
         self._stack.append(tag)
+        self._choice.append(inside or tag in _CHOICE_TAGS or attr.get("role", "").strip().lower() in _CHOICE_ROLES)
         if tag == "a" and attr.get("href"):
             self.hrefs.append(attr["href"])
         elif tag == "script" and attr.get("src"):
@@ -87,14 +94,16 @@ class _Collector(HTMLParser):
 
     def handle_endtag(self, tag: str) -> None:
         if tag in self._stack:
-            while self._stack and self._stack.pop() != tag:
-                pass
+            while self._stack:
+                self._choice.pop()
+                if self._stack.pop() == tag:
+                    break
 
     def handle_data(self, data: str) -> None:
         current = self._stack[-1] if self._stack else ""
         if current == "title":
             self.title += data
-        elif current not in _SKIP_TEXT and data.strip():
+        elif current not in _SKIP_TEXT and data.strip() and not (self._choice and self._choice[-1]):
             self.text.append(data.strip())
 
 

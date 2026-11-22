@@ -2,11 +2,12 @@
 
 import asyncio
 import logging
+import re
 
 from asgiref.sync import iscoroutinefunction, markcoroutinefunction
 from django.conf import settings
 from django.db import InterfaceError, OperationalError
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.views.defaults import server_error as html_server_error
 from rest_framework import status
 from rest_framework.exceptions import APIException
@@ -45,15 +46,52 @@ def id_param(params, name: str) -> int | None:
     return int_param(params, name, minimum=1, maximum=ID_MAX)
 
 
+# get_object_or_404 Django pisze po angielsku "No Campaign matches the given query.", bez tłumaczenia.
+_MISSING = re.compile(r"^No (\w+) matches the given query\.?$")
+_MISSING_NAMES = {
+    "Ad": "reklamy",
+    "Alert": "alertu",
+    "Analysis": "analizy",
+    "Artifact": "artefaktu",
+    "Campaign": "kampanii",
+    "Edge": "krawędzi",
+    "HuntCandidate": "kandydata łowcy",
+    "HuntRun": "przebiegu łowcy",
+    "Operator": "operatora",
+    "Premise": "przesłanki",
+}
+
+
+def not_found_detail(message: str) -> str:
+    """Komunikat 404 po polsku. Własne polskie komunikaty zostają bez zmian."""
+    match = _MISSING.match(message or "")
+    if match:
+        return f"Nie ma {_MISSING_NAMES.get(match.group(1), 'takiego obiektu')} o tym identyfikatorze."
+    if not message or message.startswith(("No ", "Not found")):
+        return "Nie znaleziono."
+    return message
+
+
 def handler(exc, context):
     """Handler DRF. Nieobsłużony wyjątek to JSON 500 (przeciążona baza: 503). Przy DEBUG=1 zostaje strona debug."""
     response = drf_exception_handler(exc, context)
+    if response is not None and isinstance(exc, Http404):
+        response.data = {"detail": not_found_detail(str(exc))}
     if response is not None or settings.DEBUG:
         return response
     log.exception("Nieobsłużony błąd w %s", context.get("view").__class__.__name__, exc_info=exc)
     if isinstance(exc, (OperationalError, InterfaceError)):
         return Response({"detail": "Baza danych jest chwilowo przeciążona. Spróbuj ponownie za chwilę."}, status=503)
     return Response({"detail": "Błąd serwera."}, status=500)
+
+
+def not_found(request, exception=None, *args, **kwargs):
+    """`handler404` dla widoków spoza DRF (np. obrazy artefaktów): JSON po polsku dla ścieżek /api/."""
+    if request.path.startswith("/api/"):
+        return JsonResponse({"detail": not_found_detail(str(exception) if exception else "")}, status=404)
+    from django.views.defaults import page_not_found
+
+    return page_not_found(request, exception)
 
 
 def server_error(request, *args, **kwargs):

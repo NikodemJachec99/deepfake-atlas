@@ -82,7 +82,7 @@ Artefakty z dowodów na krawędziach grupy (np. favicony, rodzaj `favicon`) wcho
 Każdy błąd API to JSON `{"detail": "..."}`, po polsku, bez śladu stosu i bez strony debug (stos demo działa z `DJANGO_DEBUG=0`).
 
 - `400`: zły parametr zapytania, np. `?limit=abc`, `?limit=-1`, `?ad=zz`, `/api/ads?campaign=abc`. Identyfikatory to liczby całkowite od 1, `limit` grafu 1 do 20000, `after` strumienia SSE od 0.
-- `404`: nieznany zasób, także `/api/ads/{id}/edges` i filtry `?campaign=`, `?operator=`, `?ad=` grafu.
+- `404`: nieznany zasób, także `/api/ads/{id}/edges` i filtry `?campaign=`, `?operator=`, `?ad=` grafu. Komunikat mówi, czego nie ma (np. "Nie ma kampanii o tym identyfikatorze."), także dla pobrań pakietu i obrazów artefaktów.
 - `503`: baza chwilowo przeciążona (np. brak wolnych połączeń). Powtórz żądanie. Połączenia z bazą są zamykane po każdym żądaniu (`DB_CONN_MAX_AGE=0`).
 - `500` `{"detail": "Błąd serwera."}`: nieobsłużony błąd, szczegóły tylko w logu backendu.
 

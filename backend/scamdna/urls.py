@@ -16,4 +16,5 @@ urlpatterns = [
     path("api/", include("api.urls")),
 ]
 
+handler404 = "api.errors.not_found"
 handler500 = "api.errors.server_error"

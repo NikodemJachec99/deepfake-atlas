@@ -175,9 +175,16 @@ export interface GroupChange {
   after: { key: string; ads: number[] }[];
   released: number[];
 }
+export interface GroupMerge {
+  group: string; // klucz grupy po scaleniu
+  ads: number[];
+  from: string[]; // klucze grup przed
+  joined: number[]; // reklamy, które wcześniej nie miały grupy
+}
 export interface Regroup {
   campaign: GroupChange[];
   operator: GroupChange[];
+  merged?: { campaign: GroupMerge[]; operator: GroupMerge[] }; // tylko przy przywróceniu przesłanki
 }
 
 // Zakwestionowanie przesłanki (/api/premises): globalne podważenie jednego śladu (rodzaj + wartość).

@@ -202,6 +202,7 @@ def restore(premise_id: int, user=None) -> Premise:
     if premise.status != Premise.Status.CHALLENGED:
         raise simulation.SimulationError("Ta przesłanka jest już przywrócona.", status=409)
     ad_ids = check_ads(premise.kind, premise.value)
+    before = state(ad_ids)
     premise.status = Premise.Status.RESTORED
     premise.restored_at = timezone.now()
     premise.save(update_fields=["status", "restored_at"])
@@ -210,7 +211,12 @@ def restore(premise_id: int, user=None) -> Premise:
         service.assign_campaign(ad)
         service.assign_operator(ad)
     regroup = service.recluster(touched)
-    premise.restored_state = {**state(ad_ids), "regroup": regroup}
+    after = state(ad_ids)
+    # recluster opisuje tylko rozdzielenia; scalenie przy przywróceniu wynika z różnicy składu przed i po.
+    merged = merges(before["groups"], after["groups"])
+    if any(merged.values()):
+        regroup = {**regroup, "merged": merged}
+    premise.restored_state = {**after, "regroup": regroup}
     premise.save(update_fields=["restored_state"])
     AuditLog.objects.create(
         user=user, action="premise.restore", object_type="premise", object_id=str(premise.pk),
@@ -218,6 +224,21 @@ def restore(premise_id: int, user=None) -> Premise:
     )
     premise.regroup = regroup
     return premise
+
+
+def merges(before: dict, after: dict) -> dict:
+    """Grupy po, które powstały z więcej niż jednej grupy przed albo wchłonęły reklamy bez grupy."""
+    out = {}
+    for name, groups in after.items():
+        owner = {ad: g["key"] for g in before.get(name, []) for ad in g["ads"]}
+        changes = []
+        for group in groups:
+            sources = sorted({owner[ad] for ad in group["ads"] if ad in owner})
+            joined = sorted(ad for ad in group["ads"] if ad not in owner)
+            if len(sources) > 1 or (joined and sources):
+                changes.append({"group": group["key"], "ads": group["ads"], "from": sources, "joined": joined})
+        out[name] = changes
+    return out
 
 
 def check_ads(kind: str, value: str) -> list[int]:

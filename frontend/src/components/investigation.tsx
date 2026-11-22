@@ -378,7 +378,7 @@ export function Investigation() {
           <button type="button" className="self-start px-3 py-2 text-accent md:hidden" aria-expanded={mobileFilters} aria-controls="investigation-filters" onClick={() => setMobileFilters(!mobileFilters)}>{mobileFilters ? "Zwiń filtry" : "Zakres i filtry"}</button>
           <div id="investigation-filters" className={`min-h-0 overflow-auto md:block ${mobileFilters ? "block" : "hidden"}`}>{filters}</div>
         </div>
-        {edgeId === null && nodeId === null ? graphAndTable : <Split id="inv-inspector" dir="row" fixed="second" initial={380} min={280} max={820}>
+        {edgeId === null && nodeId === null ? graphAndTable : <Split id="inv-inspector" dir="row" fixed="second" initial={560} min={280} max={820}>
           {graphAndTable}
           {inspector}
         </Split>}

@@ -46,7 +46,8 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | POST | `/api/hunt/{id}/analyze` | | `Analysis` (201): domena kandydata idzie do pełnego potoku jak `POST /api/analyses`; `409` z istniejącą analizą, gdy już zgłoszona |
 | GET | `/api/graph` | `?campaign=` \| `?operator=` \| `?ad=`, `?relation=a,b`, `?source=capture` (tylko krawędzie między materiałami z tego źródła), `?limit=` (1 do 20000, domyślnie 2000) | `Graph`: `{nodes, edges, truncated, limit, total, total_by_relation, returned_by_relation}` dla Sigma.js. Ucinanie do `limit` jest jawne i ma kolejność ważności: najpierw `same_operator`, potem `similar`, potem `same_campaign`; powtórne przechwycenia (`duplicate`) na końcu; w obrębie relacji najpierw pary materiałów ze spraw (`capture`), potem malejąco po pewności. `total` to liczba krawędzi po filtrach przed ucięciem, `truncated` mówi, czy `total` jest większe niż `edges.length`. Nieznana kampania, operator albo reklama: `404`. Przy `?campaign=` i `?operator=` każdy węzeł ma `member: bool`: czy reklama należy do tej grupy (`false` to sąsiad spoza grupy, dołączony krawędzią). Przy `?ad=` i bez filtra pola nie ma |
 | GET | `/api/kinds` | | słownik 7 rodzin i typów markerów |
-| GET | `/api/stats` | | liczby do paska stanu, w tym `alerts_unseen` (liczba nieprzejrzanych alertów) |
+| GET | `/api/review` | `?page=`, `?source=` (domyślnie `capture`, `all` bez filtra), `?relation=`, `?reason=` | strona `ReviewItem`: kolejka "Do oceny", krawędzie bez werdyktu z powodem uwagi (opis niżej) |
+| GET | `/api/stats` | | liczby do paska stanu, w tym `alerts_unseen`, `verdicts` (krawędzie według werdyktu: `none`, `confirmed`, `rejected`, `unsure`) i `review_pending` (pozycje kolejki `/api/review` dla `source=capture`) |
 | GET | `/api/export/stix` | `?operator=ID` \| `?campaign=ID` (opcjonalnie) | bundle STIX 2.1 (`application/stix+json`): operator jako `intrusion-set`, kampania jako `campaign` z `attributed-to`, wskaźniki (`indicator`) dla domen, adresów IP, numerów certyfikatów i hostów zasobów z relacją `indicates`; identyfikatory trackerów i paneli lejka w `x_scamdna_identifiers`. Tylko grupy z materiałów zgłoszonych jako podejrzane (przechwycenia, zgłoszenia ręczne), bez reklam z bibliotek, osób i tokenów. Identyfikatory deterministyczne |
 | GET | `/api/operators/{id}/package` | `?surowe=0` (opcjonalnie) | pakiet dowodowy operatora jako ZIP (`application/zip`, `Content-Disposition: attachment; filename="scamdna-pakiet-O-0001-RRRRMMDD.zip"`), zawartość w sekcji "Pakiet dowodowy" niżej; grupa bez reklam albo nieznana `404`, złe `surowe` `400`; każde pobranie trafia do dziennika audytu (`action=package`) |
 | GET | `/api/campaigns/{id}/package` | `?surowe=0` (opcjonalnie) | to samo dla kampanii (relacje `same_campaign`) |
@@ -496,6 +497,31 @@ Alert powstaje w etapie `cluster`, gdy reklama (import paczki, upload, skan bibl
 | `seen`, `seen_at` | czy przejrzany i kiedy |
 
 Lista jest stronicowana jak inne (`count`, `next`, `previous`, `results`). `?unseen=1` zostawia nieprzejrzane.
+
+## Kolejka "Do oceny" (`ReviewItem`)
+
+`GET /api/review` zwraca krawędzie bez werdyktu, z jednym powodem uwagi na krawędź. Lista jest stronicowana jak inne (`count`, `next`, `previous`, `results`, 50 na stronę). Kolejność: priorytet powodu, potem malejący `probability`. Krawędź z werdyktem (`confirmed`, `rejected`, `unsure`) do kolejki nie wchodzi. `?source=capture` (domyślnie) zostawia krawędzie, których obie reklamy pochodzą z tego źródła, `?source=all` nie filtruje. Zły `relation` albo `reason` daje `400`.
+
+Powody, w kolejności priorytetu:
+
+| `reason` | `reason_label` | Kiedy |
+|---|---|---|
+| `challenged` | Krawędź używa śladu z zakwestionowanej przesłanki | któryś dowód krawędzi ma rodzaj i wartość aktywnej przesłanki (`Premise` ze statusem `challenged`) |
+| `changed_after_decision` | Krawędź zmieniona po decyzji w jej grupie | w kampanii albo u operatora jednej z reklam była decyzja (`EdgeDecision`), a krawędź przeliczono później (`updated_at`) |
+| `unbacked` | Relacja bez śladu zaplecza albo oparta na jednym decydującym śladzie | `same_operator` albo `same_campaign`, w której żadna niezależna rodzina śladów nie dotyczy zaplecza (poza `narr`, `crea`, `pers`), albo jest dokładnie jeden ślad decydujący i mniej niż dwie niezależne rodziny |
+| `borderline` | Wynik modelu na granicy (0,5 do 0,9) | `0.5 <= probability < 0.9` |
+| `new_in_group` | Nowa reklama w znanej grupie, bez decyzji na jej krawędziach | jedna z reklam ma alert `joined_campaign`, `new_campaign_known_operator` albo `joined_operator`, a żadna z krawędzi tych reklam nie ma decyzji |
+| `other` | Bez decyzji | reszta |
+
+| Pole | Znaczenie |
+|---|---|
+| `id`, `relation`, `probability`, `bits`, `model_version`, `updated_at` | jak w `Edge`; `updated_at` służy też jako `edge_version` przy decyzji |
+| `reason`, `reason_label` | powód i jego polski opis |
+| `ad_a`, `ad_b` | `{id, external_id, source, title, domain, first_seen, thumbnail}`; `domain` to host z `landing_url` po `redact_url`; `thumbnail` to `{sha256, image}` (pierwsza kreacja z `raw.creatives`, a gdy jej nie ma zrzut strony z ostatniej analizy; obraz pod `/api/artifacts/{sha256}/image`) albo `null` |
+| `evidence` | najwyżej 3 najmocniejsze ślady krawędzi, malejąco po `weight_bits`: `{kind, label, family, family_label, weight_bits, value, artifact_a, artifact_b}`; `value` to wartość strony A po redakcji (adresy po `redact_url`, osoby jako nazwisko), do 200 znaków |
+| `limitations` | zdania po polsku o tym, czego krawędź nie dowodzi, np. `brak śladu zaplecza`, `kopia treści bez wspólnej infrastruktury`, `jeden decydujący ślad, bez niezależnego potwierdzenia`, `ślad „Domena” współdzielony przez N reklam` (od 5 reklam), `tylko wspólny motyw (osoba, marka, tematyka)`, `ta sama strona przechwycona ponownie`, `wynik modelu na granicy progu`; może być puste |
+
+Krawędź ocenia się dalej przez `POST /api/edges/{id}/verdict`. Indeks `Edge(verdict, -probability)` jest w migracji `similarity/0010`.
 
 ## Czego API jeszcze nie ma
 

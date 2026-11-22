@@ -38,6 +38,7 @@ class Edge(models.Model):
             models.UniqueConstraint(fields=["ad_a", "ad_b"], name="edge_pair"),
             models.CheckConstraint(condition=models.Q(ad_a__lt=models.F("ad_b")), name="edge_ordered"),
         ]
+        indexes = [models.Index(fields=["verdict", "-probability"], name="edge_verdict_prob")]
 
     def other(self, ad_id: int) -> int:
         return self.ad_b_id if self.ad_a_id == ad_id else self.ad_a_id

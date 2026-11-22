@@ -29,7 +29,20 @@ from evidence.models import AdMarker, Artifact, AuditLog
 from extractors import video
 from extractors.url import redact_url
 from people.display import display_value, person_names
-from similarity import assist_view, decisions, observations, package, precedents, premises, simulation, stix, suggestions, timeline, weakest
+from similarity import (
+    assist_view,
+    decisions,
+    observations,
+    package,
+    precedents,
+    premises,
+    review,
+    simulation,
+    stix,
+    suggestions,
+    timeline,
+    weakest,
+)
 from similarity.models import Alert, Campaign, CampaignMembership, Edge, EdgeDecision, Operator, OperatorMembership, Premise
 from similarity.service import assign_campaign, assign_operator, recluster
 from workflows import runner
@@ -685,6 +698,23 @@ def weights(request):
     return Response(learning.weights_overview())
 
 
+class ReviewList(generics.GenericAPIView):
+    """Kolejka "Do oceny": krawędzie bez werdyktu z powodem uwagi, od najpilniejszych.
+    Filtry: `source` (domyślnie `capture`, `all` bez filtra), `relation`, `reason`."""
+
+    def get(self, request):
+        params = request.query_params
+        source = params.get("source") or "capture"
+        relation = params.get("relation") or ""
+        if relation and relation not in Edge.Relation.values:
+            raise BadParameter("Parametr relation musi być jedną z: " + ", ".join(Edge.Relation.values))
+        reason = params.get("reason") or ""
+        if reason and reason not in review.REASON_LABELS:
+            raise BadParameter("Parametr reason musi być jedną z: " + ", ".join(review.REASON_LABELS))
+        page = self.paginate_queryset(review.queue(source, relation, reason))
+        return self.get_paginated_response(review.serialize(page))
+
+
 @api_view(["GET"])
 def stats(request):
     """Liczby do paska stanu: wielkość korpusu i tego, co silnik w nim znalazł."""
@@ -696,6 +726,9 @@ def stats(request):
             "edges": dict(Edge.objects.values_list("relation").annotate(n=Count("id"))),
             "by_source": dict(Ad.objects.values_list("source").annotate(n=Count("id"))),
             "alerts_unseen": Alert.objects.filter(seen=False).count(),
+            "verdicts": {"none": 0, "confirmed": 0, "rejected": 0, "unsure": 0}
+            | {(v or "none"): n for v, n in Edge.objects.values_list("verdict").annotate(n=Count("id"))},
+            "review_pending": review.pending_count(),
             "cert_pl_listed": Ad.objects.filter(labels__has_key="cert_pl").count(),
             "last_analysis": Analysis.objects.order_by("-created_at").values_list("created_at", flat=True).first(),
         }

@@ -39,6 +39,7 @@ urlpatterns = [
     path("hunt/runs", hunt.HuntRunList.as_view()),
     path("hunt/runs/<uuid:pk>", hunt.hunt_run_detail),
     path("hunt/<int:pk>/analyze", hunt.hunt_analyze),
+    path("review", views.ReviewList.as_view()),
     path("alerts", views.AlertList.as_view()),
     path("alerts/<int:pk>/seen", views.alert_seen),
     path("graph", views.graph),

@@ -32,6 +32,7 @@
 }
 
 @theme inline {
+  --text-xs: max(12px, 0.75rem);
   --color-bg: var(--bg);
   --color-panel: var(--panel);
   --color-raised: var(--raised);

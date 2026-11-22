@@ -100,7 +100,7 @@ export function Tag({ children, tone = "neutral", title }: { children: React.Rea
     new: "border-new text-new",
   };
   return (
-    <span title={title} className={cx("inline-flex h-[18px] shrink-0 items-center rounded-sm border px-1 text-[0.77rem] tracking-wide uppercase", tones[tone])}>
+    <span title={title} className={cx("inline-flex h-[18px] shrink-0 items-center rounded-sm border px-1 text-xs tracking-wide uppercase", tones[tone])}>
       {children}
     </span>
   );
@@ -131,7 +131,7 @@ export function FamilyBar({ families, legend = false, height = 8 }: { families: 
         ))}
       </div>
       {legend && (
-        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[0.85rem] text-muted">
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted">
           {present.map((f) => (
             <span key={f} className="inline-flex items-center gap-1">
               <FamilyDot family={f} size={7} />
@@ -232,7 +232,7 @@ export function ErrorBox({ message, onRetry, missing }: {
         <p>{missing?.description ?? (/^API 5\d\d:|Brak połączenia z API/.test(message) ? "Backend chwilowo niedostępny." : "Nie udało się pobrać danych.")}</p>
         {missing && <Link href={missing.href} className="text-accent underline">{missing.link}</Link>}
         <details><summary>Szczegóły techniczne</summary>
-        <p className="font-mono text-[0.85rem] break-words text-muted">{message}{message.startsWith("Brak połączenia z API") && " Sprawdź dostępność backendu i konfigurację NEXT_PUBLIC_API_URL."}</p></details>
+        <p className="font-mono text-xs break-words text-muted">{message}{message.startsWith("Brak połączenia z API") && " Sprawdź dostępność backendu i konfigurację NEXT_PUBLIC_API_URL."}</p></details>
       </div>
       {onRetry && !missing && <Btn onClick={onRetry}>Ponów</Btn>}
     </div>
@@ -240,7 +240,7 @@ export function ErrorBox({ message, onRetry, missing }: {
 }
 
 export function Kbd({ children }: { children: React.ReactNode }) {
-  return <kbd className="inline-flex h-4 min-w-4 items-center justify-center rounded-sm border border-line-strong px-1 font-mono text-[0.77rem] text-muted">{children}</kbd>;
+  return <kbd className="inline-flex h-4 min-w-4 items-center justify-center rounded-sm border border-line-strong px-1 font-mono text-xs text-muted">{children}</kbd>;
 }
 
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {

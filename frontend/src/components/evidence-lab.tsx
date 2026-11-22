@@ -37,7 +37,7 @@ export function EvidenceLab({ edge, refresh, open, onToggle }: { edge: EdgeDetai
           onClick={() => setExcluded([])}>Przywróć wszystkie dowody</button>
         <div aria-live="polite">
           {query.loading ? "Przeliczanie pary…" : query.error ?
-            query.error.includes("409") ? <p>Dane krawędzi zmieniły się. <button type="button" className="underline" onClick={refresh}>Odśwież dowody</button></p> :
+            query.status === 409 ? <p>Dane krawędzi zmieniły się. <button type="button" className="underline" onClick={refresh}>Odśwież dowody</button></p> :
               <p>Symulacja niedostępna. <button type="button" className="underline" onClick={query.reload}>Ponów</button></p> :
             result?.baseline && result.simulated && Array.isArray(result.simulated.reasons) ? <>
               <h3 className="font-semibold">Wpływ na parę</h3>

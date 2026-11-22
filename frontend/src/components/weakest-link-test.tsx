@@ -15,7 +15,7 @@ export function WeakestLinkTest({ edge, apply, refresh }: { edge: EdgeDetail; ap
       onClick={() => setRun(run + 1)}>Sprawdź najsłabszy punkt</button>
     {run > 0 && <div aria-live="polite">
       {request.loading ? "Sprawdzanie scenariuszy…" : request.error ?
-        request.error.includes("409") ? <p>Dane krawędzi zmieniły się. <button className="underline" onClick={refresh}>Odśwież dowody</button></p> :
+        request.status === 409 ? <p>Dane krawędzi zmieniły się. <button className="underline" onClick={refresh}>Odśwież dowody</button></p> :
         <p>Test niedostępny. Spróbuj ponownie.</p> :
         result?.searched && Array.isArray(result.solutions) ? <>
           <p>{result.message}</p>

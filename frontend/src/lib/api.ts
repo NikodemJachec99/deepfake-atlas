@@ -1065,7 +1065,12 @@ export const api = {
     return request<ReviewPage>(`/api/review${text ? `?${text}` : ""}`);
   },
   // Alerty: nowy materiał w znanej kampanii albo u znanego operatora. unseenOnly zostawia nieprzejrzane.
-  alerts: (unseenOnly = false) => request<Page<Alert>>(`/api/alerts${unseenOnly ? "?unseen=1" : ""}`),
+  alerts: (unseenOnly = false, page = 1) => {
+    const query = new URLSearchParams();
+    if (unseenOnly) query.set("unseen", "1");
+    if (page > 1) query.set("page", String(page));
+    return request<Page<Alert>>(`/api/alerts${query.size ? "?" + query : ""}`);
+  },
   markAlertSeen: (id: number, seen = true) =>
     request<Alert>(`/api/alerts/${id}/seen`, { method: "POST", body: JSON.stringify({ seen }) }),
   // Łowca domen. Lista: potwierdzeni pierwsi, potem po wyniku wstępnym.

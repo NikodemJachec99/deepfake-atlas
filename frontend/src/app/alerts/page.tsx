@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { API_URL, api, type Alert, type Page } from "@/lib/api";
+import { api } from "@/lib/api";
 import { dateTime, errorText } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 import { ErrorBox, Loading } from "@/components/ui";
@@ -14,26 +14,22 @@ export default function Alerts() {
   const unseen = params.get("unseen") !== "0";
   const requested = Number(params.get("page"));
   const page = Number.isSafeInteger(requested) && requested > 0 ? requested : 1;
-  function navigate(onlyUnseen: boolean, target: number, replace = false) {
+  function listUrl(onlyUnseen: boolean, target: number) {
     const next = new URLSearchParams(params.toString());
     if (onlyUnseen) next.delete("unseen");
     else next.set("unseen", "0");
     if (target > 1) next.set("page", String(target));
     else next.delete("page");
-    const href = next.size ? `/alerts?${next}` : "/alerts";
+    return next.size ? `/alerts?${next}` : "/alerts";
+  }
+  function navigate(onlyUnseen: boolean, target: number, replace = false) {
+    const href = listUrl(onlyUnseen, target);
     if (replace) router.replace(href);
     else router.push(href);
   }
   const [saving, setSaving] = useState<number | null>(null);
   const [error, setError] = useState("");
-  const list = useApi(`alerts:${unseen}:${page}`, async () => {
-    if (page === 1) return api.alerts(unseen);
-    const query = new URLSearchParams({ page: String(page) });
-    if (unseen) query.set("unseen", "1");
-    const response = await fetch(API_URL + "/api/alerts?" + query);
-    if (!response.ok) throw new Error(`Odczyt alertów: HTTP ${response.status}`);
-    return await response.json() as Page<Alert>;
-  });
+  const list = useApi(`alerts:${unseen}:${page}`, () => api.alerts(unseen, page));
 
   async function markSeen(id: number) {
     setSaving(id);
@@ -55,7 +51,12 @@ export default function Alerts() {
     <label><input type="checkbox" checked={unseen} disabled={saving !== null}
       onChange={event => { navigate(event.target.checked, 1); setError(""); }} /> Tylko nieprzejrzane</label>
     {error && <p role="alert" className="text-rejected">{error}</p>}
-    {list.loading ? <Loading /> : list.error ? <ErrorBox message={list.error} onRetry={list.reload} /> :
+    {list.loading ? <Loading /> : list.error ? <ErrorBox message={list.error} onRetry={list.reload}
+      missing={page > 1 && list.status === 404 ? {
+        description: "Ta strona alertów jest niedostępna.",
+        href: listUrl(unseen, 1),
+        link: "Otwórz pierwszą stronę alertów",
+      } : undefined}/> :
       <><ul>{list.data?.results.map(item => <li key={item.id} className="grid gap-2 border-b border-line py-3">
         <h2 className="text-lg font-semibold">{item.kind_label}</h2>
         <p>{item.description}</p>

@@ -112,7 +112,7 @@ export function Discovery() {
         (item) => {
           if (generation.current === current) setEvents(previous => [...previous, item]);
         },
-        async () => {
+        async (reason) => {
           try {
             const finished = await api.analysis(analysis.id);
             if (generation.current !== current) return;
@@ -120,6 +120,7 @@ export function Discovery() {
               setRetry(analysis);
               return;
             }
+            if (reason === "interrupted") setRetry(analysis);
             if (finished.status === "failed") {
               setError(finished.error || "Backend zgłosił błąd analizy.");
               return;

@@ -1096,18 +1096,18 @@ export const api = {
 export function streamAnalysis(
   analysis: Pick<Analysis, "events_url">,
   onEvent: (event: AnalysisEvent) => void,
-  onClose: () => void,
+  onClose: (reason: "complete" | "interrupted") => void,
 ): () => void {
   const source = new EventSource(`${API_URL}${analysis.events_url}`);
   const stages: AnalysisEvent["stage"][] = ["ingest", "crawl", "extract", "enrich", "fuse", "cluster", "end"];
   for (const stage of stages) {
     source.addEventListener(stage, (message) => onEvent(JSON.parse((message as MessageEvent).data)));
   }
-  const finish = () => {
+  const finish = (reason: "complete" | "interrupted") => {
     source.close();
-    onClose();
+    onClose(reason);
   };
-  source.addEventListener("close", finish);
-  source.onerror = finish;
+  source.addEventListener("close", () => finish("complete"));
+  source.onerror = () => finish("interrupted");
   return () => source.close();
 }

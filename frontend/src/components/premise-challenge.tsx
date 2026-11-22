@@ -101,10 +101,15 @@ export function PremiseHistory() {
     catch(e) { setError(errorText(e)); }
     finally { setBusy(false); }
   }
-  return <main className="atlas-page"><h1 className="atlas-title">Historia zakwestionowań</h1>
+  return <main className="atlas-page"><header className="grid gap-2"><h1 className="atlas-title">Historia zakwestionowań</h1>
+      <p className="max-w-3xl text-pretty text-muted">Zakwestionowanie to wyłączenie śladu, który nie dowodzi wspólnego źródła, na przykład popularnej usługi pośrednika. System przelicza wtedy powiązania bez niego. Każde zakwestionowanie można tu cofnąć.</p></header>
     {changes && <GroupChanges changes={changes}/>}
     {error && <ErrorBox message={error}/>}
-    {history.loading ? <Loading/> : history.error ? <ErrorBox message={history.error} onRetry={history.reload}/> : !history.data?.results.length ? <p>Brak zapisanych zakwestionowań.</p> :
+    {history.loading ? <Loading/> : history.error ? <ErrorBox message={history.error} onRetry={history.reload}/> : !history.data?.results.length ? <div className="grid justify-items-start gap-2 rounded-xl border border-dashed border-line-strong p-6">
+        <p className="text-lg font-medium">Nikt jeszcze nie zakwestionował żadnego śladu.</p>
+        <p className="text-muted">Ślad zakwestionujesz przy ocenie pary reklam, przyciskiem „Zakwestionuj przesłankę”. Przed zapisem zobaczysz, które grupy by się zmieniły.</p>
+        <Link href="/review" className="rounded-md border border-line-strong px-3 py-2 text-accent hover:bg-panel">Przejdź do oceny par</Link>
+      </div> :
       <ul>{history.data.results.map(p => <li className="border-b border-line py-3" key={p.id}><div className="flex flex-wrap items-baseline gap-x-3">
           <strong className="wrap-anywhere">{p.label} · {p.display_value || p.value}</strong>
           <span className="text-sm text-muted">{p.status_label}</span>

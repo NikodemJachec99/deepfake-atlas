@@ -23,6 +23,7 @@ function CampaignBranch({ group }: { group: Group }) {
   const connected = edges.filter(edge => edge.source === current.id || edge.target === current.id)
     .sort((a,b) => b.probability - a.probability || a.id - b.id);
   return <div className="ml-4 grid min-w-0 gap-4 border-l-2 border-accent-soft py-3 pl-4 lg:grid-cols-[minmax(14rem,2fr)_minmax(18rem,3fr)]">
+    {result.data.truncated && <p className="text-sm text-muted lg:col-span-2">Pobrano {edges.length} z {result.data.total} powiązań zakresu. Liczniki przy reklamach obejmują pobrane powiązania.</p>}
     <section className="min-w-0">
       {([["Reklamy kampanii", members], ["Sąsiedzi spoza kampanii", neighbors]] as const).map(([label, rows]) => {
         return <div key={label}><h3 className="mb-2 font-semibold">{label} ({rows.length})</h3>
@@ -43,7 +44,7 @@ function CampaignBranch({ group }: { group: Group }) {
           <span><span className="font-mono text-xs">↳ #{other}</span> {titles.get(other)}</span>
           <span className="text-sm text-muted">{RELATION_LABELS[edge.relation]} · {bits(edge.bits)} bita · <span className="text-accent">Dowody</span></span>
         </Link></li>;
-      })}</ol> : <p className="text-muted">Brak powiązań tej reklamy w kampanii.</p>}
+      })}</ol> : <p className="text-muted">{result.data.truncated ? "Brak powiązań tej reklamy w pobranej części grafu." : "Brak powiązań tej reklamy w kampanii."}</p>}
     </section>
   </div>;
 }

@@ -56,7 +56,7 @@
 }
 
 html {
-  font-size: 13px;
+  font-size: 14px;
 }
 
 body {
@@ -87,7 +87,7 @@ select {
 
 /* Etykieta sekcji: wersaliki, drobna, używana w nagłówkach paneli i kolumn. */
 .cap {
-  font-size: 0.77rem;
+  font-size: 12px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
@@ -108,7 +108,7 @@ select {
   background: var(--panel);
   border-bottom: 1px solid var(--line);
   font-weight: 500;
-  font-size: 0.77rem;
+  font-size: 12px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
@@ -170,9 +170,9 @@ select {
 }
 
 .atlas-sidebar { background: #f1f4f8; }
-.atlas-page { width: min(100%, 100rem); margin-inline: auto; padding: clamp(1rem, 3vw, 3rem); display: grid; align-content: start; gap: 1.4rem; }
+.atlas-page { width: min(100%, 100rem); margin-inline: auto; padding: clamp(16px, 3vw, 32px); display: grid; align-content: start; gap: 24px; }
 .atlas-title { font-size: clamp(1.8rem, 3vw, 2.7rem); line-height: 1.15; font-weight: 650; letter-spacing: -.035em; }
-.atlas-filters { display: flex; flex-wrap: wrap; align-items: end; gap: .8rem; padding: 1.25rem; background: var(--panel); border: 1px solid var(--line); border-radius: .8rem; }
+.atlas-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; padding: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: .8rem; }
 .atlas-table { min-width: 0; overflow-x: auto; border: 1px solid var(--line); border-radius: .75rem; }
 .atlas-table .dense :is(th, td) { padding-inline: 1rem; height: 2.9rem; }
 .atlas-group > section { min-width: 0; overflow-x: auto; padding: 1rem 1.25rem; border: 1px solid var(--line); border-radius: .75rem; }
@@ -200,4 +200,16 @@ select {
     background: var(--panel);
     box-shadow: 3px 0 4px -3px var(--line-strong);
   }
+}
+
+
+:where(button, select, input[type="text"], input[type="url"], input[type="number"], textarea) {
+  min-height: 36px;
+}
+
+@media (width < 1000px) {
+  .atlas-investigation[data-mode="Lista"] [data-split="inv-table"] > div:first-child,
+  .atlas-investigation[data-mode="Graf"] [data-split="inv-table"] > div:last-child,
+  .atlas-investigation:not([data-mode="Porównanie"]) [data-split="inv-inspector"] > div:last-child,
+  .atlas-investigation[data-mode="Porównanie"] [data-split="inv-inspector"] > div:first-child { display: none; }
 }

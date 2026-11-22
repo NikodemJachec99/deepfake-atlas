@@ -232,7 +232,7 @@ export function ErrorBox({ message, onRetry, missing }: {
         <p>{missing?.description ?? (/^API 5\d\d:|Brak połączenia z API/.test(message) ? "Backend chwilowo niedostępny." : "Nie udało się pobrać danych.")}</p>
         {missing && <Link href={missing.href} className="text-accent underline">{missing.link}</Link>}
         <details><summary>Szczegóły techniczne</summary>
-        <p className="font-mono text-[0.85rem] break-words text-muted">{message}</p></details>
+        <p className="font-mono text-[0.85rem] break-words text-muted">{message}{message.startsWith("Brak połączenia z API") && " Sprawdź dostępność backendu i konfigurację NEXT_PUBLIC_API_URL."}</p></details>
       </div>
       {onRetry && !missing && <Btn onClick={onRetry}>Ponów</Btn>}
     </div>

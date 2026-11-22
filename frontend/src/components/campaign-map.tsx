@@ -76,19 +76,28 @@ export function CampaignMap({ groups, expanded, onToggle }: {
   }));
   const width = Math.max(...locations.map(item => item.x)) + 125;
   const height = Math.max(...locations.map(item => item.y)) + 125;
+  const selected = locations.find(item => item.group.id === Array.from(expanded).at(-1));
   useEffect(() => {
     const svg = surface.current;
     if (!svg) return;
-    function wheel(e: WheelEvent) { e.preventDefault(); setAngle(value => value + Math.sign(e.deltaY) * 4); }
+    function wheel(e: WheelEvent) {
+      e.preventDefault();
+      const delta = e.deltaY || e.deltaX;
+      if (e.shiftKey) setAngle(value => value + Math.sign(delta) * 4);
+      else setScale(value => Math.max(.4, Math.min(8, value * Math.exp(-Math.sign(delta) * .12))));
+    }
     svg.addEventListener("wheel", wheel, { passive: false });
     return () => svg.removeEventListener("wheel", wheel);
   }, []);
   return <section className="flex min-h-[55vh] flex-1 flex-col rounded-lg border border-line">
     <div className="flex flex-wrap items-center gap-3 border-b border-line p-2">
-      <span className="flex-1">Kliknij węzeł kampanii, aby rozwinąć lub zwinąć jej reklamy.</span>
+      <span className="flex-1">Kliknij węzeł kampanii, aby rozwinąć lub zwinąć jej reklamy. Kółko zmienia skalę, Shift z kółkiem obraca mapę.</span>
       <button aria-label="Oddal" onClick={() => setScale(v => Math.max(.4,v/1.4))}>−</button>
       <button aria-label="Przybliż" onClick={() => setScale(v => Math.min(8,v*1.4))}>＋</button>
-      <button onClick={() => {setScale(1);setAngle(0);setOffset({x:0,y:0});}}>Dopasuj</button>
+      <button onClick={() => {setScale(1);setAngle(0);setOffset({x:0,y:0});}}>Dopasuj widok</button>
+      {selected && <button onClick={() => {
+        setAngle(0); setScale(1); setOffset({ x: width/2 - selected.x, y: height/2 - selected.y });
+      }}>Wróć do zaznaczenia · {selected.group.key}</button>}
     </div>
     {operators.error && <button className="text-accent" onClick={operators.reload}>Ponów pobranie operatorów mapy</button>}
     <svg ref={surface} className="min-h-[48vh] w-full flex-1 touch-none cursor-grab" viewBox={`0 0 ${width} ${height}`} aria-label="Graf kampanii"

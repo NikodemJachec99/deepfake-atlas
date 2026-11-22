@@ -65,7 +65,8 @@ export default function Archive() {
         <td><Link className="text-accent" href={`/ads/${ad.id}`}>#{ad.id} · {adTitle(ad)}</Link></td>
         <td>{SOURCE_LABELS[ad.source] ?? ad.source}</td><td>{ad.case ?? "—"}</td>
         <td><GroupLink group={ad.campaign} /></td><td><GroupLink group={ad.operator} /></td>
-      </tr>)}</tbody></table></div> : <p>Brak reklam odpowiadających filtrom.</p>}
+      </tr>)}</tbody></table></div> : <div className="grid justify-items-start gap-2"><p>{query ? "Brak reklam odpowiadających filtrom." : "Archiwum jest puste."}</p>
+        <Link className="text-accent underline" href={query ? "/archive" : "/#input-kind"}>{query ? "Wyczyść filtry" : "Dodaj materiał"}</Link></div>}
       <nav aria-label="Strony wyników" className="flex gap-3">
         <button disabled={!data.data.previous} className="disabled:opacity-40" onClick={() => turnPage(page - 1)}>Poprzednia</button>
         <span>Strona {page}</span>

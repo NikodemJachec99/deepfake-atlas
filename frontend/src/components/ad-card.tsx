@@ -4,6 +4,7 @@
 // Adres strony pokazujemy jako tekst. Strona oszusta nigdy nie otwiera się z interfejsu.
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { API_URL, api, artifactImageUrl, type AdDetail, type Edge } from "@/lib/api";
@@ -82,11 +83,16 @@ function MaterialWorkspace({ ad }: { ad: AdDetail }) {
     <div className="grid xl:grid-cols-[minmax(0,1fr)_minmax(22rem,32%)]">
       <div className="min-w-0 space-y-4 p-5">
         {(ad.creatives.length > 0 || !ad.videos?.length) && <h2 className="text-lg font-semibold">Zrzuty reklamy</h2>}
+        {image && <a className="block text-accent underline" href={artifactImageUrl(image)} target="_blank" rel="noreferrer">
+          {/* eslint-disable-next-line @next/next/no-img-element -- obraz dowodowy z API */}
+          <img className="mb-2 max-h-56 w-full object-contain" src={artifactImageUrl(image)} alt={`Podgląd zrzutu ${ad.creatives.indexOf(image) + 1}`} />
+          Otwórz zrzut w pełnym rozmiarze
+        </a>}
         {ad.creatives.length ? <div className="flex flex-wrap gap-3">
           {ad.creatives.map((sha, i) => <button key={sha} type="button" onClick={() => setSelected(i)}
             aria-pressed={image === sha} className="max-w-full rounded-md border border-line bg-panel p-1 text-left aria-pressed:outline-2 aria-pressed:outline-accent">
             {/* eslint-disable-next-line @next/next/no-img-element -- obraz dowodowy z API */}
-            <img className="h-36 max-w-full object-contain" alt="" src={artifactImageUrl(sha)} />
+            <img className="h-16 max-w-full object-contain" alt="" src={artifactImageUrl(sha)} />
             <span className="block px-1 py-1">Zrzut {i + 1}</span>
           </button>)}
         </div> : !ad.videos?.length && <p className="text-muted">Brak zrzutu reklamy w materiale.</p>}
@@ -98,11 +104,6 @@ function MaterialWorkspace({ ad }: { ad: AdDetail }) {
       </div>
       <aside className="min-w-0 space-y-3 border-t border-line bg-panel p-5 xl:border-t-0 xl:border-l">
         <h2 className="text-lg font-semibold">Wybrany materiał</h2>
-        {image && <a className="block text-accent underline" href={artifactImageUrl(image)} target="_blank" rel="noreferrer">
-          {/* eslint-disable-next-line @next/next/no-img-element -- obraz dowodowy z API */}
-          <img className="mb-2 max-h-56 w-full object-contain" src={artifactImageUrl(image)} alt={`Podgląd zrzutu ${ad.creatives.indexOf(image) + 1}`} />
-          Otwórz zrzut w pełnym rozmiarze
-        </a>}
         <AdMeta ad={ad} />
       </aside>
     </div>
@@ -171,41 +172,49 @@ export function AdMeta({ ad }: { ad: AdDetail }) {
 export function EdgeRows({ edges, adId, onEdge, selected }: { edges: Edge[]; adId: number; onEdge: (edge: Edge) => void; selected?: number | null }) {
   if (edges.length === 0) return <Empty title="Brak powiązań powyżej progu">Silnik nie znalazł dla tej reklamy wspólnych śladów z resztą korpusu.</Empty>;
   return (
-    <table className="dense">
-      <thead>
-        <tr>
-          <th>Z reklamą</th>
-          <th>Relacja</th>
-          <th>Wynik modelu (niekalibrowany)</th>
-          <th className="text-right">Bity</th>
-          <th>Decyzja</th>
-        </tr>
-      </thead>
-      <tbody>
-        {edges.map((edge) => (
-          <tr key={edge.id} data-selected={selected === edge.id} onClick={() => onEdge(edge)} className="cursor-pointer">
-            <td><button type="button" className="table-action" aria-label={`Dowody powiązania reklam #${edge.ad_a} i #${edge.ad_b}`}>
-              #{edge.ad_a === adId ? edge.ad_b : edge.ad_a}
-            </button></td>
-            <td>
-              <RelationTag relation={edge.relation} duplicate={edge.duplicate} />
-            </td>
-            <td>
-              <Meter value={edge.probability} width={48} />
-            </td>
-            <td className="text-right font-mono text-[0.92rem]">{edge.bits.toFixed(1).replace(".", ",")}</td>
-            <td>
-              <VerdictTag verdict={edge.verdict} />
-            </td>
+    <div className="atlas-table" role="region" aria-label="Powiązania reklam" tabIndex={0}>
+      <table className="dense">
+        <thead>
+          <tr>
+            <th>Z reklamą</th>
+            <th>Relacja</th>
+            <th>Wynik modelu (niekalibrowany)</th>
+            <th className="text-right">Bity</th>
+            <th>Decyzja</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {edges.map((edge) => (
+            <tr key={edge.id} data-selected={selected === edge.id} onClick={() => onEdge(edge)} className="cursor-pointer">
+              <td><button type="button" className="table-action" aria-label={`Dowody powiązania reklam #${edge.ad_a} i #${edge.ad_b}`}>
+                #{edge.ad_a === adId ? edge.ad_b : edge.ad_a}
+              </button></td>
+              <td>
+                <RelationTag relation={edge.relation} duplicate={edge.duplicate} />
+              </td>
+              <td>
+                <Meter value={edge.probability} width={48} />
+              </td>
+              <td className="text-right font-mono text-[0.92rem]">{edge.bits.toFixed(1).replace(".", ",")}</td>
+              <td>
+                <VerdictTag verdict={edge.verdict} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
 // Wersja do inspektora: jedna kolumna.
 export function AdCard({ adId, onEdge, selectedEdge, full = false }: { adId: number; onEdge: (edge: Edge) => void; selectedEdge?: number | null; full?: boolean }) {
+  const params = useSearchParams();
+  const sections = [
+    { key: "", label: "Materiał" }, { key: "links", label: "Powiązania" },
+    { key: "traces", label: "Ślady" }, { key: "history", label: "Historia" },
+  ];
+  const tab = sections.find(section => section.key === params.get("tab"))?.label ?? "Materiał";
   const ad = useApi(`ad:${adId}`, () => api.ad(adId));
   const edges = useApi(ad.data ? `ad-edges:${adId}` : null, () => api.adEdges(adId));
   if (ad.loading) return <Loading label="Pobieranie karty reklamy" />;
@@ -214,7 +223,15 @@ export function AdCard({ adId, onEdge, selectedEdge, full = false }: { adId: num
   if (!data) return null;
   return (
     <div className="flex flex-col">
-      {full ? <MaterialWorkspace key={adId} ad={data} /> : <div className="flex flex-col gap-2 border-b border-line p-2">
+      {full && <nav aria-label="Sekcje reklamy" className="flex flex-wrap gap-2 border-b border-line p-2">{sections.map(({ key, label }) => {
+        const query = new URLSearchParams(params.toString());
+        if (key) query.set("tab", key);
+        else query.delete("tab");
+        return <Link key={label} href={`/ads/${adId}${query.size ? "?" + query : ""}`} scroll={false} aria-current={tab === label ? "page" : undefined}
+          className="inline-flex min-h-9 items-center rounded px-3 aria-[current=page]:bg-accent-soft">{label}</Link>;
+      })}</nav>}
+      {full && tab !== "Materiał" && <h1 className="px-3 py-2 font-semibold">Reklama #{adId} · {adTitle(data)}</h1>}
+      {full ? tab === "Materiał" && <MaterialWorkspace key={adId} ad={data} /> : <div className="flex flex-col gap-2 border-b border-line p-2">
         <div className="flex items-center justify-between gap-2">
           <Mono className="text-muted">reklama #{data.id}</Mono>
           <Link href={`/ads/${data.id}`} className="text-accent hover:underline">
@@ -228,13 +245,14 @@ export function AdCard({ adId, onEdge, selectedEdge, full = false }: { adId: num
         <AdMeta ad={data} />
         {data.text && <div className="max-h-24 overflow-auto"><AdText ad={data} /></div>}
       </div>}
-      <div className="border-b border-line p-2">
+      {(!full || tab === "Ślady") && <div className="border-b border-line p-2">
         <GenomeBands genome={data.genome} caption="Genom reklamy" />
-      </div>
-      <p className="cap flex h-7 items-center border-b border-line px-2">Powiązania</p>
-      {edges.loading ? <Loading /> : edges.error ? <ErrorBox message={edges.error} onRetry={edges.reload} /> : <EdgeRows edges={edges.data ?? []} adId={adId} onEdge={onEdge} selected={selectedEdge} />}
-      <p className="cap flex h-7 items-center border-y border-line px-2">Markery</p>
-      <MarkerList videos={data.videos} genome={data.genome} initiallyOpen={full} />
+      </div>}
+      {(!full || tab === "Powiązania") && <><p className="cap flex h-7 items-center border-b border-line px-2">Powiązania</p>
+      {edges.loading ? <Loading /> : edges.error ? <ErrorBox message={edges.error} onRetry={edges.reload} /> : <EdgeRows edges={edges.data ?? []} adId={adId} onEdge={onEdge} selected={selectedEdge} />}</>}
+      {(!full || tab === "Ślady") && <><p className="cap flex h-7 items-center border-y border-line px-2">Markery</p>
+      <MarkerList videos={data.videos} genome={data.genome} initiallyOpen={full} /></>}
+      {full && tab === "Historia" && <dl className="p-4"><Field label="Pierwsza obserwacja">{dateTime(data.first_seen) || "Brak daty"}</Field><Field label={["capture", "manual"].includes(data.source) ? "Import do systemu" : "Ostatnia obserwacja"}>{dateTime(data.last_seen) || "Brak daty"}</Field></dl>}
     </div>
   );
 }

@@ -67,10 +67,13 @@ def main() -> None:
         page = browser.new_page(viewport={"width": WIDTH, "height": HEIGHT}, device_scale_factor=1)
 
         def shot(name: str, url: str, *, left: int, width: int = WIDTH, clicks: list[str] = (),
-                 wait_text: str | None = None, scroll: str | None = None, block: str = "nearest"):
+                 wait_text: str | None = None, scroll: str | None = None, block: str = "nearest", expert: bool = False):
             # Kadr bliski proporcjom miejsca na slajdzie (CROP x HEIGHT-22), bez paska nawigacji tam,
             # gdzie nie wnosi treści, i bez paska stanu: pokazuje liczby całej bazy, razem z bibliotekami.
             page.set_viewport_size({"width": width, "height": HEIGHT})
+            # Tryb ekspercki (bity, marker rozstrzygający) dla slajdów o metodzie, prosty dla pracy analityka.
+            page.goto(f"{args.base}/", wait_until="domcontentloaded")
+            page.evaluate("v => localStorage.setItem('scamdna.expert', v)", "1" if expert else "0")
             page.goto(f"{args.base}{url}", wait_until="networkidle")
             for label in clicks:
                 page.get_by_role("button", name=label).first.click()
@@ -86,16 +89,16 @@ def main() -> None:
 
         # Krawędź: prawa część grafu i panel dowodów. Reklama: treść bez nawigacji, węższe okno.
         panel, content, narrow = WIDTH - CROP, NAV, NAV + CROP
-        shot("graf-operatora", f"/investigation?operator={operator_a}", left=content)
+        shot("graf-operatora", f"/investigation?operator={operator_a}", left=content, expert=True)
         shot("krawedz-kampania", f"/investigation?ad={case2}&edge={same_campaign}", left=panel,
-             wait_text="Identyfikator strony w panelu lejka")
-        shot("krawedz-operator", f"/investigation?ad={case2}&edge={same_operator}", left=panel, wait_text="Ten sam operator")
+             wait_text="Identyfikator strony w panelu lejka", expert=True)
+        shot("krawedz-operator", f"/investigation?ad={case2}&edge={same_operator}", left=panel, wait_text="Ten sam operator", expert=True)
         shot("najslabszy-punkt", f"/investigation?ad={case2}&edge={same_campaign}", left=panel,
-             clicks=["Kontekst", "Laboratorium dowodów", "Sprawdź najsłabszy punkt"], wait_text="Najmniejszy zestaw", scroll="Najmniejszy zestaw")
+             clicks=["Kontekst", "Laboratorium dowodów", "Sprawdź najsłabszy punkt"], wait_text="Najmniejszy zestaw", scroll="Najmniejszy zestaw", expert=True)
         shot("dwie-twarze", f"/ads/{case61}", left=content, width=narrow, clicks=["Dwie twarze jednego linku"],
              wait_text="Różnice między obserwacjami", scroll="Różnice między obserwacjami")
         shot("karta-reklamy", f"/ads/{p3}?tab=traces", left=content, width=narrow, wait_text="Genom reklamy",
-             scroll="Genom reklamy", block="start")
+             scroll="Genom reklamy", block="start", expert=True)
         # Stanowisko oceny i zakwestionowanie przesłanki (podgląd, bez zapisu), karta operatora z "Dlaczego razem".
         shot("do-oceny", f"/review?edge={review_edge}", left=content, wait_text="Co uzasadnia tę hipotezę")
         shot("przeslanka", f"/review?edge={review_edge}", left=content + CROP // 3, clicks=["Zakwestionuj przesłankę"], wait_text="Wpływ na cały korpus")

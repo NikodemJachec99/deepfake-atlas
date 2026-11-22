@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { api } from "@/lib/api";
@@ -11,7 +12,8 @@ export default function ReviewPage() {
   const params = useSearchParams();
   const requested = Number(params.get("page"));
   const page = Number.isSafeInteger(requested) && requested > 0 ? requested : 1;
-  const selected = Number(params.get("edge")) || null;
+  const requestedEdge = params.get("edge");
+  const selected = requestedEdge === null ? null : Number(requestedEdge);
   const comparing = params.get("view") === "compare";
   const queue = useApi("review:" + page, () => api.review({ page }));
 
@@ -29,7 +31,8 @@ export default function ReviewPage() {
   }
   const [message, setMessage] = useState("");
   const rows = queue.data?.results ?? [];
-  const current = rows.find(row => row.id === selected) ?? rows[0];
+  const current = selected === null ? rows[0] : rows.find(row => row.id === selected);
+  const missing = selected !== null && queue.data && !current;
   return <main className="grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)] gap-3 lg:grid-rows-1 overflow-auto p-3 text-sm lg:grid-cols-[minmax(15rem,24%)_minmax(0,1fr)]">
     <nav aria-label="Widok stanowiska oceny" className="flex gap-2 lg:hidden">
       <button aria-pressed={!comparing} className="rounded px-3 aria-pressed:bg-accent-soft" onClick={() => navigate(page, selected, false)}>Kolejka</button>
@@ -47,7 +50,12 @@ export default function ReviewPage() {
     </aside>
     <section className={`min-h-0 min-w-0 flex-col overflow-auto rounded-lg border border-line bg-panel lg:flex ${comparing ? "flex" : "hidden"}`}>
       {message && <p role="status" className="border-b border-line p-3">{message}</p>}
-      {!current && comparing && (queue.loading ? <Loading/> : <button onClick={() => navigate(page, selected, false)}>Wróć do kolejki</button>)}
+      {missing && <div role="status" className="grid justify-items-start gap-3 p-4">
+        <h2 className="font-semibold">Wskazanej pary nie ma na tej stronie kolejki.</h2>
+        {Number.isSafeInteger(selected) && selected > 0 && <Link className="text-accent underline" href={`/investigation?scope=all&edge=${selected}`}>Sprawdź krawędź #{selected} w śledztwie</Link>}
+        <button className="text-accent underline" onClick={() => navigate(page, null, false)}>Wybierz parę z kolejki</button>
+      </div>}
+      {!current && comparing && !missing && (queue.loading ? <Loading/> : queue.error ? <ErrorBox message={queue.error} onRetry={queue.reload}/> : <button onClick={() => navigate(page, null, false)}>Wróć do kolejki</button>)}
       {current && <EdgePanel key={current.id} edgeId={current.id} review={current} onVerdict={saved => {
         setMessage(regroupMessage(saved.regroup));
         const index = rows.findIndex(row => row.id === saved.id);

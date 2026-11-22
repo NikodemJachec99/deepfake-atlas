@@ -54,9 +54,11 @@ function CampaignNode({ group, x, y, color, expanded, toggle }: {
       <text textAnchor="middle" dy="5" fill={expanded ? "white" : "var(--accent)"} fontSize="14" fontWeight="600">{group.size}</text>
       <text textAnchor="middle" y={expanded ? -88 : 38} fill="var(--fg)" fontSize="13">{group.key}</text>
     </g>
-    {expanded && <foreignObject x="-92" y="84" width="184" height="35">
+    {expanded && <foreignObject x="-92" y="84" width="184" height="65">
       <div className="text-center text-xs">{result.loading ? "Pobieranie reklam…" : result.error ? <button onClick={result.reload}>Ponów pobranie</button> :
-        <button onClick={() => setAll(!all)} className="text-accent underline">{all ? "Najsilniejsze połączenia" : `Wszystkie połączenia (${layout.total})`}</button>}</div>
+        <button aria-pressed={all} onClick={() => setAll(!all)} className="text-accent underline">{all ? "Najsilniejsze połączenia" : `Połączenia wewnętrzne (${layout.total})`}</button>}
+        {result.data?.truncated && <p>Pobrano {result.data.edges.length} z {result.data.total} powiązań zakresu.</p>}
+      </div>
     </foreignObject>}
   </g>;
 }

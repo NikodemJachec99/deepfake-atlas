@@ -12,6 +12,7 @@ import { SOURCE_LABELS, adTitle, dateTime, day, hostOf, lastSeenLabel } from "@/
 import { Expert, useExpert } from "@/lib/expert";
 import { useApi } from "@/lib/hooks";
 
+import { ZoomImage } from "./zoom-image";
 import { ObservationPanel } from "./observation-panel";
 import { GenomeBands, KeyTraces, MarkerList, TraceSummary } from "./genome";
 import { Fold, period } from "./simple";
@@ -22,10 +23,7 @@ export function Creatives({ shas, size = "h-40" }: { shas: string[]; size?: stri
   return (
     <div className="flex gap-2 overflow-x-auto">
       {shas.map((sha) => (
-        <a key={sha} href={artifactImageUrl(sha)} target="_blank" rel="noreferrer" className="shrink-0 border border-line bg-bg" title="Otwórz zrzut reklamy w nowej karcie">
-          {/* eslint-disable-next-line @next/next/no-img-element -- obraz z API dowodów */}
-          <img src={artifactImageUrl(sha)} alt="Zrzut reklamy" loading="lazy" className={`${size} w-auto object-contain`} />
-        </a>
+        <ZoomImage key={sha} sha={sha} alt="Zrzut reklamy" title="Powiększ zrzut reklamy" buttonClassName="shrink-0 border border-line bg-bg" className={`${size} w-auto object-contain`} />
       ))}
     </div>
   );
@@ -119,10 +117,7 @@ function MaterialWorkspace({ ad, edges }: { ad: AdDetail; edges?: Edge[] }) {
       <div className="min-w-0 space-y-4 p-5">
         {expert && (ad.creatives.length > 0 || !ad.videos?.length) && <h2 className="text-lg font-semibold">Zrzuty reklamy</h2>}
         {image && <figure className="grid gap-2">
-          <a className="block rounded-lg border border-line bg-panel p-2" href={artifactImageUrl(image)} target="_blank" rel="noreferrer" title="Otwórz zrzut w pełnym rozmiarze">
-            {/* eslint-disable-next-line @next/next/no-img-element -- obraz dowodowy z API */}
-            <img className={`mx-auto w-full object-contain ${expert ? "max-h-56" : "max-h-[28rem]"}`} src={artifactImageUrl(image)} alt={`Podgląd zrzutu ${ad.creatives.indexOf(image) + 1}`} />
-          </a>
+          <ZoomImage sha={image} alt={`Podgląd zrzutu ${ad.creatives.indexOf(image) + 1}`} title="Kliknij, żeby powiększyć zrzut" buttonClassName="w-full rounded-lg border border-line bg-panel p-2" className={`mx-auto w-full object-contain ${expert ? "max-h-56" : "max-h-[28rem]"}`} />
           <a className="w-fit text-sm text-accent underline" href={artifactImageUrl(image)} target="_blank" rel="noreferrer">Otwórz zrzut w pełnym rozmiarze</a>
         </figure>}
         {ad.creatives.length > (expert ? 0 : 1) ? <div className="flex flex-wrap gap-3">

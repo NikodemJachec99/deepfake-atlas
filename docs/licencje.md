@@ -129,7 +129,7 @@ Zgodnie z pkt 8 opisu wyzwania materiały wolno wykorzystywać wyłącznie na po
 
 - paczki leżą tylko lokalnie w `data/raw/`, katalog jest wyłączony z gita,
 - testy i przykłady w repo używają zmyślonych wartości,
-- `docs/dane-organizatora.md` opisuje wyniki i wymienia domeny ze spraw, więc **repozytorium musi pozostać prywatne**, z dostępem tylko dla organizatora.
+- `docs/dane-organizatora.md` opisuje wyniki i wymienia domeny ze spraw. Surowe paczki organizatora leżą tylko lokalnie w `data/raw/`, poza gitem.
 
 ## Narzędzia i zasoby użyte przy pisaniu kodu
 

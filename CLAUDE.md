@@ -68,7 +68,7 @@ Regulamin zadania "Kolekcjoner fejków" z wzorem umowy przeniesienia praw leży 
 
 ## Czego nie wolno
 
-- **Danych organizatora w gicie.** Paczki leżą tylko w `data/raw/` (poza gitem). W testach, przykładach i dokumentach używaj zmyślonych wartości. Wyjątek to `docs/dane-organizatora.md`, przez który repo musi zostać prywatne.
+- **Danych organizatora w gicie.** Paczki leżą tylko w `data/raw/` (poza gitem). W testach, przykładach i dokumentach używaj zmyślonych wartości. Wyjątek to `docs/dane-organizatora.md` z wynikami i domenami ze spraw.
 - **Zmyślonych danych w interfejsie.** Frontend pokazuje wyłącznie to, co zwraca API. Ekran bez API oznacz jako niedostępny.
 - **Renderowania stron oszustów.** Pokazujemy markery, tekst i zrzuty reklam, surowy HTML tylko do pobrania.
 - **Tokenów i kluczy w repo.** Tokeny znalezione w adresach zapisujemy jako skrót.

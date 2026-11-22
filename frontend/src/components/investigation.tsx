@@ -101,7 +101,7 @@ export function Investigation() {
   const campaignKey = campaigns.data?.results.find((g) => g.id === campaignId)?.key;
   const campaignOperator = campaignKey ? nodes.find((n) => n.campaign === campaignKey)?.operator : undefined;
 
-  const crumbs: Crumb[] = [{ label: "Kampanie", href: "/investigation" }];
+  const crumbs: Crumb[] = [{ label: "Śledztwo", href: "/investigation" }];
   if (campaignId !== null) {
     if (campaignOperator) crumbs.push({ label: <Mono>{campaignOperator}</Mono>, href: `/investigation?operator=${groupId(campaignOperator)}` });
     crumbs.push({ label: <Mono>{campaignKey ?? `kampania ${campaignId}`}</Mono> });
@@ -127,7 +127,7 @@ export function Investigation() {
 
   if (overview) return <main className="flex min-h-full flex-col gap-3 p-4">
     <header className="flex flex-wrap items-center justify-between gap-3">
-      <h1 className="atlas-title">Kampanie</h1>
+      <h1 className="atlas-title">Śledztwo</h1>
       <Link href="/investigation?scope=all" className="rounded-md border border-line-strong px-3 py-2 text-accent hover:bg-panel">Cały graf</Link>
     </header>
     <label><input type="checkbox" checked={allGroups} onChange={event => setAllGroups(event.target.checked)} /> Wszystkie grupy (również z bibliotek reklam)</label>

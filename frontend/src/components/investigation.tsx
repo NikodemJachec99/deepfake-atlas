@@ -9,12 +9,14 @@ import { useMemo, useState } from "react";
 
 import { FAMILY_LABELS, RELATION_LABELS, api, type Family, type Graph, type Relation } from "@/lib/api";
 import { allGroups as loadGroups } from "@/lib/group-pages";
-import { FAMILIES, RELATIONS, RELATION_HINT, bits, groupId, prob } from "@/lib/format";
+import { FAMILIES, RELATIONS, RELATION_HINT, bits, groupId, plural, prob } from "@/lib/format";
+import { useExpert } from "@/lib/expert";
 import { isTyping, useApi, useHotkey } from "@/lib/hooks";
 
 import { AdCard } from "./ad-card";
 import { EdgePanel, EdgePanelEmpty } from "./edge-panel";
 import { GraphCanvas, type GEdge } from "./graph-canvas";
+import { Fold } from "./simple";
 import { TopBar, type Crumb } from "./shell";
 import { Btn, Empty, ErrorBox, FamilyBar, FamilyDot, GroupLink, Loading, Meter, Mono, Panel, RelationLine, RelationTag, Split, Tabs, Tag, VerdictTag } from "./ui";
 
@@ -54,8 +56,15 @@ function toggle<T>(set: Set<T>, value: T, on: boolean): Set<T> {
   return next;
 }
 
+/** Filtry dla specjalisty: w trybie prostym zwinięte pod „Więcej filtrów”. */
+function FiltersMore({ expert, children }: { expert: boolean; children: React.ReactNode }) {
+  if (expert) return <>{children}</>;
+  return <div className="px-2"><Fold title="Więcej filtrów"><div className="-mx-2 flex flex-col gap-3">{children}</div></Fold></div>;
+}
+
 export function Investigation() {
   const { params, set, int } = useQuery();
+  const { expert } = useExpert();
   const [mobileView, setMobileView] = useState<string | null>(null);
   const [mobileFilters, setMobileFilters] = useState(false);
   const operatorId = int("operator");
@@ -74,6 +83,7 @@ export function Investigation() {
     set({ expanded: [...next].join(",") });
   }
   const captureOnly = overview && !allGroups;
+  const overviewOperators = useApi(overview ? "operators:" + captureOnly : null, () => loadGroups("operators", captureOnly ? "capture" : undefined));
   const campaigns = useApi("campaigns:" + captureOnly, () => loadGroups("campaigns", captureOnly ? "capture" : undefined));
   const scopeOperator = operatorId;
   const query = campaignId !== null ? `?campaign=${campaignId}` : scopeOperator !== null ? `?operator=${scopeOperator}` : adId !== null ? `?ad=${adId}` : "";
@@ -139,10 +149,23 @@ export function Investigation() {
 
   if (overview) return <main className="flex min-h-full flex-col gap-3 p-4">
     <header className="flex flex-wrap items-center justify-between gap-3">
-      <h1 className="atlas-title">Śledztwo</h1>
+      <div className="grid gap-1">
+        <h1 className="atlas-title">Śledztwo</h1>
+        <p className="max-w-3xl text-pretty text-muted">Wybierz operatora albo kampanię: zobaczysz jej reklamy, powiązania między nimi i dowody każdego powiązania. Graf pokazuje to samo jako sieć.</p>
+      </div>
       <Link href="/investigation?scope=all" className="rounded-md border border-line-strong px-3 py-2 text-accent hover:bg-panel">Cały graf</Link>
     </header>
     <label><input type="checkbox" checked={allGroups} onChange={event => set({ groups: event.target.checked ? "all" : null })} /> Wszystkie grupy (również z bibliotek reklam)</label>
+    {!expert && !!overviewOperators.data?.results.length && <section aria-label="Operatorzy" className="grid gap-2">
+      <h2 className="text-lg font-semibold">Operatorzy{captureOnly && " ze spraw"}</h2>
+      <ul className="flex flex-wrap gap-2">{overviewOperators.data.results.slice(0, 24).map(group => <li key={group.id}>
+        <Link href={`/investigation?operator=${group.id}`} className="grid rounded-lg border border-line bg-panel px-3 py-2 hover:border-accent">
+          <span className="font-semibold text-accent">{group.label || group.key}</span>
+          <span className="text-sm text-muted">{group.size} {plural(group.size, "reklama", "reklamy", "reklam")}</span>
+        </Link></li>)}</ul>
+      {overviewOperators.data.results.length > 24 && <Link href="/operators?scope=all" className="text-accent underline">Wszyscy operatorzy ({overviewOperators.data.results.length})</Link>}
+      <h2 className="mt-2 text-lg font-semibold">Kampanie{captureOnly && " ze spraw"}</h2>
+    </section>}
     {campaigns.loading ? <Loading label="Pobieranie kampanii" /> : campaigns.error ?
       <ErrorBox message={campaigns.error} onRetry={campaigns.reload} /> : campaigns.data?.results.length ? <CampaignTree map={params.get("view") === "map"} onMapChange={map => set({ view: map ? "map" : null })}
       expanded={expanded} toggleCampaign={toggleCampaign} groups={[...campaigns.data.results].sort((a,b) => Number(b.cases > 0) - Number(a.cases > 0))} /> : <Empty title="Brak kampanii">Wszystkie dostępne reklamy znajdziesz w całym grafie.</Empty>}
@@ -194,6 +217,7 @@ export function Investigation() {
           ))}
         </div>
 
+        <FiltersMore expert={expert}>
         <div>
           <p className="cap px-2 pb-1">Rodziny markerów</p>
           {FAMILIES.map((family) => (
@@ -220,7 +244,6 @@ export function Investigation() {
           </div>
         </div>
 
-        {resetFilters && <div className="px-2">{resetFilters}</div>}
         <div className="flex flex-col gap-1 px-2">
           <p className="cap">Kolor węzła</p>
           <div className="flex gap-1">
@@ -232,7 +255,9 @@ export function Investigation() {
             </Btn>
           </div>
         </div>
+        </FiltersMore>
 
+        {resetFilters && <div className="px-2">{resetFilters}</div>}
         {scoped && <p className="border-t border-line px-2 pt-2 text-xs text-faint">
           Oś obserwacji grupy jest na jej karcie.
         </p>}
@@ -274,7 +299,28 @@ export function Investigation() {
         Pobrano {edges.length} z {graph.data.total} krawędzi w wybranym zakresie. Filtry działają na pobranej części.
       </p>}
       <div className="min-h-0 flex-1 overflow-auto">
-        {table === "edges" ? (
+        {table === "edges" && !expert ? (
+          <table className="dense w-full">
+            <thead><tr><th>Reklama</th><th>Powiązana z</th><th>Relacja</th><th>Decyzja</th></tr></thead>
+            <tbody>
+              {graph.data && !visible.length && <tr><td colSpan={4} className="text-muted">
+                {edges.length ? "Brak powiązań spełniających kryteria filtrów." : "Brak powiązań w wybranym zakresie."}
+                {edges.length > 0 && resetFilters && <> {resetFilters}</>}
+              </td></tr>}
+              {visible.map((edge) => (
+                <tr key={edge.id} data-selected={edge.id === edgeId} onClick={() => { setMobileView("Porównanie"); set({ edge: edge.id }); }} className="cursor-pointer">
+                  <td className="max-w-64 truncate">
+                    <button type="button" className="table-action" aria-label={`Dowody powiązania reklam #${edge.source} i #${edge.target}`}>#{edge.source}</button>{" "}
+                    <span className="text-muted" title={nodeById.get(edge.source)?.label}>{nodeById.get(edge.source)?.label}</span>
+                  </td>
+                  <td className="max-w-64 truncate"><Mono className="text-muted">#{edge.target}</Mono> <span className="text-muted" title={nodeById.get(edge.target)?.label}>{nodeById.get(edge.target)?.label}</span></td>
+                  <td><RelationTag relation={edge.relation} duplicate={edge.duplicate} /></td>
+                  <td>{edge.verdict ? <VerdictTag verdict={edge.verdict} /> : <span className="text-faint">do oceny</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : table === "edges" ? (
           <table className="dense min-w-max">
             <thead>
               <tr>
@@ -323,30 +369,30 @@ export function Investigation() {
           <table className="dense">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Sprawa</th>
+                <th>{expert ? "ID" : "Reklama"}</th>
+                {expert && <th>Sprawa</th>}
                 <th>Tytuł</th>
                 <th>Kampania</th>
-                <th>Operator</th>
+                {expert && <th>Operator</th>}
                 <th>CERT</th>
               </tr>
             </thead>
             <tbody>
               {sections.flatMap(([heading, rows]) => [
-                ...(heading ? [<tr key={heading}><th scope="rowgroup" colSpan={6}>{heading} ({rows.length})</th></tr>] : []),
+                ...(heading ? [<tr key={heading}><th scope="rowgroup" colSpan={expert ? 6 : 4}>{heading} ({rows.length})</th></tr>] : []),
                 ...rows.map((node) => (
                 <tr key={node.id} data-selected={node.id === nodeId} onClick={event => {
                   if (!(event.target instanceof Element && event.target.closest("a"))) { setMobileView("Porównanie"); set({ node: node.id, edge: null }); }
                 }} className="cursor-pointer">
                   <td><button type="button" className="table-action" aria-label={`Otwórz reklamę #${node.id}`}>#{node.id}</button></td>
-                  <td className="font-mono text-[0.92rem]">{node.case ?? ""}</td>
+                  {expert && <td className="font-mono text-[0.92rem]">{node.case ?? ""}</td>}
                   <td className="max-w-0 w-full">{node.label}</td>
                   <td>
                     <GroupLink group={node.campaign} />
                   </td>
-                  <td>
+                  {expert && <td>
                     <GroupLink group={node.operator} />
-                  </td>
+                  </td>}
                   <td>{node.listed && <Tag tone="rejected">Lista Ostrzeżeń</Tag>}</td>
                 </tr>
                ))])}

@@ -14,6 +14,7 @@ import { layerDashed } from "sigma/rendering";
 
 import { FAMILY_LABELS, RELATION_LABELS, type Family, type Relation, type Verdict } from "@/lib/api";
 import { FAMILIES, RELATIONS, groupColor, prob } from "@/lib/format";
+import { useExpert } from "@/lib/expert";
 import { useReducedMotion } from "@/lib/hooks";
 
 
@@ -195,6 +196,7 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
   const layoutKey = useRef("");
   const targets = useRef(new Map<number, { x: number; y: number }>());
   const reduced = useReducedMotion();
+  const { expert } = useExpert();
   const [showAll, setShowAll] = useState(false);
   const available = useMemo(() => edges.filter(edge => !edge.hidden), [edges]);
   const dense = layout === "force" && available.length > Math.max(35, nodes.length * 2);
@@ -495,8 +497,10 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
             {hoveredNode.listed && <span className="text-rejected">Lista Ostrzeżeń</span>}
           </>
         ) : (
-          <span>
+          expert ? <span>
             {nodes.length} węzłów · {drawn.size} z {edges.length} krawędzi{dense && !showAll && " · najsilniejsze dla każdego węzła"} · kółko zmienia skalę, Shift z kółkiem obraca graf · krawędź otwiera dowody, węzeł kartę reklamy
+          </span> : <span>
+            Punkt to reklama, linia to powiązanie. Kliknij linię, żeby zobaczyć dowody, albo punkt, żeby otworzyć reklamę.
           </span>
         )}
       </div>

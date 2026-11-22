@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Network } from "lucide-react";
 import { api, RELATION_LABELS, type Group } from "@/lib/api";
-import { bits } from "@/lib/format";
+import { bits, plural } from "@/lib/format";
+import { useExpert } from "@/lib/expert";
 import { useApi } from "@/lib/hooks";
 import { Loading, ErrorBox } from "./ui";
 import { CampaignMap, createMapOperatorLoader } from "./campaign-map";
@@ -12,6 +13,7 @@ import { CampaignMap, createMapOperatorLoader } from "./campaign-map";
 function CampaignBranch({ group }: { group: Group }) {
   const result = useApi(String(group.id), () => api.graph(`?campaign=${group.id}`));
   const [chosen, setChosen] = useState<number | null>(null);
+  const { expert } = useExpert();
   if (result.error) return <ErrorBox message={result.error} onRetry={result.reload} />;
   if (!result.data) return <Loading label="Pobieranie reklam" />;
   const { nodes, edges } = result.data;
@@ -42,7 +44,7 @@ function CampaignBranch({ group }: { group: Group }) {
         return <li key={edge.id}><Link prefetch={false} href={`/investigation?campaign=${group.id}&edge=${edge.id}`}
           className="grid gap-0.5 border-b border-line px-2 py-2 hover:bg-panel">
           <span><span className="font-mono text-xs">↳ #{other}</span> {titles.get(other)}</span>
-          <span className="text-sm text-muted">{RELATION_LABELS[edge.relation]} · {bits(edge.bits)} bita · <span className="text-accent">Dowody</span></span>
+          <span className="text-sm text-muted">{RELATION_LABELS[edge.relation]}{expert && ` · ${bits(edge.bits)} bita`} · <span className="text-accent">Dowody</span></span>
         </Link></li>;
       })}</ol> : <p className="text-muted">{result.data.truncated ? "Brak powiązań tej reklamy w pobranej części grafu." : "Brak powiązań tej reklamy w kampanii."}</p>}
     </section>
@@ -75,7 +77,7 @@ export function CampaignTree({ groups, map, onMapChange, expanded, toggleCampaig
         return <div key={group.id} className="border-b border-line">
           <button aria-expanded={open} onClick={() => toggleCampaign(group.id)} className="flex w-full items-center gap-3 px-2 py-3 text-left hover:bg-panel">
             <Icon size={18}/><Network size={20} className="text-accent"/><strong className="text-lg">{group.key}</strong>
-            <span className="min-w-0 flex-1 truncate">{group.label}</span><span className="text-muted">Reklamy · {group.size}</span>
+            <span className="min-w-0 flex-1 truncate">{group.label}</span><span className="shrink-0 text-muted">{group.size} {plural(group.size, "reklama", "reklamy", "reklam")}</span>
           </button>
           {open && <CampaignBranch group={group}/>}
         </div>;

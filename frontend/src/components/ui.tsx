@@ -62,7 +62,7 @@ export function Btn({
 
 export function Tabs<T extends string>({ value, onChange, items }: { value: T; onChange: (value: T) => void; items: { id: T; label: React.ReactNode }[] }) {
   return (
-    <div role="tablist" className="flex h-7 shrink-0 items-stretch border-b border-line bg-panel">
+    <div role="tablist" className="flex h-9 shrink-0 items-stretch overflow-x-auto border-b border-line bg-panel">
       {items.map((item) => (
         <button
           key={item.id}
@@ -71,7 +71,7 @@ export function Tabs<T extends string>({ value, onChange, items }: { value: T; o
           aria-selected={value === item.id}
           onClick={() => onChange(item.id)}
           className={cx(
-            "cap border-r border-line px-3",
+            "cap shrink-0 whitespace-nowrap border-r border-line px-3",
             value === item.id ? "bg-raised text-fg! shadow-[inset_0_-2px_0_var(--accent)]" : "hover:bg-hover",
           )}
         >

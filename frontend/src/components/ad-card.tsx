@@ -4,6 +4,7 @@
 // Adres strony pokazujemy jako tekst. Strona oszusta nigdy nie otwiera się z interfejsu.
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { API_URL, api, artifactImageUrl, type AdDetail, type Edge } from "@/lib/api";
@@ -206,7 +207,12 @@ export function EdgeRows({ edges, adId, onEdge, selected }: { edges: Edge[]; adI
 
 // Wersja do inspektora: jedna kolumna.
 export function AdCard({ adId, onEdge, selectedEdge, full = false }: { adId: number; onEdge: (edge: Edge) => void; selectedEdge?: number | null; full?: boolean }) {
-  const [tab, setTab] = useState("Materiał");
+  const params = useSearchParams();
+  const sections = [
+    { key: "", label: "Materiał" }, { key: "links", label: "Powiązania" },
+    { key: "traces", label: "Ślady" }, { key: "history", label: "Historia" },
+  ];
+  const tab = sections.find(section => section.key === params.get("tab"))?.label ?? "Materiał";
   const ad = useApi(`ad:${adId}`, () => api.ad(adId));
   const edges = useApi(ad.data ? `ad-edges:${adId}` : null, () => api.adEdges(adId));
   if (ad.loading) return <Loading label="Pobieranie karty reklamy" />;
@@ -215,7 +221,13 @@ export function AdCard({ adId, onEdge, selectedEdge, full = false }: { adId: num
   if (!data) return null;
   return (
     <div className="flex flex-col">
-      {full && <nav aria-label="Sekcje reklamy" className="flex flex-wrap gap-2 border-b border-line p-2">{["Materiał", "Powiązania", "Ślady", "Historia"].map(t => <button key={t} aria-pressed={tab === t} className="rounded px-3 aria-pressed:bg-accent-soft" onClick={() => setTab(t)}>{t}</button>)}</nav>}
+      {full && <nav aria-label="Sekcje reklamy" className="flex flex-wrap gap-2 border-b border-line p-2">{sections.map(({ key, label }) => {
+        const query = new URLSearchParams(params.toString());
+        if (key) query.set("tab", key);
+        else query.delete("tab");
+        return <Link key={label} href={`/ads/${adId}${query.size ? "?" + query : ""}`} scroll={false} aria-current={tab === label ? "page" : undefined}
+          className="inline-flex min-h-9 items-center rounded px-3 aria-[current=page]:bg-accent-soft">{label}</Link>;
+      })}</nav>}
       {full && tab !== "Materiał" && <h1 className="px-3 py-2 font-semibold">Reklama #{adId} · {adTitle(data)}</h1>}
       {full ? tab === "Materiał" && <MaterialWorkspace key={adId} ad={data} /> : <div className="flex flex-col gap-2 border-b border-line p-2">
         <div className="flex items-center justify-between gap-2">

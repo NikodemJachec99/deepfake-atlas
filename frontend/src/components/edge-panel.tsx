@@ -438,8 +438,8 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
         <div className={review ? "lg:min-h-0 lg:overflow-auto" : undefined}>
         <div className="flex gap-2 border-b border-line px-2" aria-label="Widok pary">{["Dowody", "Źródła", "Kontekst"].map(t =>
           <button key={t} aria-pressed={tab === t} className="min-h-10 px-2 aria-pressed:border-b-2 aria-pressed:border-accent" onClick={() => setTab(t)}>{t}</button>)}</div>
-        {tab === "Kontekst" && <>        <JevReview open={section === "jev"} onToggle={() => toggle("jev")} key={`jev-${data.id}`} edge={data} />
-        <DecisionHistory open={section === "history"} onToggle={() => toggle("history")} edge={data} />
+        {tab === "Kontekst" && <>        <DecisionHistory open={section === "history"} onToggle={() => toggle("history")} edge={data} />
+        <JevReview open={section === "jev"} onToggle={() => toggle("jev")} key={`jev-${data.id}`} edge={data} />
         <EdgeSuggestions open={section === "suggestions"} onToggle={() => toggle("suggestions")} key={`suggestions-${data.id}`} edgeId={data.id} />
         <EvidenceLab open={section === "lab"} onToggle={() => toggle("lab")} key={data.id + ":" + data.updated_at} edge={data} refresh={edge.reload} />
 </>}

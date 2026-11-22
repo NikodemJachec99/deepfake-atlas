@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { api, type KindWeights } from "@/lib/api";
 import { num } from "@/lib/format";
@@ -11,6 +13,7 @@ function difference(kind: KindWeights) {
 }
 
 export default function WeightsPage() {
+  const kindCode = useSearchParams().get("kind");
   const [sortByDifference, setSortByDifference] = useState(false);
   const result = useApi("weights", api.weights);
   if (result.loading) return <Loading />;
@@ -19,6 +22,7 @@ export default function WeightsPage() {
   if (!data) return null;
   const families = new Map<string, KindWeights[]>();
   for (const kind of data.kinds) {
+    if (kindCode && kind.code !== kindCode) continue;
     const rows = families.get(kind.family_label) ?? [];
     rows.push(kind);
     families.set(kind.family_label, rows);
@@ -30,9 +34,11 @@ export default function WeightsPage() {
     <p>Waga określa, jak mocno zgodność markera przemawia za powiązaniem reklam. Jeden dodatkowy bit podwaja iloraz wiarygodności. Wagi eksperckie ustalono ręcznie, a wagi uczone oszacowano metodą EM w modelu Fellegiego–Suntera na parach reklam bez etykiet.</p>
     <p>Aktywne wagi: <strong>{data.active === "learned" ? "uczone" : "eksperckie"}</strong> · Wersja modelu oceny powiązań · {data.model_version}</p>
     {!data.learned_available && <p>Wagi uczone niedostępne. {data.learned_error}</p>}
-    <label><input type="checkbox" checked={sortByDifference} onChange={e => setSortByDifference(e.target.checked)}/> Największe różnice najpierw w każdej rodzinie</label>
+    {kindCode && <Link href="/weights" className="w-fit text-accent underline">Pokaż wagi wszystkich markerów</Link>}
+    {!families.size && <p>Brak tego typu markera w bieżącym modelu.</p>}
+    {!kindCode && <label><input type="checkbox" checked={sortByDifference} onChange={e => setSortByDifference(e.target.checked)}/> Największe różnice najpierw w każdej rodzinie</label>}
     <p className="text-muted">Myślnik oznacza brak odrębnej wagi uczonej. Wyróżniono różnice powyżej 0,5 bita w obu kierunkach.</p>
-    <div className="atlas-table"><table className="dense"><thead><tr><th>Typ markera</th><th>Eksperckie (bity)</th><th>Uczone (bity)</th><th>Różnica (bity)</th></tr></thead>
+    {families.size > 0 && <div className="atlas-table"><table className="dense"><thead><tr><th>Typ markera</th><th>Eksperckie (bity)</th><th>Uczone (bity)</th><th>Różnica (bity)</th></tr></thead>
       {Array.from(families, ([family, rows]) => <tbody key={family}>
         <tr><th colSpan={4} scope="rowgroup" className="bg-raised text-left">{family}</th></tr>
         {rows.map(kind => {
@@ -43,5 +49,5 @@ export default function WeightsPage() {
           </tr>;
         })}
       </tbody>)}
-    </table></div></main>;
+    </table></div>}</main>;
 }

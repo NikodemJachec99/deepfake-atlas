@@ -45,9 +45,10 @@ const navigation: NavGroup[] = [
 const mobileTabs = ["/review", "/", "/investigation", "/alerts"];
 const mobileLabels: Record<string, string> = { "/investigation": "Śledztwo" };
 
-function Badge({ value, tone = "accent" }: { value: number; tone?: "accent" | "alert" }) {
+function Badge({ value, tone = "accent", dark = false }: { value: number; tone?: "accent" | "alert"; dark?: boolean }) {
   return <span className={tone === "alert"
     ? "ml-auto min-w-5 rounded-full bg-rejected px-1.5 text-center text-xs font-semibold leading-5 tabular-nums text-on-accent"
+    : dark ? "ml-auto min-w-5 rounded-full bg-white px-1.5 text-center text-xs font-semibold leading-5 tabular-nums text-(--brand-navy)"
     : "ml-auto min-w-5 rounded-full bg-accent-soft px-1.5 text-center text-xs font-semibold leading-5 tabular-nums text-accent"}>{value}</span>;
 }
 
@@ -104,27 +105,30 @@ export function Shell({ children }: { children: React.ReactNode }) {
     return () => { active = false; clearTimeout(timer); };
   }, [revision]);
 
-  function badge(href: string) {
+  function badge(href: string, dark = false) {
     if (!stats || failed) return null;
-    if (href === "/review" && stats.review_pending > 0) return <Badge value={stats.review_pending} />;
+    if (href === "/review" && stats.review_pending > 0) return <Badge value={stats.review_pending} dark={dark} />;
     if (href === "/alerts" && stats.alerts_unseen > 0) return <Badge value={stats.alerts_unseen} tone="alert" />;
     return null;
   }
 
   const linkClass = "flex items-center gap-3 rounded-lg px-3 font-medium text-fg transition-colors duration-150 hover:bg-hover aria-[current=page]:bg-accent-soft aria-[current=page]:text-accent";
 
+  const sideLinkClass = "side-link flex items-center gap-3 rounded-lg px-3 font-medium transition-colors duration-150";
+
   return <ExpertProvider><div className="flex h-dvh flex-col bg-bg text-fg">
+    <div aria-hidden className="brand-stripe" />
     <div className="flex min-h-0 flex-1">
       <nav aria-label="Nawigacja główna" className="atlas-sidebar hidden shrink-0 flex-col gap-4 overflow-auto border-r border-line px-3 pt-4 pb-3 md:flex">
-        <Link href="/" aria-label="SCAM DNA, ekran startowy" className="px-3 pb-1"><Logo /></Link>
-        {navigation.map(({ label, quiet, links }) => <div key={label || "main"} className={quiet ? "mt-auto flex flex-col gap-0.5 border-t border-line pt-3" : "flex flex-col gap-0.5"}>
-          {label && <p className="px-3 pb-1 text-xs font-medium text-muted">{label}</p>}
+        <Link href="/" aria-label="SCAM DNA, ekran startowy" className="px-3 pb-1"><Logo onDark /></Link>
+        {navigation.map(({ label, quiet, links }) => <div key={label || "main"} className={quiet ? "mt-auto flex flex-col gap-0.5 border-t border-white/20 pt-3" : "flex flex-col gap-0.5"}>
+          {label && <p className="side-quiet px-3 pb-1 text-xs font-medium">{label}</p>}
           {links.map(({ href, Icon, hint }) =>
             <Link key={href} href={href} aria-current={active === href ? "page" : undefined} title={hint}
-              className={`${linkClass} ${quiet ? "h-9 text-sm text-muted" : "h-10"}`}>
+              className={`${sideLinkClass} ${quiet ? "side-quiet h-9 text-sm" : "h-10"}`}>
               <Icon size={quiet ? 15 : 17} className="shrink-0" aria-hidden />
               <span className="min-w-0 truncate">{sections[href]}</span>
-              {badge(href)}
+              {badge(href, true)}
             </Link>)}
         </div>)}
       </nav>

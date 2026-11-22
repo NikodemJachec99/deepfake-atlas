@@ -5,7 +5,7 @@ import { ContentSimilarity } from "./content-similarity";
 // Panel dowodów krawędzi: z czego wynika połączenie dwóch reklam. Najważniejszy ekran aplikacji.
 // Wszystko pochodzi z GET /api/edges/{id}; zrzuty reklam z GET /api/ads/{id}.
 
-import { Check, ChevronDown, ChevronRight, Download, HelpCircle, TriangleAlert, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Download, HelpCircle, Info, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { EdgeSuggestions } from "./edge-suggestions";
@@ -19,51 +19,55 @@ import { useRef, useState } from "react";
 import { api, ApiError, artifactDownloadUrl, artifactImageUrl, type AdDetail, type AdSummary, type EdgeDetail, type Evidence, type Verdict } from "@/lib/api";
 import { SOURCE_LABELS, utcEdgeVersion, markerValue, RELATION_HINT, adTitle, bits, dateTime, errorText, famVar, hostOf, num, plural } from "@/lib/format";
 import { isTyping, useApi, useHotkey } from "@/lib/hooks";
+import { useExpert } from "@/lib/expert";
+import { hypothesisSentence, isHardTrace, overallStrength, plainLimitation, rarityWords, STRENGTH_LABELS, traceStrength, type Strength } from "@/lib/hypothesis";
 
 import { Btn, Empty, ErrorBox, FamilyBar, FamilyDot, GroupLink, Kbd, Loading, Meter, Mono, RelationTag, Tag, VerdictTag } from "./ui";
 
 const VISUAL_KINDS = new Set(["creative_phash", "creative_sha256", "image_set"]);
 const zrodel = (n: number) => plural(n, "źródle", "źródłach", "źródłach");
 
-function Creative({ sha, label }: { sha: string; label: string }) {
+function Creative({ sha, label, height = "h-28" }: { sha: string; label: string; height?: string }) {
   const [broken, setBroken] = useState(false);
-  if (broken) return <div className="flex h-28 items-center justify-center border border-line text-faint">zrzut niedostępny</div>;
+  if (broken) return <div className={`flex ${height} items-center justify-center rounded border border-line text-faint`}>zrzut niedostępny</div>;
   return (
-    <a href={artifactImageUrl(sha)} target="_blank" rel="noreferrer" title="Otwórz zrzut reklamy w nowej karcie" className="block border border-line bg-bg">
+    <a href={artifactImageUrl(sha)} target="_blank" rel="noreferrer" title="Otwórz zrzut reklamy w nowej karcie" className="block overflow-hidden rounded border border-line bg-bg">
       {/* eslint-disable-next-line @next/next/no-img-element -- obraz z API dowodów, bez optymalizacji po stronie Next */}
-      <img src={artifactImageUrl(sha)} alt={label} loading="lazy" onError={() => setBroken(true)} className="h-28 w-full object-contain" />
+      <img src={artifactImageUrl(sha)} alt={label} loading="lazy" onError={() => setBroken(true)} className={`${height} w-full object-contain`} />
     </a>
   );
 }
 
-function AdSide({ ad, detail, side, onOpenAd }: { ad: AdSummary; detail?: AdDetail; side: "A" | "B"; onOpenAd?: (id: number) => void }) {
+function AdSide({ ad, detail, side, onOpenAd, large }: { ad: AdSummary; detail?: AdDetail; side: "A" | "B"; onOpenAd?: (id: number) => void; large?: boolean }) {
+  const { expert } = useExpert();
   const creative = detail?.creatives[0];
+  const domain = hostOf(ad.landing_url);
+  const imageHeight = large ? "h-44" : "h-28";
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-2">
+    <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3">
       <div className="flex flex-wrap items-center gap-1.5">
         <Tag>Materiał {side}</Tag>
-        <Mono className="text-muted">#{ad.id}</Mono>
+        {expert && <Mono className="text-muted">#{ad.id}</Mono>}
         {ad.case && <span className="text-muted">sprawa {ad.case}</span>}
         {"cert_pl" in ad.labels && <Tag tone="rejected" title="Domena jest na Liście Ostrzeżeń CERT Polska">CERT</Tag>}
       </div>
-      <p className="break-words font-medium sm:line-clamp-2 sm:min-h-[2.8em]" title={ad.title}>
+      <p className="break-words text-base font-semibold" title={ad.landing_url}>{domain || "brak adresu"}</p>
+      <p className="break-words sm:line-clamp-2 sm:min-h-[2.8em]" title={ad.title}>
         {adTitle(ad)}
       </p>
-      <Mono className="truncate" title={ad.landing_url}>
-        {hostOf(ad.landing_url) || "brak adresu"}
-      </Mono>
-      <p className="text-xs text-muted">{SOURCE_LABELS[ad.source]} · {dateTime(ad.first_seen) || "Brak daty obserwacji"}</p>
-      <div className="flex items-center gap-2">
+      <p className="text-xs text-muted">{SOURCE_LABELS[ad.source] ?? ad.source} · {dateTime(ad.first_seen) || "Brak daty obserwacji"}</p>
+      <div className="flex items-center gap-2 text-xs">
+        {!expert && <span className="text-muted">Grupy</span>}
         <GroupLink group={ad.campaign} />
         <GroupLink group={ad.operator} />
       </div>
-      {creative ? <Creative sha={creative} label={`Zrzut reklamy ${side}`} /> : <div className="flex h-28 items-center justify-center border border-dashed border-line text-faint">{detail ? "brak zrzutu reklamy" : "…"}</div>}
+      {creative ? <Creative sha={creative} label={`Zrzut reklamy ${side}`} height={imageHeight} /> : <div className={`flex ${imageHeight} items-center justify-center rounded border border-dashed border-line text-faint`}>{detail ? "brak zrzutu reklamy" : "…"}</div>}
       {onOpenAd ? (
-        <Btn variant="ghost" className="self-start px-0!" onClick={() => onOpenAd(ad.id)}>
+        <Btn variant="ghost" className="self-start px-0! text-accent!" onClick={() => onOpenAd(ad.id)}>
           Otwórz źródło
         </Btn>
       ) : (
-        <Link href={`/ads/${ad.id}`} className="text-accent hover:underline">
+        <Link href={`/ads/${ad.id}`} className="self-start text-accent hover:underline">
           Otwórz źródło
         </Link>
       )}
@@ -71,17 +75,34 @@ function AdSide({ ad, detail, side, onOpenAd }: { ad: AdSummary; detail?: AdDeta
   );
 }
 
-// Karta dowodu. Zwinięta: rodzina, marker, wartość, rzadkość, wkład. Rozwinięta: obie strony, wagi, artefakty.
+const STRENGTH_TONE: Record<Strength, string> = {
+  decisive: "border-accent bg-accent-soft text-accent",
+  strong: "border-accent text-accent",
+  medium: "border-line-strong text-fg",
+  weak: "border-line text-muted",
+};
+
+function StrengthPill({ item }: { item: Evidence }) {
+  const strength = traceStrength(item);
+  return <span className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs whitespace-nowrap ${STRENGTH_TONE[strength]}`}>{STRENGTH_LABELS[strength]}</span>;
+}
+
+// Wartość pokazujemy w trybie prostym tylko tam, gdzie analityk ją rozumie bez słownika (osoba, marka, treść).
+const READABLE_FAMILIES = new Set(["pers", "narr"]);
+
+// Karta dowodu. Tryb prosty: nazwa śladu, siła i rzadkość słowem. Tryb ekspercki: wartości, bity, df, artefakty.
 function EvidenceCard({ item, max, refresh }: { item: Evidence; max: number; refresh: () => void }) {
+  const { expert } = useExpert();
   const [open, setOpen] = useState(false);
   const soft = item.df === 0;
   const same = item.value_a === item.value_b;
   const left = markerValue(item.value_a, item.display_value);
   const right = same ? left : markerValue(item.value_b);
   const discounted = item.raw_bits - item.weight_bits > 0.05;
+  const challengeable = expert ? !soft : isHardTrace(item);
   return (
     <li className="border-b border-line">
-      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="grid min-h-9 w-full grid-cols-[12px_minmax(0,1fr)] sm:grid-cols-[12px_minmax(0,1fr)_auto] items-center gap-x-2 px-2 py-1 text-left hover:bg-hover">
+      {expert ? <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="grid min-h-9 w-full grid-cols-[12px_minmax(0,1fr)] sm:grid-cols-[12px_minmax(0,1fr)_auto] items-center gap-x-2 px-2 py-1 text-left hover:bg-hover">
         {open ? <ChevronDown size={12} className="text-muted" /> : <ChevronRight size={12} className="text-muted" />}
         <span className="flex min-w-0 flex-col">
           <span className="flex flex-wrap items-center gap-1.5">
@@ -109,29 +130,49 @@ function EvidenceCard({ item, max, refresh }: { item: Evidence; max: number; ref
           </span>
           <span className="text-xs text-muted">{soft ? "marker miękki" : `w ${item.df} z ${item.corpus_n} źródeł`}</span>
         </span>
-      </button>
-              <div className="flex flex-wrap gap-2 px-2 pb-1 text-xs">
-                {([["A", item.artifact_a], ["B", item.artifact_b]] as const).map(([side, sha]) =>
-                  sha ? (
-                    <a key={side} href={artifactDownloadUrl(sha)} className="inline-flex items-center gap-1 text-accent hover:underline" title="Surowy dowód jako plik. Nigdy nie renderuje się w przeglądarce.">
-                      <Download size={12} />
-                      Sprawdź źródło {side} <Mono className="text-muted">{sha.slice(0, 12)}</Mono>
-                    </a>
-                  ) : (
-                    <span key={side} className="text-faint">
-                      {side} · brak pliku źródłowego
-                    </span>
-                  ),
-                )}
-              </div>
-      {!soft && <PremiseChallenge item={item} refresh={refresh}/>}
-      <ContentSimilarity kind={item.kind} similarity={item.similarity} />
+      </button> : <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="grid w-full grid-cols-[12px_minmax(0,1fr)_auto] items-start gap-x-2 px-3 pt-2.5 pb-1 text-left hover:bg-hover">
+        {open ? <ChevronDown size={12} className="mt-1.5 text-muted" /> : <ChevronRight size={12} className="mt-1.5 text-muted" />}
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span className="flex items-center gap-2 font-medium"><FamilyDot family={item.family} /><span className="break-words">{item.label}</span></span>
+          <span className="text-xs text-muted">{rarityWords(item.df, item.corpus_n)}{!soft && READABLE_FAMILIES.has(item.family) && left && <> · <span className="text-fg">{left}</span></>}</span>
+        </span>
+        <StrengthPill item={item} />
+      </button>}
+      <div className={`flex flex-wrap items-center gap-x-4 gap-y-1 text-xs ${expert ? "px-2 pb-1" : "px-3 pb-2.5 pl-8"}`}>
+        {([["A", item.artifact_a], ["B", item.artifact_b]] as const).map(([side, sha]) =>
+          sha ? (
+            <a key={side} href={artifactDownloadUrl(sha)} className="inline-flex items-center gap-1 text-accent hover:underline" title="Surowy dowód jako plik. Nigdy nie renderuje się w przeglądarce.">
+              <Download size={12} />
+              Sprawdź źródło {side} {expert && <Mono className="text-muted">{sha.slice(0, 12)}</Mono>}
+            </a>
+          ) : expert ? (
+            <span key={side} className="text-faint">
+              {side} · brak pliku źródłowego
+            </span>
+          ) : null,
+        )}
+        {challengeable && !expert && <PremiseChallenge item={item} refresh={refresh} inline />}
+      </div>
+      {challengeable && expert && <PremiseChallenge item={item} refresh={refresh}/>}
+      {expert && <ContentSimilarity kind={item.kind} similarity={item.similarity} />}
 
       <AnimatePresence initial={false}>
         {open && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.15 }} className="overflow-hidden bg-bg">
             <div className="flex flex-col gap-2 px-2 py-2 pl-7">
-              {soft ? (
+              {!expert ? (
+                soft ? <p className="text-muted">Ten ślad porównuje podobieństwo treści, a nie jedną wartość. Samo podobieństwo nie dowodzi wspólnego zaplecza.</p> : <>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["a", "b"] as const).map((side) => (
+                      <div key={side} className="min-w-0">
+                        <p className="cap">Materiał {side.toUpperCase()}</p>
+                        <Mono className="break-all">{side === "a" ? left : right}</Mono>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-muted">{same ? "Ta sama wartość po obu stronach" : "Wartości różnią się zapisem, ale oznaczają to samo"}; {rarityWords(item.df, item.corpus_n)}.</p>
+                </>
+              ) : soft ? (
                 <p className="text-muted">
                   Marker miękki porównywany przez podobieństwo, nie przez równość wartości. Podobieństwo <Mono className="text-fg">{num(item.similarity, 3)}</Mono>.
                 </p>
@@ -154,7 +195,7 @@ function EvidenceCard({ item, max, refresh }: { item: Evidence; max: number; ref
                   ? <Creative key={side} sha={sha} label={`Artefakt dowodu · ${side}`} />
                   : <p key={side} className="text-muted">{side} · Brak artefaktu dowodu</p>)}
               </div>}
-              <p className="text-muted">
+              {expert && <p className="text-muted">
                 Wkład <Mono className="text-fg">{bits(item.weight_bits)}</Mono> bita
                 {discounted && (
                   <>
@@ -164,8 +205,7 @@ function EvidenceCard({ item, max, refresh }: { item: Evidence; max: number; ref
                 )}
                 . Typ markera: <Mono>{item.kind}</Mono>.
                 {" "}<Link className="text-accent underline" href={`/weights?kind=${encodeURIComponent(item.kind)}`}>Sprawdź wagi tego markera</Link>
-              </p>
-
+              </p>}
             </div>
           </motion.div>
         )}
@@ -289,6 +329,7 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
   const [result, setResult] = useState("");
   const [section, setSection] = useState<string | null>(null);
   const toggle = (name: string) => setSection(current => current === name ? null : name);
+  const { expert } = useExpert();
   const edge = useApi(`edge:${edgeId}`, () => api.edge(edgeId));
   const data = edge.data;
   const adA = useApi(data ? `ad:${data.ad_a}` : null, () => api.ad(data!.ad_a));
@@ -306,6 +347,8 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
   const max = Math.max(1, ...evidence.map((e) => e.weight_bits));
   const [a, b] = [data.ads.find((ad) => ad.id === data.ad_a) ?? data.ads[0], data.ads.find((ad) => ad.id === data.ad_b) ?? data.ads[1]];
   const crossDomain = a && b && hostOf(a.landing_url) && hostOf(b.landing_url) && hostOf(a.landing_url) !== hostOf(b.landing_url);
+  const sentence = hypothesisSentence(data.relation, evidence, { duplicate: data.duplicate, crossDomain: !!crossDomain });
+  const strength = overallStrength(data.probability, data.decisive);
 
   const decision = (
     <Decision
@@ -323,7 +366,18 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
     <div className="flex h-full min-h-0 min-w-0 flex-col">
       <div className={review ? "min-h-0 flex-1 overflow-auto lg:grid lg:grid-cols-2 lg:overflow-hidden" : "min-h-0 flex-1 overflow-auto"}>
         <div className={review ? "lg:min-h-0 lg:overflow-auto lg:border-r lg:border-line" : undefined}>
-        <div className="flex flex-col gap-2 border-b border-line p-2">
+        {!expert && <div className="flex flex-col gap-2 border-b border-line p-3">
+          <h2 className="cap">Hipoteza modelu</h2>
+          <p className="text-base leading-snug font-medium text-balance sm:text-lg">{sentence}</p>
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="rounded-full border border-line bg-bg px-2 py-0.5" title="Linia przy nazwie pokazuje, jak ta relacja jest rysowana w grafie">
+              <RelationTag relation={data.relation} duplicate={data.duplicate} />
+            </span>
+            <span className={`rounded-full border px-2 py-0.5 ${strength.tone === "confirmed" ? "border-confirmed text-confirmed" : strength.tone === "unsure" ? "border-unsure text-unsure" : "border-line-strong text-muted"}`}>{strength.label}</span>
+            {review && <span className="text-muted">Do oceny, bo: {review.reason_label.charAt(0).toLowerCase() + review.reason_label.slice(1)}</span>}
+          </div>
+        </div>}
+        {expert && <div className="flex flex-col gap-2 border-b border-line p-2">
           <h2 className="text-lg font-semibold">Hipoteza modelu</h2>
           {review && <span className="text-xs text-muted">Do oceny · {review.reason_label}</span>}
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -354,11 +408,11 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
             {data.decisive && <Tag tone="accent">marker rozstrzygający</Tag>}
           </div>
           <FamilyBar families={data.families} legend />
-        </div>
+        </div>}
 
         <div className="grid grid-cols-1 divide-y divide-line border-b border-line sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-          {a && <AdSide ad={a} detail={adA.data} side="A" onOpenAd={onOpenAd} />}
-          {b && <AdSide ad={b} detail={adB.data} side="B" onOpenAd={onOpenAd} />}
+          {a && <AdSide ad={a} detail={adA.data} side="A" onOpenAd={onOpenAd} large={!!review} />}
+          {b && <AdSide ad={b} detail={adB.data} side="B" onOpenAd={onOpenAd} large={!!review} />}
         </div>
 
         </div>
@@ -373,7 +427,8 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
         {tab === "Źródła" && <ul className="grid gap-2 p-3">{evidence.map(item => <li key={item.id}><strong>{item.label}</strong> · {([["A", item.artifact_a], ["B", item.artifact_b]] as const).map(([side,sha]) => sha ? <a className="mr-2 text-accent underline" key={side} href={artifactDownloadUrl(sha)} download>Sprawdź źródło {side}</a> : <span className="mr-2 text-muted" key={side}>{side} · brak pliku</span>)}</li>)}</ul>}
         {tab === "Dowody" && <>        <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1 border-b border-line px-2 py-1">
           <span className="cap">Co uzasadnia tę hipotezę</span>
-          <span className="text-xs text-faint">wersja modelu oceny powiązań · {data.model_version}</span>
+          {expert ? <span className="text-xs text-faint">wersja modelu oceny powiązań · {data.model_version}</span>
+            : <span className="text-xs text-muted">najważniejsze najpierw</span>}
         </div>
         {evidence.length === 0 ? (
           <Empty title="Krawędź nie ma zapisanych dowodów">To nie powinno się zdarzyć: silnik nie tworzy krawędzi bez dowodów. Zgłoś identyfikator krawędzi.</Empty>
@@ -385,9 +440,9 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
           </ul>
         )}
         {evidence.length > 3 && <button className="min-h-9 px-2 text-accent" onClick={() => setShowAll(!showAll)}>{showAll ? "Zwiń listę" : `Wszystkie przesłanki (${evidence.length})`}</button>}
-        {!!review?.limitations.length && <aside className="m-2 rounded border border-amber-400 bg-amber-50 p-3">
-          <h3 className="mb-1 flex items-center gap-2 font-semibold"><TriangleAlert size={16} aria-hidden/>Ograniczenia hipotezy</h3>
-          <ul className="list-disc space-y-1 pl-5">{review.limitations.map(text => <li key={text}>{text.replace(/^ślad (.+) współdzielony przez (\d+) reklam$/, "Ślad $1 występuje w $2 reklamach")}</li>)}</ul>
+        {!!review?.limitations.length && <aside className="m-3 rounded-lg border border-line bg-bg p-3">
+          <h3 className="mb-1 flex items-center gap-2 font-medium text-muted"><Info size={16} aria-hidden/>Czego te dowody nie pokazują</h3>
+          <ul className="list-disc space-y-1 pl-5">{review.limitations.map(text => <li key={text}>{expert ? text.replace(/^ślad (.+) współdzielony przez (\d+) reklam$/, "Ślad $1 występuje w $2 reklamach") : plainLimitation(text)}</li>)}</ul>
         </aside>}
         {!review && decision}
         {!review && result && <p role="status" className="p-2">{result}</p>}</>}

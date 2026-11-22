@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, exportCorpusUrl } from "@/lib/api";
 import { adTitle, SOURCE_LABELS } from "@/lib/format";
+import { useExpert } from "@/lib/expert";
 import { useApi } from "@/lib/hooks";
 import { ErrorBox, GroupLink, Loading } from "@/components/ui";
 
@@ -15,6 +16,7 @@ const filters = [
 
 export default function Archive() {
   const [wholeCorpus, setWholeCorpus] = useState(false);
+  const { expert } = useExpert();
   const params = useSearchParams();
   const router = useRouter();
   const query = params.toString();
@@ -32,7 +34,10 @@ export default function Archive() {
     navigate(next);
   }
   return <main className="atlas-page">
-    <h1 className="atlas-title">Archiwum reklam</h1>
+    <header className="grid gap-2">
+      <h1 className="atlas-title">Archiwum reklam</h1>
+      <p className="max-w-3xl text-pretty text-muted">Wszystkie reklamy w systemie: ze spraw i z bibliotek reklam. Szukaj po tytule, domenie albo słowie kluczowym i otwórz kartę reklamy.</p>
+    </header>
     <details className="rounded-md border border-line p-3">
       <summary className="font-medium">Pobierz wzbogacony korpus</summary>
       <p className="my-2 text-muted">ZIP zawiera reklamy z markerami, powiązania z dowodami, grupy i opis danych. Tokeny zapisano wyłącznie jako skróty.</p>
@@ -51,7 +56,7 @@ export default function Archive() {
       }
       navigate(next);
     }}>
-      {filters.map(([key, label]) => <label key={key} className="grid gap-1 text-sm font-medium text-muted">
+      {filters.map(([key, label]) => !expert && (key === "campaign" || key === "operator") ? params.get(key) && <input key={key} type="hidden" name={key} defaultValue={params.get(key) ?? ""} /> : <label key={key} className="grid gap-1 text-sm font-medium text-muted">
         {label}{key === "source" ? <select name={key} defaultValue={params.get(key) ?? ""} className="rounded-md border border-line-strong bg-raised px-2 py-2">
           <option value="">Wszystkie</option>{Object.entries(SOURCE_LABELS).map(([value, name]) => <option key={value} value={value}>{name}</option>)}
         </select> : <input name={key} defaultValue={params.get(key) ?? ""} className="w-40 rounded-md border border-line-strong bg-raised px-2 py-2 text-fg"
@@ -67,13 +72,17 @@ export default function Archive() {
         link: "Otwórz ostatnią stronę wyników",
       } : undefined}/> : data.data &&
       <><p>Wyniki: {data.data.count}</p>
-      {data.data.results.length ? <div className="atlas-table"><table className="dense"><thead><tr>
-        <th>Reklama</th><th>Źródło</th><th>Sprawa</th><th>Kampania</th><th>Operator</th>
+      {data.data.results.length && !expert ? <ul className="grid gap-2">{data.data.results.map(ad => <li key={ad.id} className="grid min-w-0 gap-0.5 rounded-lg border border-line px-3 py-2">
+        <Link className="font-medium text-accent [overflow-wrap:anywhere]" href={`/ads/${ad.id}`}>{adTitle(ad)}</Link>
+        <span className="flex flex-wrap gap-x-2 text-sm text-muted"><span>#{ad.id}</span><span>{SOURCE_LABELS[ad.source] ?? ad.source}</span>{ad.case && <span>sprawa {ad.case}</span>}{ad.campaign && <span>kampania <GroupLink group={ad.campaign} /></span>}</span>
+      </li>)}</ul> : data.data.results.length ? <div className="atlas-table"><table className="dense"><thead><tr>
+        <th>Reklama</th><th>Źródło</th><th>Sprawa</th><th>Kampania</th>{expert && <th>Operator</th>}
       </tr></thead><tbody>{data.data.results.map(ad => <tr key={ad.id}>
         <td className="min-w-64 whitespace-normal! [overflow-wrap:anywhere]"><Link className="text-accent" href={`/ads/${ad.id}`}>#{ad.id} · {adTitle(ad)}</Link></td>
         <td>{SOURCE_LABELS[ad.source] ?? ad.source}</td><td>{ad.case ?? "—"}</td>
-        <td><GroupLink group={ad.campaign} /></td><td><GroupLink group={ad.operator} /></td>
-      </tr>)}</tbody></table></div> : <div className="grid justify-items-start gap-2"><p>{query ? "Brak reklam odpowiadających filtrom." : "Archiwum jest puste."}</p>
+        <td><GroupLink group={ad.campaign} /></td>{expert && <td><GroupLink group={ad.operator} /></td>}
+      </tr>)}</tbody></table></div> : <div className="grid justify-items-start gap-2 rounded-xl border border-dashed border-line-strong p-6"><p className="text-lg font-medium">{query ? "Brak reklam odpowiadających filtrom." : "Archiwum jest puste."}</p>
+        <p className="text-muted">{query ? "Spróbuj krótszego hasła albo wyczyść filtry." : "Dodaj materiał w Analizie albo zaimportuj paczkę."}</p>
         <Link className="text-accent underline" href={query ? "/archive" : "/#input-kind"}>{query ? "Wyczyść filtry" : "Dodaj materiał"}</Link></div>}
       <nav aria-label="Strony wyników" className="flex gap-3">
         <button disabled={!data.data.previous} className="disabled:opacity-40" onClick={() => turnPage(page - 1)}>Poprzednia</button>

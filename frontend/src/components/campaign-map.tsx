@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { RotateCcw, RotateCw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type Group, type Graph } from "@/lib/api";
 import { groupColor } from "@/lib/format";
@@ -91,16 +92,27 @@ export function CampaignMap({ groups, expanded, onToggle }: {
   }, []);
   return <section className="flex min-h-[55vh] flex-1 flex-col rounded-lg border border-line">
     <div className="flex flex-wrap items-center gap-3 border-b border-line p-2">
-      <span className="flex-1">Kliknij węzeł kampanii, aby rozwinąć lub zwinąć jej reklamy. Kółko zmienia skalę, Shift z kółkiem obraca mapę.</span>
+      <span id="campaign-map-help" className="basis-full">Kliknij węzeł kampanii, aby rozwinąć lub zwinąć jej reklamy. Kółko zmienia skalę, Shift z kółkiem obraca mapę. Po ustawieniu fokusu na mapie strzałki ją przesuwają.</span>
       <button aria-label="Oddal" onClick={() => setScale(v => Math.max(.4,v/1.4))}>−</button>
       <button aria-label="Przybliż" onClick={() => setScale(v => Math.min(8,v*1.4))}>＋</button>
+      <button aria-label="Obróć mapę w lewo" title="Obróć mapę w lewo" className="grid size-10 place-items-center" onClick={() => setAngle(v => v - 15)}><RotateCcw size={18}/></button>
+      <button aria-label="Obróć mapę w prawo" title="Obróć mapę w prawo" className="grid size-10 place-items-center" onClick={() => setAngle(v => v + 15)}><RotateCw size={18}/></button>
       <button onClick={() => {setScale(1);setAngle(0);setOffset({x:0,y:0});}}>Dopasuj widok</button>
       {selected && <button onClick={() => {
         setAngle(0); setScale(1); setOffset({ x: width/2 - selected.x, y: height/2 - selected.y });
       }}>Wróć do zaznaczenia · {selected.group.key}</button>}
     </div>
     {operators.error && <button className="text-accent" onClick={operators.reload}>Ponów pobranie operatorów mapy</button>}
-    <svg ref={surface} className="min-h-[48vh] w-full flex-1 touch-none cursor-grab" viewBox={`0 0 ${width} ${height}`} aria-label="Graf kampanii"
+    <svg ref={surface} className="min-h-[48vh] w-full flex-1 touch-none cursor-grab" viewBox={`0 0 ${width} ${height}`} aria-label="Graf kampanii" aria-describedby="campaign-map-help" tabIndex={0}
+      onKeyDown={e => {
+        if (e.target !== e.currentTarget || e.altKey || e.ctrlKey || e.metaKey) return;
+        const directions: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+        const direction = directions[e.key];
+        const matrix = e.currentTarget.getScreenCTM();
+        if (!direction || !matrix) return;
+        e.preventDefault();
+        setOffset(v => ({ x: v.x + direction[0] * 48 / matrix.a, y: v.y + direction[1] * 48 / matrix.d }));
+      }}
       onPointerDown={e => { if ((e.target as Element).closest('a,button,[role="button"]')) return; drag.current={x:e.clientX,y:e.clientY};e.currentTarget.setPointerCapture(e.pointerId); }}
       onPointerMove={e => { const prev=drag.current, matrix=e.currentTarget.getScreenCTM(); if (!prev || !matrix) return;
         const dx=(e.clientX-prev.x)/matrix.a, dy=(e.clientY-prev.y)/matrix.d; drag.current={x:e.clientX,y:e.clientY}; setOffset(v=>({x:v.x+dx,y:v.y+dy})); }}

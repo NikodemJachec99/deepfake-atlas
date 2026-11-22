@@ -58,6 +58,27 @@ export function GenomeBands({ genome, other, caption }: { genome: Genome; other?
   );
 }
 
+// Widok prosty: najmocniejsze ślady wspólne z innymi reklamami, słowami. Rozstrzygające pierwsze, potem rzadsze.
+export function KeyTraces({ genome, limit = 6 }: { genome: Genome; limit?: number }) {
+  const shared = genome.flatMap((band) => band.markers.filter((marker) => marker.ad_count > 1).map((marker) => ({ marker, family: band.family })))
+    .sort((a, b) => Number(b.marker.decisive) - Number(a.marker.decisive) || a.marker.ad_count - b.marker.ad_count);
+  const seen = new Set<string>();
+  const top = shared.filter(({ marker }) => !seen.has(marker.label) && !!seen.add(marker.label)).slice(0, limit);
+  return (
+    <section className="grid gap-2">
+      <h2 className="text-lg font-semibold">Najważniejsze wspólne ślady</h2>
+      <p className="text-muted">Te ślady ta reklama dzieli z innymi. Im rzadszy ślad, tym mocniej łączy reklamy.</p>
+      {top.length ? <ul className="grid gap-2 md:grid-cols-2">{top.map(({ marker, family }) => (
+        <li key={marker.kind + marker.value} className="min-w-0 rounded-md border border-line bg-panel p-2">
+          <p className="flex items-center gap-1.5 font-medium"><FamilyDot family={family} />{marker.label}{marker.decisive && <Tag tone="accent">rozstrzyga</Tag>}</p>
+          {marker.display_value && marker.display_value !== marker.value && <p className="truncate">{marker.display_value}</p>}
+          <p className="text-sm text-muted">wspólny z {marker.ad_count - 1} {plural(marker.ad_count - 1, "inną reklamą", "innymi reklamami", "innymi reklamami")}</p>
+        </li>
+      ))}</ul> : <p className="text-muted">Ta reklama nie dzieli śladów z innymi reklamami.</p>}
+    </section>
+  );
+}
+
 // Chip markera: kolor rodziny, nazwa, wartość w mono, rzadkość.
 export function MarkerChip({ marker, family }: { marker: Marker; family: AdDetail["genome"][number]["family"] }) {
   return (

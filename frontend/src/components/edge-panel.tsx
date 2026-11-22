@@ -149,6 +149,7 @@ function EvidenceCard({ item, max, refresh }: { item: Evidence; max: number; ref
                   </>
                 )}
                 . Typ markera: <Mono>{item.kind}</Mono>.
+                {" "}<Link className="text-accent underline" href={`/weights?kind=${encodeURIComponent(item.kind)}`}>Sprawdź wagi tego markera</Link>
               </p>
               <div className="flex flex-wrap gap-2">
                 {([["A", item.artifact_a], ["B", item.artifact_b]] as const).map(([side, sha]) =>

@@ -19,7 +19,10 @@ export default function Archive() {
   const router = useRouter();
   const query = params.toString();
   const data = useApi("archive:" + query, () => api.ads(query ? "?" + query : ""));
-  const page = Number(params.get("page") || "1");
+  const previous = data.data?.previous;
+  const page = previous ? Number(new URL(previous, "http://localhost").searchParams.get("page") || "1") + 1 : 1;
+  const lastPage = new URLSearchParams(params);
+  lastPage.set("page", "last");
   function navigate(next: URLSearchParams) {
     router.push(next.size ? "/archive?" + next : "/archive");
   }
@@ -57,7 +60,12 @@ export default function Archive() {
       <button className="rounded-md bg-accent px-3 py-2 font-medium text-white">Zastosuj filtry</button>
       <button type="reset" className="p-1 text-accent">Wyczyść</button>
     </form>
-    {data.loading ? <Loading /> : data.error ? <ErrorBox message={data.error} onRetry={data.reload} /> : data.data &&
+    {data.loading ? <Loading /> : data.error ? <ErrorBox message={data.error} onRetry={data.reload}
+      missing={data.status === 404 && params.has("page") && params.get("page") !== "last" ? {
+        description: "Ta strona wyników jest niedostępna.",
+        href: "/archive?" + lastPage,
+        link: "Otwórz ostatnią stronę wyników",
+      } : undefined}/> : data.data &&
       <><p>Wyniki: {data.data.count}</p>
       {data.data.results.length ? <div className="atlas-table"><table className="dense"><thead><tr>
         <th>Reklama</th><th>Źródło</th><th>Sprawa</th><th>Kampania</th><th>Operator</th>

@@ -243,11 +243,11 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
     });
     const surface = container.current;
     function rotate(event: WheelEvent) {
-      if (event.ctrlKey || event.metaKey || !event.deltaY) return;
+      if (!event.shiftKey || event.ctrlKey || event.metaKey) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? surface.clientHeight : 1;
-      const delta = Math.max(-240, Math.min(240, event.deltaY * unit));
+      const delta = Math.max(-240, Math.min(240, (event.deltaY || event.deltaX) * unit));
       const camera = instance.getCamera();
       camera.setState({ angle: camera.getState().angle + delta * Math.PI / 1500 });
     }
@@ -387,13 +387,27 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
     else void camera.animate({ ratio: camera.getState().ratio * factor }, { duration: 150 });
   };
 
+  const pair = edges.find(e => e.id === selectedEdge);
+  const selection = pair ? [pair.source, pair.target] : selectedNode != null ? [selectedNode] : [];
+  function centerSelection() {
+    const renderer = sigma.current;
+    if (!renderer || !selection.length) return;
+    const points = selection.map(id => renderer.getNodeDisplayData(String(id)));
+    const first = points[0], last = points[points.length - 1];
+    if (!first || !last) return;
+    void renderer.getCamera().animate({
+      x: (first.x + last.x) / 2, y: (first.y + last.y) / 2,
+      ratio: Math.max(0.25, Math.hypot(first.x - last.x, first.y - last.y) * 1.6),
+    }, { duration: reduced ? 0 : 150 });
+  }
+
   const hoveredEdge = hover?.kind === "edge" ? edges.find((e) => e.id === hover.id) : undefined;
   const hoveredNode = hover?.kind === "node" ? nodes.find((n) => n.id === hover.id) : undefined;
   const usedFamilies = FAMILIES.filter((f) => edges.some((e) => !e.hidden && e.family === f));
 
   return (
     <div className="relative h-full min-h-0 w-full min-w-0 overflow-hidden bg-bg">
-      <div ref={container} tabIndex={0} role="region" aria-label="Graf powiązań. Przeciągnij tło lub użyj strzałek. Kółko obraca graf." className="absolute inset-0 cursor-grab active:cursor-grabbing" onKeyDown={event => {
+      <div ref={container} tabIndex={0} role="region" aria-label="Graf powiązań. Przeciągnij tło lub użyj strzałek. Kółko przybliża i oddala. Shift z kółkiem obraca graf." className="absolute inset-0 cursor-grab active:cursor-grabbing" onKeyDown={event => {
         const direction = directions.find(item => item.key === event.key);
         if (direction) { event.preventDefault(); pan(direction.dx, direction.dy); }
       }} />
@@ -406,7 +420,7 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
         {[
           { icon: Plus, label: "Przybliż", factor: 1 / 1.5 },
           { icon: Minus, label: "Oddal", factor: 1.5 },
-          { icon: Maximize2, label: "Dopasuj do okna", factor: 0 },
+          { icon: Maximize2, label: "Dopasuj widok", factor: 0 },
         ].map(({ icon: Icon, label, factor }) => (
           <button key={label} type="button" title={label} aria-label={label} onClick={() => zoom(factor)} className="flex h-6 w-6 items-center justify-center text-muted hover:bg-hover hover:text-fg">
             <Icon size={13} />
@@ -414,6 +428,10 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
         ))}
       </div>
 
+      {selection.length > 0 && <div className="absolute bottom-12 right-2 grid justify-items-end rounded border border-line bg-panel px-2">
+        <span className="text-xs text-muted">{pair ? `Para #${pair.source} ↔ #${pair.target}` : `Reklama #${selectedNode}`}</span>
+        <button type="button" onClick={centerSelection} className="text-accent">Wróć do zaznaczenia</button>
+      </div>}
       {dense && <label className="absolute top-12 left-2 flex items-center gap-2 rounded-md border border-line bg-raised px-2 py-1 text-sm">
         <input type="checkbox" checked={showAll} onChange={event => setShowAll(event.target.checked)} />
         Wszystkie połączenia
@@ -477,7 +495,7 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
           </>
         ) : (
           <span>
-            {nodes.length} węzłów · {drawn.size} z {edges.length} krawędzi{dense && !showAll && " · najsilniejsze dla każdego węzła"} · kółko obraca graf · krawędź otwiera dowody, węzeł kartę reklamy
+            {nodes.length} węzłów · {drawn.size} z {edges.length} krawędzi{dense && !showAll && " · najsilniejsze dla każdego węzła"} · kółko zmienia skalę, Shift z kółkiem obraca graf · krawędź otwiera dowody, węzeł kartę reklamy
           </span>
         )}
       </div>

@@ -148,7 +148,7 @@ export function FamilyBar({ families, legend = false, height = 8 }: { families: 
 export function Meter({ value, width = 72 }: { value: number; width?: number }) {
   const tone = value >= 0.9 ? "var(--fg)" : value >= 0.5 ? "var(--st-unsure)" : "var(--faint)";
   return (
-    <span className="inline-flex items-center gap-2" title={`Pewność ${prob(value)}. Progi: 0,50 i 0,90`}>
+    <span className="inline-flex items-center gap-2" title={`Wynik modelu (niekalibrowany) ${prob(value)}. Progi: 0,50 i 0,90`}>
       <Mono className="w-[2.6em] text-right">{prob(value)}</Mono>
       <span className="relative h-1.5 rounded-[1px] bg-line" style={{ width }}>
         <span className="absolute inset-y-0 left-0 rounded-[1px]" style={{ width: `${Math.max(0, Math.min(1, value)) * 100}%`, background: tone }} />

@@ -176,7 +176,7 @@ export function EdgeRows({ edges, adId, onEdge, selected }: { edges: Edge[]; adI
         <tr>
           <th>Z reklamą</th>
           <th>Relacja</th>
-          <th>Pewność</th>
+          <th>Wynik modelu (niekalibrowany)</th>
           <th className="text-right">Bity</th>
           <th>Decyzja</th>
         </tr>

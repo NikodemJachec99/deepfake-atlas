@@ -270,7 +270,7 @@ function Decision({ edge, onSaved, refresh }: { edge: EdgeDetail; refresh: () =>
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-muted" title={edge.updated_at}>Wersja dowodów · {dateTime(edge.updated_at)}</span>
         {dirty && <button type="button" disabled={busy} onClick={discardDraft} className="text-accent underline">Cofnij zmiany szkicu</button>}
-        <Btn disabled={!selected || busy || stale} onClick={() => selected && decide(selected)}>Zapisz ocenę</Btn></div>
+        <Btn disabled={!dirty || !selected || busy || stale} onClick={() => selected && decide(selected)}>Zapisz ocenę</Btn></div>
       {stale && <p role="alert">Dane krawędzi zmieniły się. <button className="text-accent underline" onClick={refresh}>Odśwież dane</button></p>}
       {error && <p className="pt-1 text-rejected">Decyzja nie została zapisana: {error}</p>}
     </footer>

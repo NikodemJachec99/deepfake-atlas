@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { api, campaignPackageUrl, operatorPackageUrl } from "@/lib/api";
 import { bits, markerValue, adTitle, hostOf, SOURCE_LABELS } from "@/lib/format";
 import { allGroups as loadGroups } from "@/lib/group-pages";
@@ -13,20 +13,41 @@ import { ErrorBox, FamilyDot, GroupLink, Loading } from "./ui";
 type GroupKind = "operators" | "campaigns";
 
 export function GroupList({ kind }: { kind: GroupKind }) {
-  const [all, setAll] = useState(false);
+  const params = useSearchParams();
+  const all = params.get("scope") === "all";
+  const query = params.get("q") ?? "";
+  const searchInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const current = new URLSearchParams(window.location.search).get("q") ?? "";
+    if (searchInput.current && searchInput.current.value !== current) searchInput.current.value = current;
+  }, [query]);
+
+  function updateFilter(key: "scope" | "q", value: string) {
+    const url = new URL(window.location.href);
+    if (value) url.searchParams.set(key, value);
+    else url.searchParams.delete(key);
+    window.history.replaceState(null, "", url);
+  }
   const source = all ? undefined : "capture";
   const totals = useApi("group-totals", api.stats);
   const groups = useApi(kind + ":" + source, () => loadGroups(kind, source));
+  const term = query.trim().toLocaleLowerCase("pl");
+  const matches = (groups.data?.results ?? []).filter(group =>
+    !term || group.key.toLowerCase().includes(term) || group.label.toLocaleLowerCase("pl").includes(term)
+  );
   return <main className="atlas-page">
     <h1 className="atlas-title">{kind === "operators" ? "Operatorzy" : "Kampanie"}</h1>
-    <label className="flex items-center gap-2"><input type="checkbox" checked={all} onChange={e => setAll(e.target.checked)} />Wszystkie grupy</label>
-    <p className="text-muted">{groups.data && totals.data && `Pokazano ${groups.data.results.length} z ${totals.data[kind]} grup · `}{all ? "wszystkie źródła" : "tylko sprawy"}</p>
-    {groups.loading ? <Loading /> : groups.error ? <ErrorBox message={groups.error} onRetry={groups.reload} /> : groups.data?.count ? <div className="atlas-table"><table className="dense"><thead><tr><th>Grupa</th><th>Nazwa</th><th>Reklamy</th><th>Źródła reklam</th><th>Sprawy</th><th>Reklamy z domeną na liście CERT</th></tr></thead>
-      <tbody>{groups.data.results.map(group => <tr key={group.id}>
+    <label className="grid max-w-sm gap-1">Szukaj po identyfikatorze lub nazwie
+      <input type="search" className="rounded-md border border-line bg-panel px-3 py-2" ref={searchInput} defaultValue={query} onChange={e => updateFilter("q", e.target.value)} />
+    </label>
+    <label className="flex items-center gap-2"><input type="checkbox" checked={all} onChange={e => updateFilter("scope", e.target.checked ? "all" : "")} />Wszystkie grupy</label>
+    <p className="text-muted">{groups.data && totals.data && `Pokazano ${matches.length} z ${totals.data[kind]} grup · `}{all ? "wszystkie źródła" : "tylko sprawy"}</p>
+    {groups.loading ? <Loading /> : groups.error ? <ErrorBox message={groups.error} onRetry={groups.reload} /> : matches.length ? <div className="atlas-table"><table className="dense"><thead><tr><th>Grupa</th><th>Nazwa</th><th>Reklamy</th><th>Źródła reklam</th><th>Sprawy</th><th>Reklamy z domeną na liście CERT</th></tr></thead>
+      <tbody>{matches.map(group => <tr key={group.id}>
         <td><Link className="text-accent" href={`/${kind}/${group.id}`}>{group.key}</Link></td>
         <td>{group.label}</td><td>{group.size}</td>
         <td>{Object.entries(group.sources ?? {}).map(([key, count]) => `${SOURCE_LABELS[key] ?? key}: ${count}`).join(" · ") || "Brak danych"}</td><td>{group.cases ?? "—"}</td><td>{group.cert_pl ?? "—"}</td>
-      </tr>)}</tbody></table></div> : <p>Brak grup w wybranym zakresie.</p>}
+      </tr>)}</tbody></table></div> : <p>{term ? "Brak grup pasujących do wyszukiwania." : "Brak grup w wybranym zakresie."}</p>}
   </main>;
 }
 

@@ -19,6 +19,10 @@ export const VERDICT_LABELS: Record<Exclude<Verdict, "">, string> = {
   rejected: "Odrzucone",
 };
 
+export function lastSeenLabel(source: AdSummary["source"]) {
+  return source === "capture" || source === "manual" ? "Import do systemu" : "Ostatnia obserwacja";
+}
+
 export const SOURCE_LABELS: Record<string, string> = {
   manual: "Ręcznie",
   meta: "Meta",

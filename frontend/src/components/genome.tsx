@@ -128,21 +128,21 @@ export function MarkerList({ genome, videos = [], initiallyOpen = false }: { gen
                 <Mono className="text-muted">{band.markers.length}</Mono>
               </button>
               {isOpen && (
-                <table className="dense">
-                  <tbody>
+                <table className="dense max-md:block">
+                  <tbody className="max-md:block">
                     {markers.map((marker, index) => (
-                      <tr key={index}>
-                        <td className="w-[34%] pl-7! text-muted">
+                      <tr key={index} className="max-md:block max-md:border-b max-md:border-line max-md:px-3 max-md:py-1.5">
+                        <td className="w-[34%] pl-7! text-muted max-md:block max-md:h-auto max-md:w-auto! max-md:max-w-none! max-md:border-0 max-md:p-0! max-md:whitespace-normal! max-md:break-all ">
                           {marker.label} {marker.decisive && <Tag tone="accent">rozstrzyga</Tag>}
                         </td>
-                        <td className="max-w-0 font-mono text-[0.92rem]" title={markerValue(marker.value, marker.display_value)}>
+                        <td className="max-w-0 font-mono text-[0.92rem] max-md:block max-md:h-auto max-md:w-auto! max-md:max-w-none! max-md:border-0 max-md:p-0! max-md:whitespace-normal! max-md:break-all " title={markerValue(marker.value, marker.display_value)}>
                           {markerValue(marker.value, marker.display_value)}
                           {marker.kind === "face_match" && <FaceObservation marker={marker} videos={videos} />}
                         </td>
-                        <td className={cx("w-24 text-right font-mono text-[0.92rem]", marker.ad_count > 1 ? "text-fg" : "text-faint")} title="W ilu reklamach korpusu występuje ta wartość">
+                        <td className={cx("w-24 text-right font-mono text-[0.92rem] max-md:block max-md:h-auto max-md:w-auto! max-md:max-w-none! max-md:border-0 max-md:p-0! max-md:whitespace-normal! max-md:break-all max-md:text-left", marker.ad_count > 1 ? "text-fg" : "text-faint")} title="W ilu reklamach korpusu występuje ta wartość">
                           {reklam(marker.ad_count)}
                         </td>
-                        <td className="w-7">
+                        <td className="w-7 max-md:block max-md:h-auto max-md:border-0 max-md:p-0! max-md:empty:hidden">
                           {marker.artifact && (
                             <a href={artifactDownloadUrl(marker.artifact)} title="Pobierz artefakt źródłowy (plik, nie otwiera się w przeglądarce)" className="text-muted hover:text-fg">
                               <Download size={12} />

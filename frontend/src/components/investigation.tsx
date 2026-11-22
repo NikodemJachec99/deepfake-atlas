@@ -192,7 +192,7 @@ export function Investigation() {
 
         <div className="flex flex-col gap-1 px-2">
           <label htmlFor="min-p" className="cap flex justify-between">
-            Próg pewności <Mono className="text-fg normal-case">{prob(minP)}</Mono>
+            Próg wyniku modelu (niekalibrowanego) <Mono className="text-fg normal-case">{prob(minP)}</Mono>
           </label>
           <input id="min-p" type="range" min={0} max={1} step={0.01} value={minP} onChange={(event) => setMinP(Number(event.target.value))} className="accent-(--accent)" />
           <div className="flex gap-1">
@@ -261,7 +261,7 @@ export function Investigation() {
                 <th>A</th>
                 <th>B</th>
                 <th>Relacja</th>
-                <th>Pewność</th>
+                <th>Wynik modelu (niekalibrowany)</th>
                 <th className="text-right">Bity</th>
                 <th className="w-40">Rodziny</th>
                 <th>Decyzja</th>

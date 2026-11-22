@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { api, campaignPackageUrl, operatorPackageUrl } from "@/lib/api";
-import { bits, markerValue, adTitle, hostOf, SOURCE_LABELS } from "@/lib/format";
+import { api, artifactImageUrl, campaignPackageUrl, operatorPackageUrl } from "@/lib/api";
+import { bits, dateTime, markerValue, adTitle, hostOf, SOURCE_LABELS } from "@/lib/format";
 import { allGroups as loadGroups } from "@/lib/group-pages";
 import { useApi } from "@/lib/hooks";
 import { ObservationTimeline } from "./observation-timeline";
@@ -95,14 +95,34 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
   const sorted = [...group.core_markers].sort((a,b) => (b.bits ?? -1) - (a.bits ?? -1) || Number(b.decisive) - Number(a.decisive) || b.in_group - a.in_group || a.ad_count - b.ad_count);
   const paths = sorted.filter(marker => marker.kind === "kit_path");
   const markers = sorted.filter(marker => marker.kind !== "kit_path");
-  const top = sorted[0];
+  const strongest = sorted.filter(marker => marker.bits != null).slice(0, 3);
+  const representative = group.ads.find(ad => ad.title?.trim());
+  const name = group.label.trim() || (representative ? adTitle(representative) : operator ? "Operator" : "Kampania");
+  const latest = group.ads.filter(ad => ad.last_seen).sort((a,b) => Date.parse(b.last_seen!) - Date.parse(a.last_seen!))[0];
+  const packageUrl = (operator ? operatorPackageUrl : campaignPackageUrl)(Number(id), { raw: includeRaw });
   return <main className="atlas-page atlas-group">
-    <header className="flex flex-wrap items-center justify-between gap-3"><h1 className="atlas-title">{group.key} {group.label}</h1>
+    <header className="flex flex-wrap items-center justify-between gap-3"><div className="min-w-0 flex-1"><p className="text-sm text-muted">{group.key}{!group.label && representative && " · nazwa robocza według tytułu reklamy"}</p><h1 className="atlas-title text-pretty">{name}</h1></div>
+      {group.ads.length > 0 && <a className="rounded-md border border-line-strong px-3 py-2 text-accent" href={packageUrl} download>Pobierz pakiet (ZIP)</a>}
       <Link className="rounded-md bg-accent px-3 py-2 font-medium text-white" href={`/investigation?${operator ? "operator" : "campaign"}=${id}`}>Otwórz graf grupy</Link></header>
     <section><dl className="flex flex-wrap gap-x-8 gap-y-3">{metrics.map(([name,value]) => <div key={name}><dt className="text-muted">{name}</dt><dd className="text-2xl font-semibold">{value}</dd></div>)}</dl>
-      {top && <p className="mt-3">Wspólny ślad: {top.label} · {markerValue(top.value, top.display_value)} ({top.in_group} z {group.size} reklam{top.bits != null && `, ${bits(top.bits)} bita`}).</p>}
+      {latest?.last_seen && <p className="mt-2 text-sm text-muted">Ostatnia obserwacja reklamy <Link href={`/ads/${latest.id}`} className="text-accent underline">#{latest.id}</Link> · {dateTime(latest.last_seen)}</p>}
     </section>
-    <ObservationTimeline key={kind + id} id={Number(id)} operator={operator} />
+    <section><h2>Dlaczego razem</h2>
+      {strongest.length ? <ol className="grid gap-3 md:grid-cols-3">{strongest.map(marker => <li key={JSON.stringify([marker.kind, marker.value])} className="min-w-0">
+        <strong>{bits(marker.bits!)} bita</strong> · {marker.label}
+        <p className="line-clamp-2 break-all font-mono text-sm" title={markerValue(marker.value, marker.display_value)}>{markerValue(marker.value, marker.display_value)}</p>
+        <p className="text-sm text-muted">Powiązania: {marker.edges} · Reklamy: {marker.in_group} z {group.size}</p>
+      </li>)}</ol> : <p>Brak śladów z wyliczonym wkładem w powiązania.</p>}
+    </section>
+    <section><h2>Materiały grupy</h2>
+      <div className="flex gap-3 overflow-x-auto">{group.ads.map(ad => <Link key={ad.id} href={`/ads/${ad.id}`} className="w-28 shrink-0 text-accent" title={adTitle(ad)}>
+        {ad.thumbnail ? (
+          // eslint-disable-next-line @next/next/no-img-element -- Obrazy pochodzą z serwera artefaktów demo.
+          <img src={artifactImageUrl(ad.thumbnail.sha256)} alt={`Podgląd reklamy #${ad.id}`} loading="lazy" className="h-16 w-full rounded border border-line bg-panel object-contain" />
+        ) : <span className="grid h-16 place-items-center rounded border border-line text-sm text-muted">Brak miniatury</span>}
+        #{ad.id}
+      </Link>)}</div>
+    </section>
     <section>
       <h2>Pary ze spraw wymagające oceny</h2>
       {pending.loading ? <Loading/> : pending.error ? <ErrorBox message={pending.error} onRetry={pending.reload}/> :
@@ -115,18 +135,19 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
             </li>)}</ul>
           </details>}
     </section>
+    <ObservationTimeline key={kind + id} id={Number(id)} operator={operator} />
     <section><h2>Markery rdzeniowe</h2>
       {markers.length ? <>
         <dl className="grid gap-3 md:hidden">{markers.map(marker => <div key={JSON.stringify([marker.kind, marker.value])} className="min-w-0 border-b border-line pb-3">
           <dt className="font-medium"><FamilyDot family={marker.family} /> {marker.label}</dt>
           <dd className="break-all font-mono">{markerValue(marker.value, marker.display_value)}</dd>
-          <dd className="text-sm text-muted">Reklamy w grupie: {marker.in_group} · W korpusie: {marker.ad_count}</dd>
+          <dd className="text-sm text-muted">Bity: {marker.bits == null ? "—" : bits(marker.bits)} · Powiązania: {marker.edges} · Reklamy w grupie: {marker.in_group} · W korpusie: {marker.ad_count}</dd>
         </div>)}</dl>
-        <table className="dense hidden md:table"><thead><tr><th>Marker</th><th>Wartość</th><th>Reklamy w grupie</th><th>W korpusie</th></tr></thead>
+        <table className="dense hidden md:table"><thead><tr><th>Marker</th><th>Wartość</th><th>Bity</th><th>Powiązania</th><th>Reklamy w grupie</th><th>W korpusie</th></tr></thead>
         <tbody>{markers.map(marker => <tr key={JSON.stringify([marker.kind, marker.value])}>
           <td><FamilyDot family={marker.family} /> {marker.label}</td><td className="break-all font-mono">{markerValue(marker.value, marker.display_value)}</td>
-          <td>{marker.in_group}</td><td>{marker.ad_count}</td></tr>)}</tbody></table></> : !paths.length && <p>Brak markerów rdzeniowych.</p>}
-      {!!paths.length && <details><summary>Ścieżki zaplecza ({paths.length})</summary><ul>{paths.map(m => <li key={m.value} className="break-all">{m.display_value || m.value} · w grupie {m.in_group}, w korpusie {m.ad_count}</li>)}</ul></details>}
+          <td>{marker.bits == null ? "—" : bits(marker.bits)}</td><td>{marker.edges}</td><td>{marker.in_group}</td><td>{marker.ad_count}</td></tr>)}</tbody></table></> : !paths.length && <p>Brak markerów rdzeniowych.</p>}
+      {!!paths.length && <details><summary>Ścieżki zaplecza ({paths.length})</summary><ul>{paths.map(m => <li key={m.value} className="break-all">{m.display_value || m.value} · bity: {m.bits == null ? "—" : bits(m.bits)} · powiązania: {m.edges} · w grupie {m.in_group}, w korpusie {m.ad_count}</li>)}</ul></details>}
     </section>
     {operator && <HuntProfile id={Number(id)}/>}
     {"campaigns" in group && Array.isArray(group.campaigns) && <section><h2>Kampanie operatora</h2>
@@ -136,7 +157,7 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
       {group.ads.length === 0 ? <p>Grupa nie ma reklam. Pakiet dowodowy jest niedostępny.</p> : <>
         <label><input type="checkbox" checked={includeRaw} onChange={e => setIncludeRaw(e.target.checked)} /> Dołącz surowe pliki HAR i HTML</label>
         {includeRaw && <p>Surowe pliki zawierają niezredagowaną treść ze stron oszustów.</p>}
-        <a className="rounded-md border border-line-strong px-3 py-2 text-accent" href={(operator ? operatorPackageUrl : campaignPackageUrl)(Number(id), { raw: includeRaw })} download>Pobierz pakiet dowodowy (ZIP)</a>
+        <a className="rounded-md border border-line-strong px-3 py-2 text-accent" href={packageUrl} download>Pobierz pakiet dowodowy (ZIP)</a>
         <p className="text-sm text-muted">Po rozpakowaniu sprawdź sumy plików poleceniem <code>python weryfikuj.py</code>. Skrót SHA-256 całego ZIP do osobnego porównania podaje API w nagłówku <code>X-Package-SHA256</code>.</p>
       </>}
     </section>

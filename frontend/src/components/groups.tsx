@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { api, campaignPackageUrl, operatorPackageUrl } from "@/lib/api";
-import { markerValue, adTitle, hostOf, SOURCE_LABELS } from "@/lib/format";
+import { bits, markerValue, adTitle, hostOf, SOURCE_LABELS } from "@/lib/format";
 import { allGroups as loadGroups } from "@/lib/group-pages";
 import { useApi } from "@/lib/hooks";
 import { ObservationTimeline } from "./observation-timeline";
@@ -45,6 +45,15 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
   const valid = /^[1-9]\d*$/.test(id) && Number.isSafeInteger(Number(id));
   const operator = kind === "operators";
   const result = useApi(valid ? kind + id : null, () => operator ? api.operator(Number(id)) : api.campaign(Number(id)));
+  const pending = useApi(result.data ? "group-review:" + kind + id : null, async () => {
+    const members = new Set(result.data!.ads.map(ad => ad.id));
+    const rows = [];
+    for (let page = 1; ; page++) {
+      const queue = await api.review({ page });
+      rows.push(...queue.results.filter(row => members.has(row.ad_a.id) || members.has(row.ad_b.id)));
+      if (!queue.next) return rows;
+    }
+  });
   if (!valid) return <p>Nieprawidłowy identyfikator grupy.</p>;
   if (result.loading) return <Loading />;
   if (result.error) return <ErrorBox message={result.error} onRetry={result.reload} missing={result.status === 404 ? {
@@ -60,16 +69,18 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
     ["Sprawy", new Set(group.ads.map(ad => ad.case).filter(Boolean)).size],
     ["Domeny na liście CERT", new Set(group.ads.map(ad => ad.labels.cert_pl?.domain).filter(Boolean)).size],
   ] as const;
-  const sorted = [...group.core_markers].sort((a,b) => Number(b.decisive) - Number(a.decisive) || b.in_group - a.in_group || a.ad_count - b.ad_count);
+  const sorted = [...group.core_markers].sort((a,b) => (b.bits ?? -1) - (a.bits ?? -1) || Number(b.decisive) - Number(a.decisive) || b.in_group - a.in_group || a.ad_count - b.ad_count);
   const paths = sorted.filter(marker => marker.kind === "kit_path");
   const markers = sorted.filter(marker => marker.kind !== "kit_path");
-  const top = markers[0] ?? paths[0];
+  const top = sorted[0];
   return <main className="atlas-page atlas-group">
     <header className="flex flex-wrap items-center justify-between gap-3"><h1 className="atlas-title">{group.key} {group.label}</h1>
       <Link className="rounded-md bg-accent px-3 py-2 font-medium text-white" href={`/investigation?${operator ? "operator" : "campaign"}=${id}`}>Otwórz graf grupy</Link></header>
     <section><dl className="flex flex-wrap gap-x-8 gap-y-3">{metrics.map(([name,value]) => <div key={name}><dt className="text-muted">{name}</dt><dd className="text-2xl font-semibold">{value}</dd></div>)}</dl>
-      {top && <p className="mt-3">Wspólny ślad: {top.label} · {markerValue(top.value, top.display_value)} ({top.in_group} z {group.size} reklam).</p>}
+      {top && <p className="mt-3">Wspólny ślad: {top.label} · {markerValue(top.value, top.display_value)} ({top.in_group} z {group.size} reklam{top.bits != null && `, ${bits(top.bits)} bita`}).</p>}
     </section>
+    <ObservationTimeline key={kind + id} id={Number(id)} operator={operator} />
+    <section><h2>Pary ze spraw wymagające oceny</h2>{pending.loading ? <Loading/> : pending.error ? <ErrorBox message={pending.error} onRetry={pending.reload}/> : !pending.data?.length ? <p>Brak par do oceny dla tej grupy.</p> : <details><summary>Pokaż pary ({pending.data.length})</summary><ul>{pending.data.map(row => <li key={row.id}><Link className="text-accent" href={`/investigation?${operator ? "operator" : "campaign"}=${id}&edge=${row.id}`}>#{row.ad_a.id} ↔ #{row.ad_b.id} · {row.reason_label}</Link></li>)}</ul></details>}</section>
     <section><h2>Markery rdzeniowe</h2>
       {markers.length ? <table className="dense"><thead><tr><th>Marker</th><th>Wartość</th><th>Reklamy w grupie</th><th>W korpusie</th></tr></thead>
         <tbody>{markers.map(marker => <tr key={JSON.stringify([marker.kind, marker.value])}>
@@ -78,7 +89,6 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
       {!!paths.length && <details><summary>Ścieżki zaplecza ({paths.length})</summary><ul>{paths.map(m => <li key={m.value} className="break-all">{m.display_value || m.value} · w grupie {m.in_group}, w korpusie {m.ad_count}</li>)}</ul></details>}
     </section>
     {operator && <HuntProfile id={Number(id)}/>}
-    <ObservationTimeline key={kind + id} id={Number(id)} operator={operator} />
     {"campaigns" in group && Array.isArray(group.campaigns) && <section><h2>Kampanie operatora</h2>
       {group.campaigns.length ? <ul>{group.campaigns.map(key => <li key={key}><GroupLink group={key} /></li>)}</ul> : <p>Brak przypisanych kampanii.</p>}</section>}
     <section className="grid justify-items-start gap-2">

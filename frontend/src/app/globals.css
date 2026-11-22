@@ -206,3 +206,10 @@ select {
 :where(button, select, input[type="text"], input[type="url"], input[type="number"], textarea) {
   min-height: 36px;
 }
+
+@media (width < 1000px) {
+  .atlas-investigation[data-mode="Lista"] [data-split="inv-table"] > div:first-child,
+  .atlas-investigation[data-mode="Graf"] [data-split="inv-table"] > div:last-child,
+  .atlas-investigation:not([data-mode="Porównanie"]) [data-split="inv-inspector"] > div:last-child,
+  .atlas-investigation[data-mode="Porównanie"] [data-split="inv-inspector"] > div:first-child { display: none; }
+}

@@ -29,8 +29,25 @@ function CampaignNode({ group, x, y, angle, color, expanded, toggle }: {
     return { nodes, positions, edges: all ? edges : [...new Set(strongest.values())], total: edges.length };
   }, [result.data, all, group.key]);
   return <g transform={`translate(${x} ${y})`}>
+    {expanded && <circle r="84" fill="var(--accent-soft)" stroke="var(--line)" />}
+    <g transform={`rotate(${-angle})`} role="button" tabIndex={0} aria-label={`Kampania ${group.key}, liczba reklam ${group.size}`} aria-expanded={expanded}
+      className="cursor-pointer" onClick={toggle} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } }}>
+      <title>{group.label || group.key} · {group.size} reklam</title>
+      <circle r="20" fill={expanded ? color : "var(--raised)"} stroke={color} strokeWidth="2" />
+      <text textAnchor="middle" dy="5" fill={expanded ? "white" : "var(--accent)"} fontSize="14" fontWeight="600">{group.size}</text>
+      <text textAnchor="middle" y={expanded ? -88 : 38} fill="var(--fg)" fontSize="13">{group.key}</text>
+    </g>
     {expanded && <>
-      <circle r="84" fill="var(--accent-soft)" stroke="var(--line)" />
+      {layout.nodes.map(n => <Link key={n.id} href={`/ads/${n.id}`} prefetch={false} aria-label={`Reklama #${n.id}`}>
+        <title>#{n.id} · {n.label}</title><circle {...{cx:layout.positions.get(n.id)?.x, cy:layout.positions.get(n.id)?.y}} r="4" fill="var(--accent)" stroke="white" />
+      </Link>)}
+      <defs>
+        <clipPath id={`edges-around-nodes-${group.id}`}>
+          <path clipRule="evenodd" d={`M-84 -84h168v168h-168z M-21 0a21 21 0 1 0 42 0a21 21 0 1 0 -42 0z ${[...layout.positions.values()].map(({ x, y }) =>
+            `M${x - 4.5} ${y}a4.5 4.5 0 1 0 9 0a4.5 4.5 0 1 0 -9 0z`).join(" ")}`} />
+        </clipPath>
+      </defs>
+      <g clipPath={`url(#edges-around-nodes-${group.id})`}>
       {layout.edges.map(e => {
         const a = layout.positions.get(e.source), b = layout.positions.get(e.target);
         if (!a || !b) return null;
@@ -43,17 +60,8 @@ function CampaignNode({ group, x, y, angle, color, expanded, toggle }: {
             className="opacity-35 group-hover:opacity-100 group-focus-visible:opacity-100 group-hover:stroke-2 group-focus-visible:stroke-2" />
         </Link>;
       })}
-      {layout.nodes.map(n => <Link key={n.id} href={`/ads/${n.id}`} prefetch={false} aria-label={`Reklama #${n.id}`}>
-        <title>#{n.id} · {n.label}</title><circle {...{cx:layout.positions.get(n.id)?.x, cy:layout.positions.get(n.id)?.y}} r="4" fill="var(--accent)" stroke="white" />
-      </Link>)}
+      </g>
     </>}
-    <g transform={`rotate(${-angle})`} role="button" tabIndex={0} aria-label={`Kampania ${group.key}, liczba reklam ${group.size}`} aria-expanded={expanded}
-      className="cursor-pointer" onClick={toggle} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } }}>
-      <title>{group.label || group.key} · {group.size} reklam</title>
-      <circle r="20" fill={expanded ? color : "var(--raised)"} stroke={color} strokeWidth="2" />
-      <text textAnchor="middle" dy="5" fill={expanded ? "white" : "var(--accent)"} fontSize="14" fontWeight="600">{group.size}</text>
-      <text textAnchor="middle" y={expanded ? -88 : 38} fill="var(--fg)" fontSize="13">{group.key}</text>
-    </g>
     {expanded && <foreignObject transform={`rotate(${-angle})`} x="-92" y="84" width="184" height="65">
       <div className="text-center text-xs">{result.loading ? "Pobieranie reklam…" : result.error ? <button onClick={result.reload}>Ponów pobranie</button> :
         <button aria-pressed={all} onClick={() => setAll(!all)} className="text-accent underline">{all ? "Najsilniejsze połączenia" : `Połączenia wewnętrzne (${layout.total})`}</button>}

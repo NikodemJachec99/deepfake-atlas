@@ -33,9 +33,14 @@ function CampaignNode({ group, x, y, color, expanded, toggle }: {
       <circle r="84" fill="var(--accent-soft)" stroke="var(--line)" />
       {layout.edges.map(e => {
         const a = layout.positions.get(e.source), b = layout.positions.get(e.target);
-        return a && b && <Link key={e.id} href={`/investigation?campaign=${group.id}&edge=${e.id}`} prefetch={false}>
-          <title>Dowody powiązania #{e.id}</title>
-          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="var(--accent)" strokeOpacity=".35" strokeWidth=".9" />
+        if (!a || !b) return null;
+        const endpoints = { x1: a.x, y1: a.y, x2: b.x, y2: b.y };
+        const label = `Dowody powiązania #${e.id} · reklamy #${e.source} i #${e.target}`;
+        return <Link key={e.id} className="group" aria-label={label} href={`/investigation?campaign=${group.id}&edge=${e.id}`} prefetch={false}>
+          <title>{label}</title>
+          <line {...endpoints} stroke="transparent" strokeWidth="12" vectorEffect="non-scaling-stroke" pointerEvents="stroke" />
+          <line {...endpoints} stroke="var(--accent)" strokeWidth=".9" pointerEvents="none"
+            className="opacity-35 group-hover:opacity-100 group-focus-visible:opacity-100 group-hover:stroke-2 group-focus-visible:stroke-2" />
         </Link>;
       })}
       {layout.nodes.map(n => <Link key={n.id} href={`/ads/${n.id}`} prefetch={false} aria-label={`Reklama #${n.id}`}>

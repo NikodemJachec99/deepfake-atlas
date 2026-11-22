@@ -172,36 +172,38 @@ export function AdMeta({ ad }: { ad: AdDetail }) {
 export function EdgeRows({ edges, adId, onEdge, selected }: { edges: Edge[]; adId: number; onEdge: (edge: Edge) => void; selected?: number | null }) {
   if (edges.length === 0) return <Empty title="Brak powiązań powyżej progu">Silnik nie znalazł dla tej reklamy wspólnych śladów z resztą korpusu.</Empty>;
   return (
-    <table className="dense">
-      <thead>
-        <tr>
-          <th>Z reklamą</th>
-          <th>Relacja</th>
-          <th>Wynik modelu (niekalibrowany)</th>
-          <th className="text-right">Bity</th>
-          <th>Decyzja</th>
-        </tr>
-      </thead>
-      <tbody>
-        {edges.map((edge) => (
-          <tr key={edge.id} data-selected={selected === edge.id} onClick={() => onEdge(edge)} className="cursor-pointer">
-            <td><button type="button" className="table-action" aria-label={`Dowody powiązania reklam #${edge.ad_a} i #${edge.ad_b}`}>
-              #{edge.ad_a === adId ? edge.ad_b : edge.ad_a}
-            </button></td>
-            <td>
-              <RelationTag relation={edge.relation} duplicate={edge.duplicate} />
-            </td>
-            <td>
-              <Meter value={edge.probability} width={48} />
-            </td>
-            <td className="text-right font-mono text-[0.92rem]">{edge.bits.toFixed(1).replace(".", ",")}</td>
-            <td>
-              <VerdictTag verdict={edge.verdict} />
-            </td>
+    <div className="atlas-table" role="region" aria-label="Powiązania reklam" tabIndex={0}>
+      <table className="dense">
+        <thead>
+          <tr>
+            <th>Z reklamą</th>
+            <th>Relacja</th>
+            <th>Wynik modelu (niekalibrowany)</th>
+            <th className="text-right">Bity</th>
+            <th>Decyzja</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {edges.map((edge) => (
+            <tr key={edge.id} data-selected={selected === edge.id} onClick={() => onEdge(edge)} className="cursor-pointer">
+              <td><button type="button" className="table-action" aria-label={`Dowody powiązania reklam #${edge.ad_a} i #${edge.ad_b}`}>
+                #{edge.ad_a === adId ? edge.ad_b : edge.ad_a}
+              </button></td>
+              <td>
+                <RelationTag relation={edge.relation} duplicate={edge.duplicate} />
+              </td>
+              <td>
+                <Meter value={edge.probability} width={48} />
+              </td>
+              <td className="text-right font-mono text-[0.92rem]">{edge.bits.toFixed(1).replace(".", ",")}</td>
+              <td>
+                <VerdictTag verdict={edge.verdict} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

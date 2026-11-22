@@ -99,7 +99,17 @@ export function PremiseHistory() {
     {changes && <GroupChanges changes={changes}/>}
     {error && <ErrorBox message={error}/>}
     {history.loading ? <Loading/> : history.error ? <ErrorBox message={history.error} onRetry={history.reload}/> : !history.data?.results.length ? <p>Brak zapisanych zakwestionowań.</p> :
-      <ul>{history.data.results.map(p => <li className="border-b border-line py-3" key={p.id}><strong>{p.label} · {p.display_value || p.value}</strong><p>{p.status_label} · {dateTime(p.created_at)} · {p.reason}</p>
+      <ul>{history.data.results.map(p => <li className="border-b border-line py-3" key={p.id}><div className="flex flex-wrap items-baseline gap-x-3">
+          <strong className="wrap-anywhere">{p.label} · {p.display_value || p.value}</strong>
+          <span className="text-sm text-muted">{p.status_label}</span>
+        </div>
+        <p>Powód zakwestionowania: {p.reason}</p>
+        <dl className="my-2 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+          <div><dt className="text-muted">Zakwestionowano</dt><dd><time dateTime={p.created_at}>{dateTime(p.created_at)}</time></dd></div>
+          {p.status === "restored" && <div><dt className="text-muted">Przywrócono</dt><dd>{p.restored_at
+            ? <time dateTime={p.restored_at}>{dateTime(p.restored_at)}</time>
+            : "Data niedostępna"}</dd></div>}
+        </dl>
         {p.status === "restored" && <RestoreDetails id={p.id}/>}
         {p.status === "challenged" && <button disabled={busy} className="text-accent underline" onClick={() => restore(p.id)}>Przywróć przesłankę</button>}</li>)}</ul>}
   </main>;

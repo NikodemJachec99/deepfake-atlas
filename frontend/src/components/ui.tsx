@@ -49,7 +49,7 @@ export function Btn({
       type="button"
       {...props}
       className={cx(
-        "inline-flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-sm border px-2 text-[0.92rem] whitespace-nowrap transition-colors duration-150 disabled:opacity-40",
+        "inline-flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-3 text-[0.92rem] font-medium whitespace-nowrap transition-colors duration-150 disabled:opacity-40",
         variant === "primary" && "border-accent bg-accent font-medium text-on-accent hover:brightness-110",
         variant === "default" && "border-line-strong bg-raised hover:bg-hover",
         variant === "ghost" && "border-transparent text-muted hover:bg-hover hover:text-fg",
@@ -204,8 +204,8 @@ export function GroupLink({ group }: { group: string | null | undefined }) {
 
 export function Empty({ title, children }: { title: string; children?: React.ReactNode }) {
   return (
-    <div className="flex h-full min-h-24 flex-col justify-center gap-1 p-4">
-      <p className="text-fg">{title}</p>
+    <div className="flex h-full min-h-28 flex-col justify-center gap-1.5 p-6">
+      <p className="text-base font-medium text-fg">{title}</p>
       {children && <div className="max-w-[60ch] text-muted">{children}</div>}
     </div>
   );
@@ -213,8 +213,8 @@ export function Empty({ title, children }: { title: string; children?: React.Rea
 
 export function Loading({ label = "Pobieranie danych" }: { label?: string }) {
   return (
-    <div className="flex h-full min-h-16 items-center gap-2 p-4 text-muted" role="status">
-      <Loader2 size={14} className="animate-spin" />
+    <div className="flex h-full min-h-20 items-center justify-center gap-2 p-6 text-muted" role="status">
+      <Loader2 size={16} className="animate-spin text-accent" aria-hidden />
       {label}
     </div>
   );
@@ -226,7 +226,7 @@ export function ErrorBox({ message, onRetry, missing }: {
   missing?: { description: string; href: string; link: string };
 }) {
   return (
-    <div className="m-2 flex items-start gap-2 rounded-sm border border-rejected p-2" role="alert">
+    <div className="m-3 flex items-start gap-3 rounded-lg border border-rejected/60 bg-rejected/5 p-3" role="alert">
       <AlertTriangle size={14} className="mt-0.5 shrink-0 text-rejected" />
       <div className="min-w-0 flex-1">
         <p>{missing?.description ?? (/^API 5\d\d:|Brak połączenia z API/.test(message) ? "Backend chwilowo niedostępny." : "Nie udało się pobrać danych.")}</p>

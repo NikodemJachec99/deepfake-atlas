@@ -27,7 +27,7 @@ P0 to minimalny pionowy przepływ na demo: symulacja w API i panel w interfejsie
 - **Bity to wkład w skali logarytmicznej, nie prawdopodobieństwo i nie procent.** Pewność krawędzi to osobne pole.
 - **Kilka śladów jednego mechanizmu to jedno potwierdzenie.** Ścieżki zaplecza, zestaw parametrów i szablon ścieżki ustawia ten sam silnik lejka, więc symulacja liczy je razem (`independent: ["kit", ...]`), tak samo jak produkcyjny silnik.
 - **Wpływ na grupę tylko tam, gdzie da się go policzyć dokładnie.** Symulacja sprawdza, czy obie reklamy łączy inna ścieżka z krawędzi tego samego rodzaju (bez odrzuconych). Nie przelicza innych par i nie twierdzi, że rozpadnie się cała grupa.
-- **Pochodzenie i prywatność.** Każdy dowód wskazuje plik źródłowy (`artifact_a`, `artifact_b`). Dane organizatora zostają w prywatnym repo i w `data/raw/`.
+- **Pochodzenie i prywatność.** Każdy dowód wskazuje plik źródłowy (`artifact_a`, `artifact_b`). Surowe dane organizatora zostają w `data/raw/`, poza gitem.
 
 ## Co już widać na danych organizatora
 

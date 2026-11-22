@@ -51,7 +51,7 @@
 | Działający demonstrator z prostym interfejsem | jest | `frontend/`, http://localhost:3000 |
 | Opis metodyki | jest | [metodyka.md](metodyka.md) |
 | Instrukcja instalacji, konfiguracji i uruchomienia z zależnościami | jest | [README.md](../README.md) |
-| Kod w repozytorium Git | jest | GitHub, repo prywatne: **trzeba nadać dostęp organizatorowi** |
+| Kod w repozytorium Git | jest | GitHub: https://github.com/NikodemJachec99/deepfake-atlas, do tego archiwum kodu w zgłoszeniu |
 | Środowisko skonteneryzowane | jest | `docker-compose.yml`, wszystkie usługi łącznie z interfejsem |
 | Opis dostępu do usług wymagających autoryzacji | jest | [licencje.md](licencje.md): tylko Meta Ad Library, opcjonalna |
 | Lista bibliotek, modeli i usług z licencjami i ograniczeniami | jest | [licencje.md](licencje.md) |
@@ -87,12 +87,12 @@ Nie mamy zbioru z oznaczonymi kampaniami, więc **nie podajemy liczbowej skutecz
 | Zasada | Jak jej dotrzymujemy |
 |---|---|
 | Materiały organizatora tylko na potrzeby wyzwania | używane wyłącznie lokalnie do rozwoju i testów |
-| Zakaz publicznego rozpowszechniania | `data/raw/` poza gitem; testy na zmyślonych wartościach; repo prywatne |
+| Zakaz publicznego rozpowszechniania | `data/raw/` poza gitem; testy na zmyślonych wartościach; w repo tylko wyniki i domeny ze spraw w `docs/dane-organizatora.md` |
 | Dodatkowe dane dozwolone po wskazaniu pochodzenia | źródła wymienione w [metodyka.md](metodyka.md) pkt 10 i [licencje.md](licencje.md) |
 
 Do pilnowania:
 
-- Repozytorium ma pozostać prywatne. `docs/dane-organizatora.md` wymienia domeny ze spraw.
+- `docs/dane-organizatora.md` wymienia domeny ze spraw. Surowe materiały zostają poza gitem.
 - Zrzuty ekranu aplikacji z danymi organizatora w prezentacji są pokazywane jury, nie publikowane.
 - Druga paczka pochodzi z archiwum ukrytego w zagadce organizatora. Traktujemy ją tak samo jak pierwszą.
 
@@ -120,7 +120,7 @@ Regulamin zadania ma pierwszeństwo przed regulaminem wydarzenia (§5 ust. 2). P
 | §4 ust. 1 | każdy uczestnik jest twórcą swojego wkładu i ma do niego pełne prawa majątkowe | kod pisał zespół z asystentem Claude Code (Anthropic), co jest ujawnione w [licencje.md](licencje.md); kodu z innych projektów nie kopiowaliśmy, poza bibliotekami jako zależnościami |
 | §4 ust. 2, umowa §5 | rozwiązanie wolne od wad prawnych, bez naruszania praw osób trzecich, prawa nieobciążone | repozytorium **nie ma pliku licencji**: nie udzieliliśmy nikomu licencji (np. MIT), więc wyłączne prawa da się przenieść bez obciążeń. Zależności tylko na licencjach otwartych ([licencje.md](licencje.md)). Usługi na licencjach z warunkami (Neo4j GPL-3.0, ffmpeg LGPL/GPL) działają jako osobne procesy i nie są częścią naszego kodu. Redis (RSALv2/SSPLv1) usunięty 22.11, bo nie był używany. Modele: MIT (Whisper, CLIP), licencje modeli w licencje.md. Zdjęć osób w repo nie ma, są tylko wektory z plików Commons na wolnej licencji z autorem i licencją |
 | §4 ust. 3–8 | zwycięzcy przenoszą autorskie prawa majątkowe na NASK-PIB (art. 74 ust. 4 i art. 50 ustawy), wszyscy współtwórcy podpisują wspólnie | kod, dokumentacja i skrypty są w jednym repozytorium; po przeniesieniu NASK-PIB może je zmieniać, łączyć i wdrażać bez naszej zgody (umowa §1 ust. 3–5) |
-| umowa §1 ust. 1 pkt 4 | autor zamieszcza na platformie konkursowej kod źródłowy z dokumentacją w formie pozwalającej na jego wykorzystanie | **do zrobienia przez zespół**: repozytorium jest prywatne, więc w zgłoszeniu na HackTribe trzeba dać organizatorowi dostęp do repo albo dołączyć archiwum kodu; instalacja jednym poleceniem `python scripts/start.py`, dokumentacja w `README.md` i `docs/` |
+| umowa §1 ust. 1 pkt 4 | autor zamieszcza na platformie konkursowej kod źródłowy z dokumentacją w formie pozwalającej na jego wykorzystanie | zrobione: link do repozytorium w zgłoszeniu na HackTribe i archiwum kodu; instalacja jednym poleceniem `python scripts/start.py`, dokumentacja w `README.md` i `docs/` |
 | umowa §6 ust. 3 | zgoda na korzystanie z utworu bez oznaczenia autorstwa | w kodzie i interfejsie nie ma wymaganych oznaczeń autorstwa |
 | §5 ust. 5 | organizator może zmienić regulamin, informując mailem | przy zmianie podmieniamy PDF w `docs/zrodla/` i tę tabelę |
 
@@ -136,6 +136,6 @@ Z przewodnika uczestnika i FAQ (strona hacknation.pl, odczyt 21.11):
 ## Otwarte sprawy dla zespołu
 
 1. Założyć szkic na HackTribe przed 20:00 i podpiąć repozytorium.
-2. Nadać organizatorowi dostęp do prywatnego repo albo ustalić inną formę przekazania kodu.
+2. Link do repozytorium w zgłoszeniu i archiwum kodu.
 3. Zapytać mentorów NASK o dwie rzeczy: zasady użycia asystenta AI do pisania kodu, warunki przeniesienia praw oraz dopuszczalność przekazania materiałów organizatora dostawcy API.
 4. Przygotować prezentację na 5 minut i demo do 2 minut.

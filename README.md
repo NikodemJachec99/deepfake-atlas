@@ -36,7 +36,7 @@ Silnik nie dostał żadnej informacji, które sprawy do siebie pasują. Z 28 str
 - **Próba jury „spróbuj zgubić kampanię”**: 7 z 7 przebranych wariantów (przycięty i przekompresowany zrzut, podmienione zdania, nowa domena) wróciło do swojej kampanii i operatora. Kopia zrzutu i tekstu na obcej infrastrukturze dała tylko „podobne”.
 - **Wrażliwość na wagi**: zmiana siły dowodów o ±50% rusza tylko 4 pary graniczne, szansa wstępna i próg pewności nie zmieniają żadnej relacji.
 
-Szczegóły, metoda pomiaru i polecenia do powtórzenia: [docs/dane-organizatora.md](docs/dane-organizatora.md). Surowych danych organizatora w repozytorium nie ma (leżą lokalnie w `data/raw/`, poza gitem), a ten plik jest jedynym miejscem z domenami ze spraw, dlatego **repozytorium ma pozostać prywatne**.
+Szczegóły, metoda pomiaru i polecenia do powtórzenia: [docs/dane-organizatora.md](docs/dane-organizatora.md). Surowych danych organizatora w repozytorium nie ma (leżą lokalnie w `data/raw/`, poza gitem), a ten plik jest jedynym miejscem z domenami ze spraw.
 
 > **Czego nie twierdzimy.** Nie mamy zbioru z oznaczonymi kampaniami, więc **nie podajemy precyzji ani czułości**. „Pewność” przy krawędzi to niekalibrowany wynik modelu, nie prawdopodobieństwo. Pełna lista ograniczeń: [sekcja niżej](#ograniczenia-powiedziane-wprost).
 
@@ -575,7 +575,7 @@ Repozytorium **celowo nie ma pliku licencji**. Zgodnie z regulaminem zadania (§
 |---|---|
 | [docs/metodyka.md](docs/metodyka.md) | wejście, potok, cechy, model par, relacje, grupowanie, łowca, interpretowalność, źródła, ograniczenia |
 | [docs/api.md](docs/api.md) | kontrakt API z polami odpowiedzi |
-| [docs/dane-organizatora.md](docs/dane-organizatora.md) | wyniki na danych organizatora, odporność, wrażliwość, próba jury (zawiera domeny ze spraw: repo prywatne) |
+| [docs/dane-organizatora.md](docs/dane-organizatora.md) | wyniki na danych organizatora, odporność, wrażliwość, próba jury (zawiera domeny ze spraw) |
 | [docs/wymagania.md](docs/wymagania.md) | tabela zgodności z opisem zadania i regulaminami |
 | [docs/licencje.md](docs/licencje.md) | biblioteki, modele, usługi, dane, licencje i ograniczenia |
 | [docs/prezentacja.md](docs/prezentacja.md) | slajdy, scenariusz demo, pytania, nagranie |

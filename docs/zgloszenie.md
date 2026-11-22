@@ -2,7 +2,7 @@
 
 Szkic projektu trzeba założyć **21.11 przed 20:00** (później nie da się utworzyć projektu ani zmienić zadania). Zgłoszenie końcowe do **22.11 godz. 11:00**. Po tym terminie repozytorium zostaje bez zmian.
 
-Zespół: dwie osoby, Nikodem i Sokół. Repozytorium jest prywatne, bo `docs/dane-organizatora.md` opisuje sprawy z paczki organizatora. Organizatorowi trzeba nadać dostęp do odczytu albo przekazać kod w inny sposób ([wymagania.md](wymagania.md)).
+Zespół: dwie osoby, Nikodem i Sokół. Surowe paczki organizatora są poza gitem, a `docs/dane-organizatora.md` opisuje wyniki na sprawach z paczki ([wymagania.md](wymagania.md)).
 
 ## Nazwa
 
@@ -36,7 +36,7 @@ Python 3.12, Django 5.2, DRF, Temporal, PostgreSQL 16 z pgvector, RustFS (S3), N
 
 ## Repozytorium
 
-https://github.com/NikodemJachec99/deepfake-atlas (prywatne, dostęp dla organizatora)
+https://github.com/NikodemJachec99/deepfake-atlas
 
 ## Jak sprawdzić
 

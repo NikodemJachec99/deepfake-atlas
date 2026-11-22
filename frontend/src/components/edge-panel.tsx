@@ -14,7 +14,7 @@ import { DecisionHistory } from "./decision-history";
 import type { Regroup, ReviewItem, VerdictReason } from "@/lib/api";
 import { PremiseChallenge } from "./premise-challenge";
 import { EvidenceLab } from "./evidence-lab";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { api, ApiError, artifactDownloadUrl, artifactImageUrl, type AdDetail, type AdSummary, type EdgeDetail, type Evidence, type Verdict } from "@/lib/api";
 import { SOURCE_LABELS, utcEdgeVersion, markerValue, RELATION_HINT, adTitle, bits, dateTime, errorText, famVar, hostOf, num, plural } from "@/lib/format";
@@ -181,6 +181,7 @@ const DECISIONS: { verdict: Exclude<Verdict, "">; label: string; key: string; ic
 ];
 
 function Decision({ edge, onSaved, refresh }: { edge: EdgeDetail; refresh: () => void; onSaved: (edge: EdgeDetail & { regroup?: Regroup }) => void }) {
+  const footer = useRef<HTMLElement>(null);
   const reasons = useApi("verdict-reasons", api.kinds);
   const storageKey = `atlas:decision:${edge.id}:${edge.updated_at}`;
   const savedReason = edge.verdict_reason && edge.verdict_reason !== "unknown" ? edge.verdict_reason : "";
@@ -230,11 +231,11 @@ function Decision({ edge, onSaved, refresh }: { edge: EdgeDetail; refresh: () =>
   useHotkey((event) => {
     if (event.repeat || isTyping(event) || event.ctrlKey || event.metaKey || event.altKey || busy || stale) return;
     const decision = DECISIONS.find((d) => d.key.toLowerCase() === event.key.toLowerCase());
-    if (decision) edit({ selected: decision.verdict });
+    if (decision && footer.current?.getClientRects().length) edit({ selected: decision.verdict });
   });
 
   return (
-    <footer className="shrink-0 border-t border-line bg-panel p-2">
+    <footer ref={footer} className="shrink-0 border-t border-line bg-panel p-2">
       <div className="flex items-center justify-between gap-2 pb-1.5">
         <span className="cap">Twoja ocena powiązania</span>
         <span className="flex items-center gap-2 text-xs text-muted">

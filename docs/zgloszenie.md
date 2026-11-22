@@ -24,13 +24,15 @@ Wynik to trzy relacje (ta sama kampania, ten sam operator, podobna koncepcja), k
 
 Na danych organizatora (28 stron z 25 spraw) system bez podpowiedzi znalazł operatora z 8 stronami na 7 domenach w 2 kampaniach, spiętego identyfikatorami z panelu lejka i pikselem Meta, drugiego operatora z 3 stronami i kampanię z dwiema różnymi stronami pod tym samym adresem. Każdą krawędź między sprawami przejrzeliśmy ręcznie.
 
-Dodatkowo: laboratorium dowodów (co zostaje z połączenia po wyłączeniu śladów i test najsłabszego ogniwa), wskazówki "co sprawdzić dalej", porównanie dwóch przechwyceń tego samego adresu, twarze z małej bazy referencyjnej (także na klatkach nagrań), analiza nagrań reklam (klatki: OCR, twarze, hash), podobieństwo znaczenia treści (lokalny model wielojęzyczny łapie przepisany artykuł), pobranie wzbogaconego korpusu jako ZIP i operatorów z kampaniami w STIX 2.1 do wymiany z zespołami CERT, Lista Ostrzeżeń CERT Polska, crt.sh, RDAP, konektory bibliotek reklam i harmonogram skanów.
+Analityk pracuje na stanowisku oceny: kolejka par z powodem uwagi ("wspólne zaplecze do potwierdzenia", "podobna treść bez wspólnego zaplecza"), porównanie materiałów A i B, najważniejsze przesłanki z ograniczeniami i ocena przypisana do konkretnej wersji dowodów. Odrzucenie mostu rozdziela kampanię i operatora. Analityk może też zakwestionować przesłankę w całym korpusie (np. identyfikator, który okazał się wspólnym pośrednikiem): podgląd pokazuje, które grupy się rozpadną, a które trzymają się na niezależnych śladach, zapis przelicza krawędzie i grupy, przywrócenie je cofa, historia zostaje.
 
-Wynik sprawdziliśmy liczbowo. Bez plików HAR zostaje 19 z 33 połączeń wspólnego źródła, bez zapisu strony 30, bez zrzutów 32, a w żadnym wariancie nie powstaje fałszywe połączenie. Zmiana wag modelu o ±50% rusza tylko 4 pary graniczne, a szansa wstępna i próg pewności nie zmieniają żadnej relacji.
+Dodatkowo: crawler z przeglądarką w odizolowanym kontenerze (wyjście tylko przez proxy wpuszczające adresy publiczne, HAR i zrzut strony z wykonanym JavaScriptem), łowca domen (nowe certyfikaty z logów CT pasujące do wzorców znanych operatorów, potwierdzane crawlerem), alerty o nowych materiałach znanych kampanii, pakiet dowodowy operatora i kampanii (raport, artefakty z sumami SHA-256, STIX, skrypt weryfikacji), laboratorium dowodów i test najsłabszego ogniwa, porównanie dwóch przechwyceń tego samego adresu, twarze z małej bazy referencyjnej, nagrania reklam (klatki: OCR, twarze, hash; mowa zamieniona na tekst lokalnym modelem Whisper), podobne ujęcie (CLIP) i podobieństwo znaczenia treści, wagi uczone metodą EM do porównania z eksperckimi, Lista Ostrzeżeń CERT Polska, crt.sh, RDAP, konektory bibliotek reklam i harmonogram skanów.
+
+Wynik sprawdziliśmy liczbowo. Bez plików HAR zostaje 19 z 33 połączeń wspólnego źródła, bez zapisu strony 30, bez zrzutów 32, a w żadnym wariancie nie powstaje fałszywe połączenie. Zmiana wag modelu o ±50% rusza tylko 4 pary graniczne, a szansa wstępna i próg pewności nie zmieniają żadnej relacji. W próbie "spróbuj zgubić kampanię" (prawdziwy upload na osobnym stosie) 7 z 7 przebranych wariantów (przycięty i przekompresowany zrzut, zmieniony tekst, nowa domena) wróciło do swojej kampanii i operatora, a kopia zrzutu i tekstu na obcej infrastrukturze dała tylko podobieństwo, bez wspólnego operatora.
 
 ## Technologie
 
-Python 3.12, Django 5.2, DRF, Temporal, PostgreSQL 16 z pgvector, RustFS (S3), Neo4j, OpenSearch, RapidOCR (PP-OCRv5), OpenCV YuNet i SFace, paraphrase-multilingual-MiniLM-L12-v2 (ONNX), Next.js 16, React 19, TypeScript, Tailwind 4, Sigma.js, Docker Compose.
+Python 3.12, Django 5.2, DRF, Temporal, PostgreSQL 16 z pgvector, RustFS (S3), Neo4j, OpenSearch, Playwright z Chromium, RapidOCR (PP-OCRv5), OpenCV YuNet i SFace, paraphrase-multilingual-MiniLM-L12-v2 (ONNX), CLIP ViT-B/32 (ONNX), Whisper small (faster-whisper), Next.js 16, React 19, TypeScript, Tailwind 4, Sigma.js, Docker Compose.
 
 ## Repozytorium
 
@@ -38,15 +40,13 @@ https://github.com/NikodemJachec99/deepfake-atlas (prywatne, dostęp dla organiz
 
 ## Jak sprawdzić
 
+Paczki rozpakowane do `data/raw/<nazwa>/`, potem:
+
 ```bash
-cp .env.example .env
-docker compose up -d --build
-docker compose exec backend python manage.py seed_people
-docker compose exec backend python manage.py collect cert_pl
-docker compose exec backend python manage.py import_bundle /data/raw/nask --name nask
+python scripts/start.py
 ```
 
-Interfejs: http://localhost:3000. Szczegóły i porty: [README.md](../README.md). Sprawdzone na świeżym klonie na Windowsie i na Linuksie, CI stawia cały stos przy każdym PR.
+Skrypt stawia wszystkie usługi, wczytuje bazę osób i importuje paczki. Interfejs: http://localhost:3000, ekran "Do oceny" to stanowisko analityka. Szczegóły i porty: [README.md](../README.md). Sprawdzone na świeżym klonie na Windowsie (obie paczki: 28 reklam, 4 kampanie, 3 operatorów) i wcześniej na Linuksie. Każda zmiana w repo przechodziła lokalnie ruff, pytest, lint i build frontendu po scaleniu z main.
 
 ## Dokumenty dla jury
 

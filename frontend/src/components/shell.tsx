@@ -9,7 +9,7 @@ import { api, RELATION_LABELS, type Stats } from "@/lib/api";
 import { dateTime } from "@/lib/format";
 
 const sections: Record<string, string> = {
-  "/premises": "Historia zakwestionowań", "/hunt": "Łowca domen", "/": "Analiza", "/investigation": "Śledztwo", "/archive": "Archiwum",
+  "/review": "Do oceny", "/premises": "Historia zakwestionowań", "/hunt": "Łowca domen", "/": "Analiza", "/investigation": "Śledztwo", "/archive": "Archiwum",
   "/operators": "Operatorzy", "/campaigns": "Kampanie", "/ads": "Reklamy", "/alerts": "Alerty", "/weights": "Wagi markerów",
 };
 

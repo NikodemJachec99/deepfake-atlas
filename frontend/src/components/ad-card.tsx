@@ -82,11 +82,16 @@ function MaterialWorkspace({ ad }: { ad: AdDetail }) {
     <div className="grid xl:grid-cols-[minmax(0,1fr)_minmax(22rem,32%)]">
       <div className="min-w-0 space-y-4 p-5">
         {(ad.creatives.length > 0 || !ad.videos?.length) && <h2 className="text-lg font-semibold">Zrzuty reklamy</h2>}
+        {image && <a className="block text-accent underline" href={artifactImageUrl(image)} target="_blank" rel="noreferrer">
+          {/* eslint-disable-next-line @next/next/no-img-element -- obraz dowodowy z API */}
+          <img className="mb-2 max-h-56 w-full object-contain" src={artifactImageUrl(image)} alt={`Podgląd zrzutu ${ad.creatives.indexOf(image) + 1}`} />
+          Otwórz zrzut w pełnym rozmiarze
+        </a>}
         {ad.creatives.length ? <div className="flex flex-wrap gap-3">
           {ad.creatives.map((sha, i) => <button key={sha} type="button" onClick={() => setSelected(i)}
             aria-pressed={image === sha} className="max-w-full rounded-md border border-line bg-panel p-1 text-left aria-pressed:outline-2 aria-pressed:outline-accent">
             {/* eslint-disable-next-line @next/next/no-img-element -- obraz dowodowy z API */}
-            <img className="h-36 max-w-full object-contain" alt="" src={artifactImageUrl(sha)} />
+            <img className="h-16 max-w-full object-contain" alt="" src={artifactImageUrl(sha)} />
             <span className="block px-1 py-1">Zrzut {i + 1}</span>
           </button>)}
         </div> : !ad.videos?.length && <p className="text-muted">Brak zrzutu reklamy w materiale.</p>}
@@ -98,11 +103,6 @@ function MaterialWorkspace({ ad }: { ad: AdDetail }) {
       </div>
       <aside className="min-w-0 space-y-3 border-t border-line bg-panel p-5 xl:border-t-0 xl:border-l">
         <h2 className="text-lg font-semibold">Wybrany materiał</h2>
-        {image && <a className="block text-accent underline" href={artifactImageUrl(image)} target="_blank" rel="noreferrer">
-          {/* eslint-disable-next-line @next/next/no-img-element -- obraz dowodowy z API */}
-          <img className="mb-2 max-h-56 w-full object-contain" src={artifactImageUrl(image)} alt={`Podgląd zrzutu ${ad.creatives.indexOf(image) + 1}`} />
-          Otwórz zrzut w pełnym rozmiarze
-        </a>}
         <AdMeta ad={ad} />
       </aside>
     </div>
@@ -206,6 +206,7 @@ export function EdgeRows({ edges, adId, onEdge, selected }: { edges: Edge[]; adI
 
 // Wersja do inspektora: jedna kolumna.
 export function AdCard({ adId, onEdge, selectedEdge, full = false }: { adId: number; onEdge: (edge: Edge) => void; selectedEdge?: number | null; full?: boolean }) {
+  const [tab, setTab] = useState("Materiał");
   const ad = useApi(`ad:${adId}`, () => api.ad(adId));
   const edges = useApi(ad.data ? `ad-edges:${adId}` : null, () => api.adEdges(adId));
   if (ad.loading) return <Loading label="Pobieranie karty reklamy" />;
@@ -214,7 +215,9 @@ export function AdCard({ adId, onEdge, selectedEdge, full = false }: { adId: num
   if (!data) return null;
   return (
     <div className="flex flex-col">
-      {full ? <MaterialWorkspace key={adId} ad={data} /> : <div className="flex flex-col gap-2 border-b border-line p-2">
+      {full && <nav aria-label="Sekcje reklamy" className="flex flex-wrap gap-2 border-b border-line p-2">{["Materiał", "Powiązania", "Ślady", "Historia"].map(t => <button key={t} aria-pressed={tab === t} className="rounded px-3 aria-pressed:bg-accent-soft" onClick={() => setTab(t)}>{t}</button>)}</nav>}
+      {full && tab !== "Materiał" && <h1 className="px-3 py-2 font-semibold">Reklama #{adId} · {adTitle(data)}</h1>}
+      {full ? tab === "Materiał" && <MaterialWorkspace key={adId} ad={data} /> : <div className="flex flex-col gap-2 border-b border-line p-2">
         <div className="flex items-center justify-between gap-2">
           <Mono className="text-muted">reklama #{data.id}</Mono>
           <Link href={`/ads/${data.id}`} className="text-accent hover:underline">
@@ -228,13 +231,14 @@ export function AdCard({ adId, onEdge, selectedEdge, full = false }: { adId: num
         <AdMeta ad={data} />
         {data.text && <div className="max-h-24 overflow-auto"><AdText ad={data} /></div>}
       </div>}
-      <div className="border-b border-line p-2">
+      {(!full || tab === "Ślady") && <div className="border-b border-line p-2">
         <GenomeBands genome={data.genome} caption="Genom reklamy" />
-      </div>
-      <p className="cap flex h-7 items-center border-b border-line px-2">Powiązania</p>
-      {edges.loading ? <Loading /> : edges.error ? <ErrorBox message={edges.error} onRetry={edges.reload} /> : <EdgeRows edges={edges.data ?? []} adId={adId} onEdge={onEdge} selected={selectedEdge} />}
-      <p className="cap flex h-7 items-center border-y border-line px-2">Markery</p>
-      <MarkerList videos={data.videos} genome={data.genome} initiallyOpen={full} />
+      </div>}
+      {(!full || tab === "Powiązania") && <><p className="cap flex h-7 items-center border-b border-line px-2">Powiązania</p>
+      {edges.loading ? <Loading /> : edges.error ? <ErrorBox message={edges.error} onRetry={edges.reload} /> : <EdgeRows edges={edges.data ?? []} adId={adId} onEdge={onEdge} selected={selectedEdge} />}</>}
+      {(!full || tab === "Ślady") && <><p className="cap flex h-7 items-center border-y border-line px-2">Markery</p>
+      <MarkerList videos={data.videos} genome={data.genome} initiallyOpen={full} /></>}
+      {full && tab === "Historia" && <dl className="p-4"><Field label="Pierwsza obserwacja">{dateTime(data.first_seen) || "Brak daty"}</Field><Field label={["capture", "manual"].includes(data.source) ? "Import do systemu" : "Ostatnia obserwacja"}>{dateTime(data.last_seen) || "Brak daty"}</Field></dl>}
     </div>
   );
 }

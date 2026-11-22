@@ -56,6 +56,7 @@ function toggle<T>(set: Set<T>, value: T, on: boolean): Set<T> {
 
 export function Investigation() {
   const { params, set, int } = useQuery();
+  const [mobileView, setMobileView] = useState<string | null>(null);
   const [mobileFilters, setMobileFilters] = useState(false);
   const operatorId = int("operator");
   const campaignId = int("campaign");
@@ -237,8 +238,8 @@ export function Investigation() {
       layout="force"
       selectedEdge={edgeId}
       selectedNode={nodeId}
-      onEdge={(id) => set({ edge: id })}
-      onNode={(id) => set({ node: id, edge: null })}
+      onEdge={(id) => { setMobileView("Porównanie"); set({ edge: id }); }}
+      onNode={(id) => { setMobileView("Porównanie"); set({ node: id, edge: null }); }}
       onClear={() => set({ edge: null, node: null })}
     />
   );
@@ -269,7 +270,7 @@ export function Investigation() {
             </thead>
             <tbody>
               {visible.map((edge) => (
-                <tr key={edge.id} data-selected={edge.id === edgeId} onClick={() => set({ edge: edge.id })} className="cursor-pointer">
+                <tr key={edge.id} data-selected={edge.id === edgeId} onClick={() => { setMobileView("Porównanie"); set({ edge: edge.id }); }} className="cursor-pointer">
                   <td className="max-w-56">
                     <button type="button" className="table-action" aria-label={`Dowody powiązania reklam #${edge.source} i #${edge.target}`}>
                       #{edge.source}
@@ -312,7 +313,7 @@ export function Investigation() {
                 ...(heading ? [<tr key={heading}><th scope="rowgroup" colSpan={6}>{heading} ({rows.length})</th></tr>] : []),
                 ...rows.map((node) => (
                 <tr key={node.id} data-selected={node.id === nodeId} onClick={event => {
-                  if (!(event.target instanceof Element && event.target.closest("a"))) set({ node: node.id, edge: null });
+                  if (!(event.target instanceof Element && event.target.closest("a"))) { setMobileView("Porównanie"); set({ node: node.id, edge: null }); }
                 }} className="cursor-pointer">
                   <td><button type="button" className="table-action" aria-label={`Otwórz reklamę #${node.id}`}>#{node.id}</button></td>
                   <td className="font-mono text-[0.92rem]">{node.case ?? ""}</td>
@@ -363,6 +364,7 @@ export function Investigation() {
     </Panel>
   );
 
+  const mode = mobileView === "Porównanie" && edgeId === null && nodeId === null ? "Lista" : mobileView ?? (edgeId !== null || nodeId !== null ? "Porównanie" : "Lista");
   const graphAndTable = (
     <Split id="inv-table" dir="col" fixed="second" initial={236} min={90} max={560}>
             <div className="flex min-h-0 min-w-0 flex-1">{canvas}</div>
@@ -373,7 +375,8 @@ export function Investigation() {
   return (
     <>
       <TopBar crumbs={crumbs} />
-      <div className="atlas-investigation"><Split id="inv-filters" dir="row" fixed="first" initial={208} min={180} max={360}>
+      <nav aria-label="Widok śledztwa" className="flex gap-2 px-3 min-[1000px]:hidden">{["Lista", "Porównanie", "Graf"].map(view => <button key={view} disabled={view === "Porównanie" && edgeId === null && nodeId === null} aria-pressed={view === mode} onClick={() => setMobileView(view)} className="rounded px-2 aria-pressed:bg-accent-soft disabled:opacity-50">{view}</button>)}</nav>
+      <div className="atlas-investigation" data-mode={mode}><Split id="inv-filters" dir="row" fixed="first" initial={208} min={180} max={360}>
         <div className="flex h-full min-h-0 flex-col">
           <button type="button" className="self-start px-3 py-2 text-accent md:hidden" aria-expanded={mobileFilters} aria-controls="investigation-filters" onClick={() => setMobileFilters(!mobileFilters)}>{mobileFilters ? "Zwiń filtry" : "Zakres i filtry"}</button>
           <div id="investigation-filters" className={`min-h-0 overflow-auto md:block ${mobileFilters ? "block" : "hidden"}`}>{filters}</div>

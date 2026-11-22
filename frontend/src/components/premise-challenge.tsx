@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { api, type Evidence, type Regroup } from "@/lib/api";
 import { bits, dateTime, errorText, plural } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
+import { useExpert } from "@/lib/expert";
 import { ErrorBox, GroupLink, Loading } from "./ui";
 
 const groupKind = (key: string) => (key.startsWith("O") ? "Operator" : "Kampania");
@@ -33,8 +34,9 @@ function RestoreDetails({ id }: { id: number }) {
   </details>;
 }
 
-export function PremiseChallenge({ item, refresh }: { item: Evidence; refresh: () => void }) {
+export function PremiseChallenge({ item, refresh, inline }: { item: Evidence; refresh: () => void; inline?: boolean }) {
   const values = [...new Set([item.value_a, item.value_b])].filter(Boolean);
+  const { expert } = useExpert();
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(values[0] ?? "");
   const [reason, setReason] = useState("");
@@ -65,18 +67,18 @@ export function PremiseChallenge({ item, refresh }: { item: Evidence; refresh: (
     catch (e) { setError(errorText(e)); }
     finally { setBusy(false); }
   }
-  return <section className="px-2 pb-2">
+  return <section className={inline ? "contents" : "px-2 pb-2"}>
     <button className="text-accent underline" aria-expanded={open} disabled={busy} onClick={() => setOpen(!open)}>Zakwestionuj przesłankę</button>
-    {open && <div className="grid gap-2 rounded border border-line p-3">
+    {open && <div className="grid basis-full gap-2 rounded border border-line p-3 text-sm">
       {!changes && values.length > 1 && <label>Wartość śladu <select disabled={busy} value={value} onChange={e => setValue(e.target.value)}>{values.map(v => <option key={v}>{v}</option>)}</select></label>}
       {!value && <p>Brak wartości śladu do zakwestionowania.</p>}
       {changes ? <><GroupChanges changes={changes}/><button className="text-accent" onClick={refresh}>Odśwież krawędź</button></> : preview.loading ? <Loading/> : preview.error ? <ErrorBox message={preview.error} onRetry={preview.reload}/> : preview.data && <>
         <h3 ref={heading} tabIndex={-1}>Wpływ na cały korpus · {preview.data.display_value || value}</h3>
-        <p>Krawędzie korzystające ze śladu: {preview.data.edge_count}. Podziały grup: {preview.data.split_count}.</p>
+        <p>{expert ? <>Krawędzie korzystające ze śladu: {preview.data.edge_count}. Podziały grup: {preview.data.split_count}.</> : <>Ten ślad łączy {preview.data.edge_count} {plural(preview.data.edge_count, "parę", "pary", "par")} reklam. {preview.data.split_count ? `Po zakwestionowaniu rozpadnie się ${preview.data.split_count} ${plural(preview.data.split_count, "grupa", "grupy", "grup")}.` : "Żadna grupa się nie rozpadnie."}</>}</p>
         <details><summary>Krawędzie przed i po zmianie</summary><ul>{preview.data.edges.map(e => <li key={e.id}>{adLabel(e.ad_a)} ↔ {adLabel(e.ad_b)} · {e.before.relation_label} ({bits(e.before.bits)} bita) → {e.removed ? "usunięcie powiązania" : e.after.relation_label + " (" + bits(e.after.bits) + " bita)"}</li>)}</ul></details>
         {Object.values(preview.data.groups).map((group, i) => <div key={i}>
           {group.split.map(g => <p key={g.key}>Podział: {groupKind(g.key)} {g.key} na {g.after.map(part => (part.key || "nową grupę") + " (" + adList(part.ads) + ")").join(" i ")} · Reklamy poza grupą: {adList(g.released)}</p>)}
-          {group.stay.map(g => <p key={g.key}>{g.key} pozostaje razem · {g.supported_by.map(s => s.label + " (" + bits(s.bits) + " bita)").join(", ") || "brak dodatkowych śladów w odpowiedzi"}</p>)}
+          {group.stay.map(g => <p key={g.key}>{g.key} pozostaje razem · {g.supported_by.map(s => expert ? s.label + " (" + bits(s.bits) + " bita)" : s.label).join(", ") || "brak dodatkowych śladów w odpowiedzi"}</p>)}
         </div>)}
         {preview.data.warnings.map(w => <p key={w}>{w}</p>)}
         <label>Powód zakwestionowania<textarea className="block w-full border border-line" value={reason} disabled={busy} onChange={e => setReason(e.target.value)}/></label>

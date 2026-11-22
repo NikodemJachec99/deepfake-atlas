@@ -16,12 +16,13 @@ import { PremiseChallenge } from "./premise-challenge";
 import { EvidenceLab } from "./evidence-lab";
 import { useRef, useState } from "react";
 
-import { api, ApiError, artifactDownloadUrl, artifactImageUrl, type AdDetail, type AdSummary, type EdgeDetail, type Evidence, type Verdict } from "@/lib/api";
+import { api, ApiError, artifactDownloadUrl, type AdDetail, type AdSummary, type EdgeDetail, type Evidence, type Verdict } from "@/lib/api";
 import { SOURCE_LABELS, reviewReasonLabel, utcEdgeVersion, markerValue, RELATION_HINT, adTitle, bits, dateTime, errorText, famVar, hostOf, num, plural } from "@/lib/format";
 import { isTyping, useApi, useHotkey } from "@/lib/hooks";
 import { useExpert } from "@/lib/expert";
 import { hypothesisSentence, isHardTrace, overallStrength, plainLimitation, rarityWords, STRENGTH_LABELS, traceStrength, type Strength } from "@/lib/hypothesis";
 
+import { ZoomImage } from "./zoom-image";
 import { Btn, Empty, ErrorBox, FamilyBar, FamilyDot, GroupLink, Kbd, Loading, Meter, Mono, RelationTag, Tag, VerdictTag } from "./ui";
 
 const VISUAL_KINDS = new Set(["creative_phash", "creative_sha256", "image_set"]);
@@ -32,10 +33,7 @@ function Creative({ sha, label, height = "h-28" }: { sha: string; label: string;
   const [broken, setBroken] = useState(false);
   if (broken) return <div className={`flex ${height} items-center justify-center rounded border border-line text-faint`}>zrzut niedostępny</div>;
   return (
-    <a href={artifactImageUrl(sha)} target="_blank" rel="noreferrer" title="Otwórz zrzut reklamy w nowej karcie" className="block overflow-hidden rounded border border-line bg-bg">
-      {/* eslint-disable-next-line @next/next/no-img-element -- obraz z API dowodów, bez optymalizacji po stronie Next */}
-      <img src={artifactImageUrl(sha)} alt={label} loading="lazy" onError={() => setBroken(true)} className={`${height} w-full object-contain`} />
-    </a>
+    <ZoomImage sha={sha} alt={label} title="Powiększ zrzut reklamy" onError={() => setBroken(true)} buttonClassName="w-full overflow-hidden rounded border border-line bg-bg" className={`${height} w-full object-contain`} />
   );
 }
 

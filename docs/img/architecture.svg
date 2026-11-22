@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-labelledby="t d">
+<title id="t">Architektura SCAM DNA: usługi docker compose</title>
+<desc id="d">Przeglądarka, frontend Next.js, backend Django z API, worker Temporal, Postgres z pgvector, magazyn S3, Neo4j, OpenSearch oraz crawler w sieci wewnętrznej z proxy wyjściowym.</desc>
+<defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#647BFF"/></marker>
+<marker id="g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#33D9BC"/></marker></defs>
+<g font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+<rect width="1280" height="640" rx="20" fill="#0B1120"/>
+<text x="40" y="44" font-size="13" font-weight="700" fill="#7F90B3" letter-spacing="2.5">WARSTWA UŻYTKOWNIKA</text>
+<rect x="40" y="58" width="250" height="92" rx="14" fill="#10203A" stroke="#9FB0CF" stroke-width="1.6"/><rect x="40" y="58" width="6" height="92" rx="3" fill="#9FB0CF"/>
+<text x="62" y="88" font-size="18" font-weight="700" fill="#fff">Przeglądarka</text>
+<text x="62" y="110" font-size="13.5" fill="#B7C4DE">analityk, jury, tryb prosty</text>
+<text x="62" y="128" font-size="13.5" fill="#B7C4DE">i tryb ekspercki</text>
+<rect x="350" y="58" width="280" height="92" rx="14" fill="#10203A" stroke="#3D9BE0" stroke-width="1.6"/><rect x="350" y="58" width="6" height="92" rx="3" fill="#3D9BE0"/>
+<text x="372" y="88" font-size="18" font-weight="700" fill="#fff">frontend</text>
+<text x="372" y="110" font-size="13.5" fill="#B7C4DE">Next.js 16, React 19, Tailwind 4</text>
+<text x="372" y="128" font-size="13.5" fill="#B7C4DE">sigma.js (graf)</text>
+<text x="616" y="82" font-size="12" fill="#3D9BE0" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">:3000</text>
+<rect x="690" y="58" width="300" height="92" rx="14" fill="#10203A" stroke="#25B48A" stroke-width="1.6"/><rect x="690" y="58" width="6" height="92" rx="3" fill="#25B48A"/>
+<text x="712" y="88" font-size="18" font-weight="700" fill="#fff">backend (API)</text>
+<text x="712" y="110" font-size="13.5" fill="#B7C4DE">Django 5.2, DRF, OpenAPI, SSE</text>
+<text x="712" y="128" font-size="13.5" fill="#B7C4DE">uvicorn (ASGI), migracje przy starcie</text>
+<text x="976" y="82" font-size="12" fill="#25B48A" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">:8000</text>
+<rect x="1040" y="58" width="200" height="92" rx="14" fill="#10203A" stroke="#E0A12B" stroke-width="1.6"/><rect x="1040" y="58" width="6" height="92" rx="3" fill="#E0A12B"/>
+<text x="1062" y="88" font-size="18" font-weight="700" fill="#fff">worker</text>
+<text x="1062" y="110" font-size="13.5" fill="#B7C4DE">potok analizy,</text>
+<text x="1062" y="128" font-size="13.5" fill="#B7C4DE">konektory, łowca</text>
+<line x1="290" y1="104" x2="348" y2="104" stroke="#647BFF" stroke-width="2.2" marker-end="url(#a)"/>
+<line x1="630" y1="104" x2="688" y2="104" stroke="#647BFF" stroke-width="2.2" marker-end="url(#a)"/>
+<line x1="1040" y1="128" x2="992" y2="128" stroke="#647BFF" stroke-width="2.2" marker-end="url(#a)"/>
+<text x="40" y="178" font-size="13" font-weight="700" fill="#7F90B3" letter-spacing="2.5">DANE I ORKIESTRACJA (kontenery, tylko 127.0.0.1)</text>
+<rect x="40" y="210" width="230" height="104" rx="14" fill="#10203A" stroke="#3D9BE0" stroke-width="1.6"/><rect x="40" y="210" width="6" height="104" rx="3" fill="#3D9BE0"/>
+<text x="62" y="240" font-size="18" font-weight="700" fill="#fff">db</text>
+<text x="62" y="262" font-size="13.5" fill="#B7C4DE">PostgreSQL 16 + pgvector</text>
+<text x="62" y="280" font-size="13.5" fill="#B7C4DE">źródło prawdy, wektory, HNSW</text>
+<text x="256" y="234" font-size="12" fill="#3D9BE0" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">:5432</text>
+<rect x="290" y="210" width="230" height="104" rx="14" fill="#10203A" stroke="#E0A12B" stroke-width="1.6"/><rect x="290" y="210" width="6" height="104" rx="3" fill="#E0A12B"/>
+<text x="312" y="240" font-size="18" font-weight="700" fill="#fff">temporal</text>
+<text x="312" y="262" font-size="13.5" fill="#B7C4DE">orkiestracja, harmonogramy</text>
+<text x="312" y="280" font-size="13.5" fill="#B7C4DE">serwer deweloperski</text>
+<text x="506" y="234" font-size="12" fill="#E0A12B" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">:7233 / 8233</text>
+<rect x="540" y="210" width="230" height="104" rx="14" fill="#10203A" stroke="#25B48A" stroke-width="1.6"/><rect x="540" y="210" width="6" height="104" rx="3" fill="#25B48A"/>
+<text x="562" y="240" font-size="18" font-weight="700" fill="#fff">s3 (RustFS)</text>
+<text x="562" y="262" font-size="13.5" fill="#B7C4DE">dowody adresowane</text>
+<text x="562" y="280" font-size="13.5" fill="#B7C4DE">SHA-256 treści</text>
+<text x="756" y="234" font-size="12" fill="#25B48A" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">:9000</text>
+<rect x="790" y="210" width="210" height="104" rx="14" fill="#10203A" stroke="#D26FA9" stroke-width="1.6"/><rect x="790" y="210" width="6" height="104" rx="3" fill="#D26FA9"/>
+<text x="812" y="240" font-size="18" font-weight="700" fill="#fff">neo4j</text>
+<text x="812" y="262" font-size="13.5" fill="#B7C4DE">projekcja grafu</text>
+<text x="812" y="280" font-size="13.5" fill="#B7C4DE">(Community)</text>
+<text x="986" y="234" font-size="12" fill="#D26FA9" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">:7687</text>
+<rect x="1020" y="210" width="220" height="104" rx="14" fill="#10203A" stroke="#EF7A3C" stroke-width="1.6"/><rect x="1020" y="210" width="6" height="104" rx="3" fill="#EF7A3C"/>
+<text x="1042" y="240" font-size="18" font-weight="700" fill="#fff">opensearch</text>
+<text x="1042" y="262" font-size="13.5" fill="#B7C4DE">pełny tekst reklam</text>
+<text x="1042" y="280" font-size="13.5" fill="#B7C4DE">(projekcja)</text>
+<text x="1226" y="234" font-size="12" fill="#EF7A3C" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">:9200</text>
+<g stroke="#33D9BC" stroke-width="1.6" stroke-dasharray="4 4" stroke-opacity="0.75" fill="none"><path d="M840 152V190M1090 152V190M155 190H1130"/><path d="M155 190V208M405 190V208M655 190V208M895 190V208M1130 190V208"/></g>
+<text x="40" y="364" font-size="13" font-weight="700" fill="#F16C92" letter-spacing="2.5">PIASKOWNICA NA STRONY OSZUSTÓW</text>
+<rect x="40" y="376" width="800" height="216" rx="18" fill="none" stroke="#F16C92" stroke-width="1.5" stroke-dasharray="7 6"/>
+<text x="60" y="404" font-size="14" fill="#F8A7C0">sieć crawl: internal, bez wyjścia na świat, bez bazy, S3 i kolejek. Z crawlerem rozmawia tylko worker.</text>
+<rect x="64" y="420" width="240" height="140" rx="14" fill="#10203A" stroke="#F16C92" stroke-width="1.6"/><rect x="64" y="420" width="6" height="140" rx="3" fill="#F16C92"/>
+<text x="86" y="450" font-size="18" font-weight="700" fill="#fff">crawler</text>
+<text x="86" y="472" font-size="13.5" fill="#B7C4DE">Chromium (Playwright)</text>
+<text x="86" y="490" font-size="13.5" fill="#B7C4DE">render jako ofiara i jako automat</text>
+<text x="86" y="508" font-size="13.5" fill="#B7C4DE">HAR, zrzut, DOM po skryptach</text>
+<text x="86" y="526" font-size="13.5" fill="#B7C4DE">cap_drop ALL, read-only</text>
+<rect x="364" y="420" width="220" height="140" rx="14" fill="#10203A" stroke="#F16C92" stroke-width="1.6"/><rect x="364" y="420" width="6" height="140" rx="3" fill="#F16C92"/>
+<text x="386" y="450" font-size="18" font-weight="700" fill="#fff">crawler-egress</text>
+<text x="386" y="472" font-size="13.5" fill="#B7C4DE">proxy: tylko adresy</text>
+<text x="386" y="490" font-size="13.5" fill="#B7C4DE">publiczne, porty 80/443/</text>
+<text x="386" y="508" font-size="13.5" fill="#B7C4DE">8080/8443, sprawdzony IP</text>
+<text x="386" y="526" font-size="13.5" fill="#B7C4DE">(blokada SSRF)</text>
+<line x1="306" y1="490" x2="362" y2="490" stroke="#F16C92" stroke-width="2.2" marker-end="url(#a)"/>
+<rect x="640" y="440" width="170" height="100" rx="14" fill="#0B1120" stroke="#7F90B3" stroke-width="1.4"/><text x="725" y="484" font-size="18" font-weight="700" fill="#fff" text-anchor="middle">internet</text><text x="725" y="508" font-size="13" fill="#B7C4DE" text-anchor="middle">strony oszustów</text>
+<line x1="586" y1="490" x2="638" y2="490" stroke="#F16C92" stroke-width="2.2" marker-end="url(#a)"/>
+<text x="880" y="364" font-size="13" font-weight="700" fill="#7F90B3" letter-spacing="2.5">ŹRÓDŁA ZEWNĘTRZNE</text>
+<rect x="880" y="380" width="360" height="34" rx="17" fill="#10203A" stroke="#2A3F66"/><text x="898" y="402" font-size="14" fill="#E4EBF8" font-weight="600">Lista CERT Polska</text><text x="1224" y="402" font-size="12" fill="#7F90B3" text-anchor="end">bez klucza</text>
+<rect x="880" y="422" width="360" height="34" rx="17" fill="#10203A" stroke="#2A3F66"/><text x="898" y="444" font-size="14" fill="#E4EBF8" font-weight="600">RDAP, crt.sh, Team Cymru</text><text x="1224" y="444" font-size="12" fill="#7F90B3" text-anchor="end">bez klucza</text>
+<rect x="880" y="464" width="360" height="34" rx="17" fill="#10203A" stroke="#2A3F66"/><text x="898" y="486" font-size="14" fill="#E4EBF8" font-weight="600">Microsoft Ad Library</text><text x="1224" y="486" font-size="12" fill="#7F90B3" text-anchor="end">bez klucza</text>
+<rect x="880" y="506" width="360" height="34" rx="17" fill="#10203A" stroke="#2A3F66"/><text x="898" y="528" font-size="14" fill="#E4EBF8" font-weight="600">Meta Ad Library</text><text x="1224" y="528" font-size="12" fill="#7F90B3" text-anchor="end">token (opcjonalny)</text>
+<rect x="880" y="548" width="360" height="34" rx="17" fill="#10203A" stroke="#2A3F66"/><text x="898" y="570" font-size="14" fill="#E4EBF8" font-weight="600">Wikidata, Commons</text><text x="1224" y="570" font-size="12" fill="#7F90B3" text-anchor="end">tylko build_face_refs</text>
+<text x="40" y="624" font-size="12.5" fill="#7F90B3">Modele (OCR, twarze, znaczenie treści, obraz, mowa) działają lokalnie w workerze na CPU i niczego nie wysyłają na zewnątrz.</text>
+</g></svg>

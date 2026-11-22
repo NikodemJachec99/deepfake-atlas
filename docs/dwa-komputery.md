@@ -1,5 +1,7 @@
 # Praca na dwóch komputerach
 
+> **Stan z 22.11.2026, ok. 03:20:** komputer `koder` zakończył pracę. Komputer `glowny` robi wszystko, także `frontend/` (strefa frontend jest dopisana głównemu w `scripts/praca.py`). Reszta dokumentu opisuje mechanizm, z którego korzystaliśmy przez większość wydarzenia.
+
 Komputer główny (Windows) trzyma kontenery, dane i ciężkie operacje. MacBook tylko pisze frontend i łączy się z backendem głównego po sieci. Zadania są w GitHub Issues, więc oba komputery widzą ten sam stan od razu, bez czekania na `git pull`.
 
 ## Jednorazowo na głównym

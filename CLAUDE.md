@@ -13,6 +13,8 @@ Nad repo pracują dwa komputery na osobnych kontach. Żeby nie robić tego sameg
 | `glowny` | mocny, Windows | backend, dane, infra, docs | wszystko, w tym Docker, import paczek, OCR, modele |
 | `koder` | MacBook | frontend | tylko kod w `frontend/`; bez Dockera, bez importu danych, bez modeli |
 
+**Zmiana z 22.11.2026 ok. 03:20, decyzja użytkownika: koder skończył pracę. Główny robi wszystko, także `frontend/` (strefa frontend dopisana głównemu w `scripts/praca.py`). Zasady jakości frontendu bez zmian: `npm run lint` i `npm run build`, ekran sprawdzony na prawdziwych danych.**
+
 Rola tej maszyny jest w pliku `.maszyna` (poza gitem). Jeśli go nie ma, poproś użytkownika o `python scripts/praca.py start glowny` albo `start koder --host <IP głównego> --port <port backendu>`. Na Macu polecenie to `python3`.
 
 ## "Rób swoje zadania zgodnie z planem"

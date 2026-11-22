@@ -123,7 +123,9 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
   const sorted = [...group.core_markers].sort((a,b) => (b.bits ?? -1) - (a.bits ?? -1) || Number(b.decisive) - Number(a.decisive) || b.in_group - a.in_group || a.ad_count - b.ad_count);
   const paths = sorted.filter(marker => marker.kind === "kit_path");
   const markers = sorted.filter(marker => marker.kind !== "kit_path");
-  const strongest = sorted.filter(marker => marker.bits != null).slice(0, 3);
+  const withBits = sorted.filter(marker => marker.bits != null);
+  // W trybie prostym jeden wiersz na rodzaj śladu (dwie wartości identyfikatora to wciąż jeden powód).
+  const strongest = expert ? withBits.slice(0, 3) : withBits.filter((marker, index) => withBits.findIndex(other => other.kind === marker.kind) === index).slice(0, 3);
   const representative = group.ads.find(ad => ad.title?.trim());
   const name = group.label.trim() || (representative ? adTitle(representative) : operator ? "Operator" : "Kampania");
   const latest = group.ads.filter(ad => ad.last_seen).sort((a,b) => Date.parse(b.last_seen!) - Date.parse(a.last_seen!))[0];

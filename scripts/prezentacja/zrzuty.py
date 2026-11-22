@@ -58,6 +58,9 @@ def main() -> None:
     same_campaign = edge_between(args.api, case2, case1)
     same_operator = edge_between(args.api, case2, p3)
     operator_a = operator_of(args.api, "O-0001")
+    # Para operatora A do potwierdzenia zaplecza: na niej pokazujemy stanowisko oceny i podważenie przesłanki.
+    queue = api(args.api, "/api/review?reason=operator_to_confirm")["results"] or api(args.api, "/api/review")["results"]
+    review_edge = queue[0]["id"]
 
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
@@ -88,11 +91,15 @@ def main() -> None:
              wait_text="Identyfikator strony w panelu lejka")
         shot("krawedz-operator", f"/investigation?ad={case2}&edge={same_operator}", left=panel, wait_text="Ten sam operator")
         shot("najslabszy-punkt", f"/investigation?ad={case2}&edge={same_campaign}", left=panel,
-             clicks=["Laboratorium dowodów", "Sprawdź najsłabszy punkt"], wait_text="Najmniejszy zestaw", scroll="Najmniejszy zestaw")
+             clicks=["Kontekst", "Laboratorium dowodów", "Sprawdź najsłabszy punkt"], wait_text="Najmniejszy zestaw", scroll="Najmniejszy zestaw")
         shot("dwie-twarze", f"/ads/{case61}", left=content, width=narrow, clicks=["Dwie twarze jednego linku"],
              wait_text="Różnice między obserwacjami", scroll="Różnice między obserwacjami")
-        shot("karta-reklamy", f"/ads/{p3}", left=content, width=narrow, wait_text="GENOM REKLAMY",
-             scroll="GENOM REKLAMY", block="start")
+        shot("karta-reklamy", f"/ads/{p3}?tab=traces", left=content, width=narrow, wait_text="Genom reklamy",
+             scroll="Genom reklamy", block="start")
+        # Stanowisko oceny i zakwestionowanie przesłanki (podgląd, bez zapisu), karta operatora z "Dlaczego razem".
+        shot("do-oceny", f"/review?edge={review_edge}", left=content, wait_text="Co uzasadnia tę hipotezę")
+        shot("przeslanka", f"/review?edge={review_edge}", left=content + CROP // 3, clicks=["Zakwestionuj przesłankę"], wait_text="Wpływ na cały korpus")
+        shot("karta-operatora", f"/operators/{operator_a}", left=content, wait_text="Dlaczego razem")
         browser.close()
 
 

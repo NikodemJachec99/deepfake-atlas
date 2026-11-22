@@ -55,10 +55,10 @@ Przed prezentacją sprawdź je jeszcze raz: `curl localhost:8000/api/stats`. Je�
 
 ### 7. Ograniczenia i dalej (30 s)
 
-- Wagi są eksperckie. Bez oznaczonego zbioru nie podajemy precyzji ani czułości. Następny krok: model uczony na decyzjach analityków, które już zapisujemy w dzienniku audytu.
+- Domyślnie działają wagi eksperckie, wagi uczone metodą EM są policzone do porównania. Bez oznaczonego zbioru nie podajemy precyzji ani czułości, a wynik modelu nie jest kalibrowany. Następny krok: kalibracja na decyzjach analityków, które już zapisujemy.
 - Twarze rozpoznajemy tylko dla osób z małej bazy referencyjnej. Z nagrań bierzemy klatki i mowę zamienioną na tekst (Whisper lokalnie), głosu mówcy nie porównujemy.
-- Strony na żywo pobieramy bez JavaScriptu. Pełny zestaw cech dają przechwycenia z HAR.
-- Działa jako `docker compose up`, z Temporalem, Postgresem i projekcją do Neo4j, sprawdzone na Windowsie i Linuksie, CI stawia cały stos przy każdym PR. Harmonogram skanuje bibliotekę reklam Microsoft. Wzbogacony korpus do pobrania jednym kliknięciem (`GET /api/export`).
+- Crawler z przeglądarką działa w odizolowanym kontenerze, ale bez polskiego adresu domowego; strony wykrywające automat mogą pokazać białą stronę.
+- Start jednym poleceniem (`python scripts/start.py`), z Temporalem, Postgresem, crawlerem i projekcją do Neo4j, sprawdzony na świeżym klonie. Harmonogram skanuje bibliotekę reklam Microsoft. Pakiet dowodowy operatora i korpus do pobrania jednym kliknięciem.
 
 ## Plik PDF do zgłoszenia
 
@@ -69,19 +69,19 @@ uv run --no-project --with playwright python scripts/prezentacja/zrzuty.py --bas
 uv run --no-project --with playwright python scripts/prezentacja/pdf.py --api http://localhost:8010 --shots data/zgloszenie/zrzuty --out data/zgloszenie/prezentacja.pdf
 ```
 
-- `zrzuty.py` otwiera graf operatora A, krawędzie spraw 1 i 2 oraz 2 i p3, laboratorium z testem najsłabszego ogniwa, dwie twarze sprawy 61 i kartę reklamy p3. Identyfikatory reklam i krawędzi szuka przez API po numerach spraw, bo zmieniają się przy imporcie. Tylko czyta.
-- `pdf.py` liczy wynik z API z filtrem `source=capture` (same paczki organizatora): strony, sprawy, kampanie, operatorów, krawędzie między stronami z paczek i strony z Listy CERT. Wstawia liczby i zrzuty do `scripts/prezentacja/slajdy.html` i drukuje 10 slajdów 1280x720. Przerywa, gdy PDF ma ponad 10 MB.
+- `zrzuty.py` otwiera graf operatora A, krawędzie spraw 1 i 2 oraz 2 i p3, laboratorium z testem najsłabszego ogniwa (zakładka Kontekst), dwie twarze sprawy 61, ślady karty reklamy p3, stanowisko oceny na parze operatora A, podgląd zakwestionowania jej najmocniejszej przesłanki i kartę operatora O-0001. Identyfikatory reklam i krawędzi szuka przez API po numerach spraw, bo zmieniają się przy imporcie. Tylko czyta.
+- `pdf.py` liczy wynik z API z filtrem `source=capture` (same paczki organizatora): strony, sprawy, kampanie, operatorów, krawędzie między stronami z paczek i strony z Listy CERT. Wstawia liczby i zrzuty do `scripts/prezentacja/slajdy.html` i drukuje 12 slajdów 1280x720. Przerywa, gdy PDF ma ponad 10 MB.
 - Treść slajdów (poza liczbami ze slajdu z wynikiem) jest w szablonie. Zmiana opisu metody wymaga zmiany w `slajdy.html` i tutaj.
 
 ## Nagranie demo do zgłoszenia
 
-Nagranie (ok. 64 s, 1440x900, napisy na ekranie) powstaje skryptem na osobnym stosie przygotowanym jak w scenariuszu niżej, bo wrzucenie `p3.zip` zmienia korpus. Plik zawiera dane organizatora, więc leży w `data/zgloszenie/demo.mp4` (poza gitem).
+Nagranie (ok. 70 s, 1440x900, napisy na ekranie) powstaje skryptem na osobnym stosie przygotowanym jak w scenariuszu niżej, bo wrzucenie `p3.zip` zmienia korpus. Plik zawiera dane organizatora, więc leży w `data/zgloszenie/demo.mp4` (poza gitem).
 
 ```powershell
 uv run --no-project --with playwright --with imageio-ffmpeg python scripts/nagranie_demo.py --ui http://localhost:3100 --api http://localhost:8100 --zip data/raw/p3.zip --out data/zgloszenie
 ```
 
-Kolejność: Discovery i wrzucenie `p3.zip`, wynik "nowa kampania znanego operatora", graf i panel dowodów, laboratorium z testem najsłabszego ogniwa, karta operatora O-0001, dwie twarze sprawy 61. Sprawdzone 21.11 na stosie `fresh-z14` (main po #205): 64 s, mp4 1,6 MB. Przed kolejnym nagraniem korpus trzeba przygotować od nowa, bo p3 jest już w nim po pierwszym przebiegu.
+Kolejność: Analiza, zakładka Pliki i wrzucenie `p3.zip`, wynik "nowa kampania znanego operatora", stanowisko oceny na parze z nową reklamą (hipoteza, materiały A i B, przesłanki i ograniczenia), podgląd zakwestionowania pierwszej przesłanki (bez zapisu), karta operatora O-0001 z sekcją "Dlaczego razem" i pakietem dowodowym. Próba 22.11 na stosie `fresh-z14` (main po #379): 67 s, mp4 1,6 MB. Przed kolejnym nagraniem korpus trzeba przygotować od nowa, bo p3 jest już w nim po pierwszym przebiegu.
 
 ## Scenariusz demo (2 min)
 
@@ -114,12 +114,12 @@ Po demo: `docker compose exec backend python manage.py ensure_schedules --resume
 
 | Czas | Co robimy | Co ma być widać |
 |---|---|---|
-| 0:00 | Ekran Discovery, przeciągamy `p3.zip` na pole plików | przycisk "Analiza trwa" |
+| 0:00 | Ekran Analiza, zakładka Pliki, przeciągamy `p3.zip` na pole plików, "Przeanalizuj materiał" | przycisk "Analiza trwa" |
 | 0:10 | Przebieg analizy | siedem kroków "zakończono" i dziennik zdarzeń: łańcuch adresu, liczba markerów w każdej rodzinie, wzbogacanie, powiązania |
 | 0:25 | Wynik po prawej | "Nowa kampania znanego operatora", Operator O-0001, najsilniejsze dowody: Meta Pixel i identyfikator strony w panelu lejka po 18 bitów |
-| 0:40 | Przewijamy niżej | graf: nowa reklama w środku, krawędzie do 6 stron operatora |
-| 0:55 | Klik w krawędź z listy powiązań | panel "Ten sam operator": pewność 1,00, suma ok. 56 bitów, znacznik "marker rozstrzygający", pasek rodzin, obie reklamy ze zrzutami, dowody według wkładu z liczbą źródeł (np. "w 2 z 19 źródeł") |
-| 1:25 | Operatorzy, O-0001 | kampania K-0001, 7 reklam (nowa bez kampanii), markery rdzeniowe: zestaw parametrów z `utm_visit`, identyfikatory w panelu lejka, ścieżki zaplecza; "Otwórz graf grupy" |
+| 0:40 | Do oceny, para "Nowa reklama w znanej grupie" | hipoteza modelu osobno od oceny, materiały A i B obok siebie, przesłanki: Meta Pixel i identyfikator panelu lejka (znacznik "rozstrzyga"), ramka z ograniczeniami |
+| 0:55 | "Zakwestionuj przesłankę" przy pikselu, tylko podgląd | "Wpływ na cały korpus": ile krawędzi używa śladu, grupy, które zostają razem, i dzięki jakim innym śladom |
+| 1:25 | Operatorzy, O-0001 | "Dlaczego razem" w bitach, miniatury materiałów, "Pobierz pakiet (ZIP)" |
 | 1:50 | Jedno zdanie | "Nowa domena, inny artykuł, inna osoba. System wie, kto za nią stoi, i pokazuje dlaczego." |
 
 ### Plan B

@@ -188,16 +188,49 @@
 </section>
 
 <section class="slide">
-  <div class="tag">9 · Ograniczenia i dalej</div>
+  <div class="tag">9 · Stanowisko oceny</div>
+  <div class="two">
+    <div>
+      <h2>Analityk ocenia parę, nie graf</h2>
+      <ul>
+        <li>Kolejka "Do oceny": każda para ma powód uwagi, np. "wspólne zaplecze do potwierdzenia" albo "podobna treść bez wspólnego zaplecza".</li>
+        <li>Hipoteza modelu osobno od oceny człowieka, materiały A i B obok siebie, przesłanki z wkładem w bitach i ograniczenia wniosku.</li>
+        <li>Ocena odnosi się do konkretnej wersji dowodów. Odrzucenie mostu rozdziela kampanię i operatora.</li>
+      </ul>
+    </div>
+    <div><img class="shot full" src="$shots/do-oceny.jpg"><div class="cap">Para operatora A do potwierdzenia: piksel Meta i identyfikator panelu lejka</div></div>
+  </div>
+  <div class="foot"><span>SCAM DNA</span><span>10</span></div>
+</section>
+
+<section class="slide">
+  <div class="tag">10 · Zakwestionuj przesłankę</div>
+  <div class="two">
+    <div>
+      <h2>A jeśli ten ślad należy do pośrednika?</h2>
+      <ul>
+        <li>Analityk podważa jeden ślad w całym korpusie. Podgląd pokazuje, które grupy się rozpadną, a które trzymają się na niezależnych śladach.</li>
+        <li>Zapis przelicza krawędzie i grupy, przywrócenie je cofa, historia zostaje.</li>
+        <li>Operator A wytrzymuje podważenie piksela Meta i identyfikatora lejka.</li>
+        <li>Próba jury: 7 z 7 przebranych wariantów wróciło do swojej grupy, kopia reklamy na obcej infrastrukturze dała tylko podobieństwo.</li>
+      </ul>
+    </div>
+    <div><img class="shot full" src="$shots/przeslanka.jpg"><div class="cap">Podgląd bez zapisu: K-0001, K-0004 i O-0001 zostają razem</div></div>
+  </div>
+  <div class="foot"><span>SCAM DNA</span><span>11</span></div>
+</section>
+
+<section class="slide">
+  <div class="tag">11 · Ograniczenia i dalej</div>
   <h2>Co wiemy, a czego nie</h2>
   <ul>
-    <li>Wagi są eksperckie. Bez oznaczonego zbioru nie podajemy precyzji ani czułości. Następny krok: model uczony na decyzjach analityków, które już zapisujemy.</li>
-    <li>Twarze rozpoznajemy tylko dla osób z małej bazy referencyjnej. Z nagrań bierzemy klatki, dźwięku nie analizujemy.</li>
-    <li>Strony na żywo pobieramy bez JavaScriptu. Pełny zestaw cech dają przechwycenia z HAR.</li>
-    <li>Zewnętrzny model decyzyjny (Jev) jest opcjonalny i wyłączony: w naszej ocenie nie zastąpił reguły, a danych spraw do niego nie wysyłamy.</li>
+    <li>Domyślnie działają wagi eksperckie. Wagi uczone metodą EM są policzone do porównania; bez oznaczonego zbioru nie podajemy precyzji ani czułości, a wynik modelu nie jest kalibrowany.</li>
+    <li>Twarze rozpoznajemy tylko dla osób z małej bazy referencyjnej. Mowę z nagrań zamieniamy na tekst, barwy głosu nie porównujemy.</li>
+    <li>Crawler z przeglądarką działa w odizolowanym kontenerze, ale bez polskiego adresu domowego. Strony wykrywające automat mogą pokazać białą stronę.</li>
+    <li>Zewnętrzny model decyzyjny (Jev) jest opcjonalny i wyłączony: danych spraw do niego nie wysyłamy.</li>
   </ul>
-  <div class="rule">Uruchomienie: <code>docker compose up</code> (Postgres z pgvector, Temporal, S3, Neo4j, OpenSearch). Wzbogacony korpus jako ZIP i operatorzy w STIX 2.1 do wymiany z zespołami CERT.</div>
-  <div class="foot"><span>Repozytorium: github.com/NikodemJachec99/deepfake-atlas (prywatne)</span><span>10</span></div>
+  <div class="rule">Uruchomienie: <code>python scripts/start.py</code> (Postgres z pgvector, Temporal, S3, Neo4j, OpenSearch, crawler). Pakiet dowodowy operatora z sumami SHA-256 i operatorzy w STIX 2.1 do wymiany z zespołami CERT.</div>
+  <div class="foot"><span>Repozytorium: github.com/NikodemJachec99/deepfake-atlas (prywatne)</span><span>12</span></div>
 </section>
 
 </body>

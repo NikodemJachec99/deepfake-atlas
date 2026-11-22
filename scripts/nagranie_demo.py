@@ -67,55 +67,52 @@ def main() -> None:
         context = browser.new_context(viewport={"width": 1440, "height": 900}, record_video_dir=str(out / "surowe"), record_video_size={"width": 1440, "height": 900})
         page = context.new_page()
 
-        # 1. Discovery i nowa sprawa
+        # 1. Analiza nowej sprawy
         page.goto(args.ui + "/")
         page.wait_for_load_state("networkidle")
         caption(page, "SCAM DNA. Wrzucamy sprawę, której system jeszcze nie widział: nowa domena, inny artykuł, inna osoba.", 4)
-        page.set_input_files("input[type=file]", args.zip)
-        caption(page, "Analiza bez sieci: strona z przechwycenia, ruch HAR, zrzut reklamy. Sześć etapów na żywo.")
+        page.get_by_role("button", name="Pliki", exact=True).click()
+        page.set_input_files("#input-files", args.zip)
+        page.wait_for_timeout(600)
+        page.locator("#analyze").click()
+        caption(page, "Analiza bez sieci: strona z przechwycenia, ruch HAR, zrzut reklamy. Etapy na żywo.")
         page.get_by_text("Nowa kampania znanego operatora").first.wait_for(timeout=180_000)
         page.wait_for_timeout(1500)
+        page.get_by_text("Nowa kampania znanego operatora").first.scroll_into_view_if_needed()
         caption(page, "Wynik: nowa kampania znanego operatora. Łączą ją identyfikator strony w panelu lejka i piksel Meta, po 18 bitów.", 6)
 
-        # 2. Graf i panel dowodów
-        smooth_scroll(page, 700)
-        caption(page, "Graf dorysowuje powiązania z reklamami tego samego operatora.", 4)
-        # Pozycja listy powiązań ("#24 ↔ #27 · Ten sam operator"), nie legenda grafu.
-        page.locator("text=/↔.*Ten sam operator/").first.click()
-        page.wait_for_timeout(1500)
-        page.get_by_text("Dowody według wkładu").first.scroll_into_view_if_needed()
-        caption(page, "Każde połączenie ma listę dowodów: wkład w bitach i w ilu niezależnych źródłach występuje ślad.", 6)
+        # 2. Stanowisko oceny: hipoteza, materiały A i B, przesłanki, ograniczenia
+        page.goto(args.ui + "/review")
+        page.wait_for_load_state("networkidle")
+        # Para z nową reklamą w znanej grupie (wrzucona sprawa), a gdy jej nie ma, para do potwierdzenia zaplecza.
+        for reason in ("Nowa reklama w znanej grupie", "Wspólne zaplecze do potwierdzenia"):
+            item = page.get_by_text(reason).first
+            if item.count():
+                item.click()
+                page.wait_for_timeout(1200)
+                break
+        caption(page, "Do oceny: kolejka par z powodem uwagi. Hipoteza modelu osobno od oceny człowieka, materiały A i B obok siebie.", 6)
+        caption(page, "Najważniejsze przesłanki z wkładem w bitach i ograniczenia: co może osłabić ten wniosek.", 5)
 
-        # 3. Laboratorium dowodów
-        lab = page.get_by_text("Laboratorium dowodów").first
-        if lab.count():
-            lab.click()
-            page.wait_for_timeout(800)
-            weakest = page.get_by_text("Sprawdź najsłabszy punkt").first
-            weakest.scroll_into_view_if_needed()
-            weakest.click()
-            page.wait_for_timeout(2500)
-            caption(page, "Laboratorium: na czym trzyma się hipoteza. Symulacja niczego nie zapisuje.", 6)
+        # 3. Zakwestionowanie przesłanki: podgląd, bez zapisu
+        challenge = page.get_by_role("button", name="Zakwestionuj przesłankę").first
+        if challenge.count():
+            challenge.click()
+            page.get_by_text("Wpływ na cały korpus").first.wait_for(timeout=20_000)
+            page.wait_for_timeout(1200)
+            caption(page, "Co, jeśli ten ślad należy do pośrednika? Podgląd liczy cały korpus bez niego: która grupa się rozpada, a która trzyma się na innych śladach.", 8)
 
-        # 4. Karta operatora
+        # 4. Karta operatora: dlaczego razem i pakiet dowodowy
         operator = next(g for g in api(args.api, "/api/operators")["results"] if g["key"] == "O-0001")
         page.goto(f"{args.ui}/operators/{operator['id']}")
         page.wait_for_load_state("networkidle")
-        caption(page, "Karta operatora: kampanie, reklamy na różnych domenach i ślady, które je spinają.", 6)
+        caption(page, "Karta operatora: dlaczego te reklamy są razem, w bitach, i miniatury materiałów.", 5)
+        package = page.get_by_text("Pobierz pakiet").first
+        if package.count():
+            package.hover()
+            caption(page, "Pakiet dowodowy do przekazania dalej: raport, pliki z sumami SHA-256, STIX i skrypt weryfikacji.", 5)
 
-        # 5. Dwie twarze jednego linku (sprawa 61)
-        ads = api(args.api, "/api/ads?case=61")["results"]
-        offer = next((a for a in ads if "strona-2" in a.get("external_id", "")), None)
-        if offer:
-            page.goto(f"{args.ui}/ads/{offer['id']}")
-            page.wait_for_load_state("networkidle")
-            twin = page.get_by_text("Dwie twarze jednego linku").first
-            twin.scroll_into_view_if_needed()
-            twin.click()
-            page.wait_for_timeout(2000)
-            caption(page, "Sprawa 61: ten sam adres, co do znaku, w 161 s dał dwie różne strony. System podaje możliwe wyjaśnienia, nie przesądza.", 7)
-
-        caption(page, "Nowa domena, inny artykuł, inna osoba. System wie, kto za nią stoi, i pokazuje dlaczego.", 5)
+        caption(page, "Nowa domena, inny artykuł, inna osoba. System wie, kto za nią stoi, pokazuje dlaczego i daje się podważyć.", 5)
         video = page.video
         context.close()
         browser.close()

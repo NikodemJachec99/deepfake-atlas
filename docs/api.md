@@ -45,6 +45,7 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | GET | `/api/hunt/runs`, `/api/hunt/runs/{id}` | | strona `HuntRun` albo jeden przebieg: status i liczby |
 | POST | `/api/hunt/{id}/analyze` | | `Analysis` (201): domena kandydata idzie do pełnego potoku jak `POST /api/analyses`; `409` z istniejącą analizą, gdy już zgłoszona |
 | GET | `/api/graph` | `?campaign=` \| `?operator=` \| `?ad=`, `?relation=a,b`, `?source=capture` (tylko krawędzie między materiałami z tego źródła), `?limit=` (1 do 20000, domyślnie 2000) | `Graph`: `{nodes, edges, truncated, limit, total, total_by_relation, returned_by_relation}` dla Sigma.js. Ucinanie do `limit` jest jawne i ma kolejność ważności: najpierw `same_operator`, potem `similar`, potem `same_campaign`; powtórne przechwycenia (`duplicate`) na końcu; w obrębie relacji najpierw pary materiałów ze spraw (`capture`), potem malejąco po pewności. `total` to liczba krawędzi po filtrach przed ucięciem, `truncated` mówi, czy `total` jest większe niż `edges.length`. Nieznana kampania, operator albo reklama: `404`. Przy `?campaign=` i `?operator=` każdy węzeł ma `member: bool`: czy reklama należy do tej grupy (`false` to sąsiad spoza grupy, dołączony krawędzią). Przy `?ad=` i bez filtra pola nie ma |
+| GET | `/api/weights` | | `Weights`: wagi eksperckie i uczone każdego typu markera, raport kalibracji (opis w sekcji "Wagi modelu") |
 | GET | `/api/kinds` | | słownik 7 rodzin i typów markerów |
 | GET | `/api/review` | `?page=`, `?source=` (domyślnie `capture`, `all` bez filtra), `?relation=`, `?reason=` | strona `ReviewItem`: kolejka "Do oceny", krawędzie bez werdyktu z powodem uwagi (opis niżej) |
 | GET | `/api/stats` | | liczby do paska stanu, w tym `alerts_unseen`, `verdicts` (krawędzie według werdyktu: `none`, `confirmed`, `rejected`, `unsure`) i `review_pending` (pozycje kolejki `/api/review` dla `source=capture`) |
@@ -53,6 +54,7 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | GET | `/api/campaigns/{id}/package` | `?surowe=0` (opcjonalnie) | to samo dla kampanii (relacje `same_campaign`) |
 | GET | `/api/export` | `?source=capture` (opcjonalnie) | ZIP z wzbogaconym korpusem: `korpus/reklamy.jsonl` (reklamy z markerami), `korpus/krawedzie.jsonl` (krawędzie z dowodami), `korpus/grupy.csv`, `korpus/opis.json`; tokeny tylko jako skróty; nieznane źródło `400` |
 | GET | `/api/artifacts/{sha256}` | | surowy dowód jako załącznik (nigdy się nie renderuje) |
+| GET | `/api/artifacts/{sha256}/har` | | `HarOverview`: streszczenie pliku HAR (żądania, łańcuch przekierowań, żądania ze śladami, adresy po redakcji, bez treści), opis w sekcji niżej |
 | GET | `/api/artifacts/{sha256}/image` | | zrzut reklamy, zrzut strony z crawlera albo klatka poglądowa nagrania jako obraz (tylko artefakty obrazów) |
 | GET | `/api/artifacts/{sha256}/video` | nagłówek `Range` (opcjonalny) | nagranie do odtworzenia (MP4, MOV, WebM po sygnaturze bajtów), `206` dla zakresu, `416` poza plikiem |
 
@@ -334,6 +336,18 @@ Porównanie dwóch przechwyconych stron, np. tego samego adresu widzianego dwa r
 - `page_screenshot` to zrzut wyrenderowanej strony docelowej z crawlera z przeglądarką (`{sha256, image}`), dla materiałów z przechwycenia `null`. Zrzut reklamy (`ad_creatives`) to reklama, nie strona docelowa.
 - HAR i HTML są tylko do pobrania (`/api/artifacts/{sha256}`), nigdy do renderowania. Odpowiedź nie zawiera HTML ani skryptów, adresy mają zredagowane sekrety.
 - Błędy: brak albo zły parametr `400`, ta sama reklama dwa razy `400`, nieistniejąca reklama `404`.
+
+### Streszczenie pliku HAR: `GET /api/artifacts/{sha256}/har`
+
+Tylko do odczytu. Zamienia surowy HAR (artefakt `har`) w opis czytelny dla analityka, bez treści odpowiedzi i bez treści żądań. Adresy przechodzą przez redakcję (`redact_url`): tokeny w adresach są skrótami `sha256-...`.
+
+- `total`, `with_traces` (ile żądań niesie ślady użyte w porównaniach), `truncated` (lista `entries` ma najwyżej 400 pozycji), `started_at`, `page_url`.
+- `chain`: droga do dokumentu głównego, `{url, status}`.
+- `hosts`: do 30 hostów z liczbą żądań, malejąco.
+- `entries[]`: `n`, `method`, `host`, `path` (z query po redakcji), `url`, `status` (0 bez odpowiedzi), `type` (dokument, skrypt, styl, obraz, czcionka, dane, wideo, dźwięk, inne), `size`, `ms`, `ip`, `redirect_to`, `main` (dokument główny) i `traces` (kody typów markerów, np. `meta_pixel`, `funnel_id`, `kit_path`, `asset_host`, `redirect_domain`).
+- `trace_labels`: etykiety kodów z `traces`, po polsku.
+- `download`: surowy plik, tylko do pobrania.
+- Błędy: artefakt nie istnieje albo nie jest HAR `404`, uszkodzony JSON albo nieznany format `422`. Odpowiedź nie zawiera HTML ani skryptów, adresy mają zredagowane sekrety.
 
 ## Zakwestionowanie przesłanki (`Premise`)
 

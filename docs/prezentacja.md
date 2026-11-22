@@ -9,7 +9,26 @@ Liczby poniżej pochodzą z `GET /api/stats` po imporcie samych paczek organizat
  "cert_pl_listed": 6}
 ```
 
-Przed prezentacją sprawdź je jeszcze raz: `curl localhost:8000/api/stats`. Jeśli się różnią, popraw slajd 4. Harmonogram skanów co 6 godzin dokłada reklamy z Microsoft Ad Library, więc na stosie, który chodzi dłużej, reklam jest więcej (np. 327 zamiast 28). Na demo wstrzymaj skany (przygotowanie niżej).
+Przed prezentacją sprawdź je jeszcze raz: `curl localhost:8000/api/stats`. Jeśli się różnią, popraw liczby na slajdach z wynikami (patrz niżej). Harmonogram skanów co 6 godzin dokłada reklamy z Microsoft Ad Library, więc na stosie, który chodzi dłużej, reklam jest więcej (np. 327 zamiast 28). Na demo wstrzymaj skany (przygotowanie niżej).
+
+## Talia zgłoszeniowa: 10 slajdów
+
+Struktura talii do zgłoszenia (zadanie [#487](https://github.com/NikodemJachec99/deepfake-atlas/issues/487)), z liczbami policzonymi z API przez `scripts/prezentacja/pdf.py` (filtr `source=capture`, same paczki organizatora) i zrzutami z prawdziwego interfejsu. Sama talia (`data/zgloszenie/prezentacja.html` i `.pdf`) leży poza gitem, bo zawiera dane organizatora. W repozytorium jest generator (`scripts/prezentacja/`) i ten opis.
+
+| Nr | Slajd | Treść |
+|---|---|---|
+| 1 | hero | SCAM DNA, hasło „Różne reklamy. Jedno zaplecze.”, jedno zdanie o tym, co system robi |
+| 2 | mapa | graf kampanii i operatorów zbudowany z paczek organizatora bez podpowiedzi, które sprawy pasują |
+| 3 | genom | siedem rodzin śladów, 62 typy markerów, przykłady, które rozstrzygały na danych organizatora |
+| 4 | operator | karta operatora: „dlaczego razem” w bitach, miniatury materiałów, domeny, kampanie |
+| 5 | wagi | wagi w bitach zamiast progów podobieństwa, rzadkość liczona po niezależnych źródłach |
+| 6 | podobne | podobne to nie to samo źródło: skopiowana treść i silnik lejka bez śladu operatora |
+| 7 | link | jedno powiązanie z dowodami: hipoteza modelu, przesłanki w bitach, ograniczenia, dwie twarze jednego linku |
+| 8 | przesłanka | zakwestionowanie przesłanki w całym korpusie: podgląd, co się rozpadnie, a co trzyma się na innych śladach |
+| 9 | odporność | pomiar: bez HAR 18 z 32 połączeń, bez zapisu strony 30, bez zrzutów 32, 0 nowych fałszywych połączeń, 7 z 7 wariantów próby jury |
+| 10 | cert | pokrycie Listą Ostrzeżeń CERT Polska i co z tego wynika: jedna znana domena wskazuje resztę zaplecza, plus ograniczenia i dalsze kroki |
+
+Plan 5-minutowego wystąpienia poniżej mieści się w tych dziesięciu slajdach. Jeżeli szablon w `scripts/prezentacja/slajdy.html` ma inną liczbę slajdów niż ta tabela, obowiązuje szablon, a tabelę trzeba poprawić.
 
 ## Slajdy
 
@@ -22,7 +41,7 @@ Przed prezentacją sprawdź je jeszcze raz: `curl localhost:8000/api/stats`. Je�
 ### 2. Genom reklamy (45 s)
 
 - Z każdego materiału (URL, zrzut reklamy, nagranie, zapisana strona, HAR, ZIP sprawy, archiwum NASK) wyciągamy markery w 7 rodzinach: infrastruktura, tracking i lejek, szablon strony, kreacja, narracja, osoby i marki, zachowanie.
-- Ok. 50 typów markerów. Przykłady, które rozstrzygały na danych organizatora: identyfikator strony w panelu lejka z treści żądań POST, ścieżki zaplecza strony z HAR, piksel Meta, konto Google Ads, własny host zasobów operatora.
+- 62 typy markerów (57 niosących dowód). Przykłady, które rozstrzygały na danych organizatora: identyfikator strony w panelu lejka z treści żądań POST, ścieżki zaplecza strony z HAR, piksel Meta, konto Google Ads, własny host zasobów operatora.
 - Nagrania: 8 klatek z OCR, twarzami i hashem. Sprawa 5 (sama reklama wideo) dostaje tak tekst reklamy z podszyciem pod lekarza.
 - Znaczenie treści: lokalny model wielojęzyczny łapie ten sam artykuł przepisany innymi słowami (sprawa 48 i strona 1 sprawy 61: znaczenie 0,98 przy zgodności tekstu 0,39).
 - Analiza materiału z przechwycenia działa bez sieci. Niczego nie pobieramy od oszustów.
@@ -70,7 +89,7 @@ uv run --no-project --with playwright python scripts/prezentacja/pdf.py --api ht
 ```
 
 - `zrzuty.py` otwiera graf operatora A, krawędzie spraw 1 i 2 oraz 2 i p3, laboratorium z testem najsłabszego ogniwa (zakładka Kontekst), dwie twarze sprawy 61, ślady karty reklamy p3, stanowisko oceny na parze operatora A, podgląd zakwestionowania jej najmocniejszej przesłanki i kartę operatora O-0001. Identyfikatory reklam i krawędzi szuka przez API po numerach spraw, bo zmieniają się przy imporcie. Tylko czyta.
-- `pdf.py` liczy wynik z API z filtrem `source=capture` (same paczki organizatora): strony, sprawy, kampanie, operatorów, krawędzie między stronami z paczek i strony z Listy CERT. Wstawia liczby i zrzuty do `scripts/prezentacja/slajdy.html` i drukuje 12 slajdów 1280x720. Przerywa, gdy PDF ma ponad 10 MB.
+- `pdf.py` liczy wynik z API z filtrem `source=capture` (same paczki organizatora): strony, sprawy, kampanie, operatorów, krawędzie między stronami z paczek i strony z Listy CERT. Wstawia liczby i zrzuty do `scripts/prezentacja/slajdy.html` i drukuje slajdy 1280x720 z szablonu (talia z sekcji niżej). Przerywa, gdy PDF ma ponad 10 MB.
 - Treść slajdów (poza liczbami ze slajdu z wynikiem) jest w szablonie. Zmiana opisu metody wymaga zmiany w `slajdy.html` i tutaj.
 
 ## Nagranie demo do zgłoszenia
@@ -166,6 +185,6 @@ Interfejs startuje w trybie prostym: wnioski prostym językiem (ocena, jedno zda
 | Jaka skuteczność? | Nie mamy oznaczonego zbioru, więc nie podajemy liczb. Każdą krawędź między sprawami przejrzeliśmy ręcznie po dowodach, wynik w `docs/dane-organizatora.md`. |
 | Co z nową kampanią z innej domeny i innym artykułem? | Właśnie to pokazuje demo: łączy ślad konta w panelu lejka i piksel, nie treść. |
 | Co, gdy strona już nie działa? | Analiza kończy się z mniejszą liczbą cech. Sam zrzut reklamy daje OCR, nazwę reklamodawcy i hash kreacji. |
-| Twarze? | Twarz na zrzucie reklamy porównujemy z małą bazą osób publicznych (YuNet i SFace, zdjęcia z Commons na wolnej licencji). Na danych organizatora rozpoznało twarze w 8 zrzutach (baza 9 osób), zgodnie z nazwiskami w tekstach. Twarz to motyw: nie łączy operatorów, bo ta sama twarz występuje u różnych. |
+| Twarze? | Twarz na zrzucie reklamy porównujemy z małą bazą osób publicznych (YuNet i SFace, zdjęcia z Commons na wolnej licencji). Na danych organizatora rozpoznało twarze w 8 zrzutach (baza 10 osób), zgodnie z nazwiskami w tekstach. Twarz to motyw: nie łączy operatorów, bo ta sama twarz występuje u różnych. |
 | Skąd wiecie, które połączenie jest kruche? | Laboratorium dowodów: `POST /api/edges/{id}/simulate` przelicza krawędź bez wybranych śladów i niczego nie zapisuje, a `GET /api/edges/{id}/suggestions` mówi, czego brakuje. Przykład z danych: operator B trzyma się na jednym hoście zasobów. Bez niego para spada do podobieństwa. Opis: `docs/laboratorium.md`. |
 | Dlaczego sprawy 48 i p11 nie są przy operatorze A? | Dzielą z nim tylko silnik lejka. Program mógł kupić każdy, operatora wskazuje ślad jego konta albo infrastruktury. |

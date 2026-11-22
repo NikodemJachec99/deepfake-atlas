@@ -1,7 +1,8 @@
 "use client";
+import { SourceLink } from "./har-overview";
 
 import { useState } from "react";
-import { api, artifactDownloadUrl, type EdgeDetail } from "@/lib/api";
+import { api, type EdgeDetail } from "@/lib/api";
 import { utcEdgeVersion } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 import { useExpert } from "@/lib/expert";
@@ -31,7 +32,7 @@ export function WeakestLinkTest({ edge, apply, refresh }: { edge: EdgeDetail; ap
             {solution.simulated.reasons.map(reason => <p key={reason}>{reason}</p>)}
             <ul>{edge.evidence.filter(item => solution.excluded_evidence.includes(item.id)).map(item => <li key={item.id}>
               {item.family_label} · {item.label}{" "}
-              {([["A", item.artifact_a], ["B", item.artifact_b]] as const).map(([side, sha]) => sha && <a key={side} href={artifactDownloadUrl(sha)} className="mr-2 text-accent underline">Źródło {side}</a>)}
+              {([["A", item.artifact_a], ["B", item.artifact_b]] as const).map(([side, sha]) => sha && <SourceLink key={side} sha={sha} side={side} className="mr-2 text-accent underline">Źródło {side}</SourceLink>)}
             </li>)}</ul>
             <button className="text-accent underline" onClick={() => apply(solution.excluded_evidence)}>Otwórz w ręcznej symulacji</button>
           </details>)}

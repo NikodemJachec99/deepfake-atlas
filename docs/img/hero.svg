@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 440" width="1280" height="440" role="img" aria-labelledby="t d">
+  <title id="t">SCAM DNA: Różne reklamy. Jedno zaplecze.</title>
+  <desc id="d">Baner projektu SCAM DNA. Pięć pasm genomu reklamy w kolorach rodzin śladów, hasło i trzy relacje między reklamami.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B1120"/><stop offset="1" stop-color="#10203A"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.82" cy="0.35" r="0.6">
+      <stop offset="0" stop-color="#2952CC" stop-opacity="0.45"/><stop offset="1" stop-color="#2952CC" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="stripe" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#3D9BE0"/><stop offset="0.2" stop-color="#3D9BE0"/>
+      <stop offset="0.2" stop-color="#E0A12B"/><stop offset="0.4" stop-color="#E0A12B"/>
+      <stop offset="0.4" stop-color="#25B48A"/><stop offset="0.6" stop-color="#25B48A"/>
+      <stop offset="0.6" stop-color="#EF7A3C"/><stop offset="0.8" stop-color="#EF7A3C"/>
+      <stop offset="0.8" stop-color="#D26FA9"/><stop offset="1" stop-color="#D26FA9"/>
+    </linearGradient>
+  </defs>
+  <g font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <rect width="1280" height="440" rx="20" fill="url(#bg)"/>
+    <rect width="1280" height="440" rx="20" fill="url(#glow)"/>
+    <rect x="0" y="0" width="1280" height="8" rx="4" fill="url(#stripe)"/>
+
+    <!-- znak -->
+    <g transform="translate(72 74) scale(2.6)">
+      <rect width="32" height="32" rx="7" fill="#10203A" stroke="#647BFF" stroke-opacity="0.55" stroke-width="0.7"/>
+      <rect x="5" y="12" width="3" height="8" rx="1.5" fill="#3D9BE0"/>
+      <rect x="10" y="7" width="3" height="18" rx="1.5" fill="#E0A12B"/>
+      <rect x="14.5" y="10" width="3" height="12" rx="1.5" fill="#25B48A"/>
+      <rect x="19" y="7" width="3" height="18" rx="1.5" fill="#EF7A3C"/>
+      <rect x="24" y="12" width="3" height="8" rx="1.5" fill="#D26FA9"/>
+    </g>
+    <text x="180" y="124" font-size="62" font-weight="800" fill="#FFFFFF" letter-spacing="-1.5">SCAM <tspan fill="#647BFF">DNA</tspan></text>
+    <text x="182" y="156" font-size="19" font-weight="500" fill="#9FB0CF" letter-spacing="3">KOLEKCJONER FEJKÓW · HACKNATION 2026 · NASK</text>
+
+    <text x="72" y="248" font-size="46" font-weight="700" fill="#FFFFFF" letter-spacing="-0.8">Różne reklamy. <tspan fill="#33D9BC">Jedno zaplecze.</tspan></text>
+    <text x="72" y="290" font-size="21" fill="#C5D1E8">Łączymy fałszywe reklamy w kampanie i operatorów po wspólnych śladach.</text>
+    <text x="72" y="320" font-size="21" fill="#C5D1E8">Każde połączenie ma listę dowodów w bitach, którą da się sprawdzić i podważyć.</text>
+
+    <!-- trzy relacje -->
+    <g transform="translate(72 360)">
+      <rect width="230" height="48" rx="24" fill="#33D9BC" fill-opacity="0.14" stroke="#33D9BC" stroke-opacity="0.7"/>
+      <circle cx="26" cy="24" r="8" fill="#33D9BC"/>
+      <text x="46" y="31" font-size="19" font-weight="600" fill="#33D9BC">ta sama kampania</text>
+      <g transform="translate(246 0)">
+        <rect width="230" height="48" rx="24" fill="#647BFF" fill-opacity="0.16" stroke="#647BFF" stroke-opacity="0.8"/>
+        <circle cx="26" cy="24" r="8" fill="#647BFF"/>
+        <text x="46" y="31" font-size="19" font-weight="600" fill="#9BAAFF">ten sam operator</text>
+      </g>
+      <g transform="translate(492 0)">
+        <rect width="230" height="48" rx="24" fill="#FFC15A" fill-opacity="0.12" stroke="#FFC15A" stroke-opacity="0.7" stroke-dasharray="5 4"/>
+        <circle cx="26" cy="24" r="8" fill="none" stroke="#FFC15A" stroke-width="2.5"/>
+        <text x="46" y="31" font-size="19" font-weight="600" fill="#FFC15A">tylko podobne</text>
+      </g>
+    </g>
+
+    <!-- genom po prawej -->
+    <g transform="translate(850 70)">
+      <text x="0" y="0" font-size="14" font-weight="600" fill="#7F90B3" letter-spacing="2">GENOM REKLAMY · 7 RODZIN</text>
+      <g>
+        <g transform="translate(0 24)"><rect width="330" height="26" rx="13" fill="#3D9BE0" fill-opacity="0.18"/><rect width="248" height="26" rx="13" fill="#3D9BE0"/><text x="14" y="18" font-size="14" font-weight="700" fill="#0B1120">infrastruktura</text></g>
+        <g transform="translate(0 60)"><rect width="330" height="26" rx="13" fill="#E0A12B" fill-opacity="0.18"/><rect width="300" height="26" rx="13" fill="#E0A12B"/><text x="14" y="18" font-size="14" font-weight="700" fill="#0B1120">tracking i lejek</text></g>
+        <g transform="translate(0 96)"><rect width="330" height="26" rx="13" fill="#25B48A" fill-opacity="0.18"/><rect width="190" height="26" rx="13" fill="#25B48A"/><text x="14" y="18" font-size="14" font-weight="700" fill="#0B1120">szablon strony</text></g>
+        <g transform="translate(0 132)"><rect width="330" height="26" rx="13" fill="#EF7A3C" fill-opacity="0.18"/><rect width="150" height="26" rx="13" fill="#EF7A3C"/><text x="14" y="18" font-size="14" font-weight="700" fill="#0B1120">kreacja</text></g>
+        <g transform="translate(0 168)"><rect width="330" height="26" rx="13" fill="#D26FA9" fill-opacity="0.18"/><rect width="226" height="26" rx="13" fill="#D26FA9"/><text x="14" y="18" font-size="14" font-weight="700" fill="#0B1120">narracja</text></g>
+        <g transform="translate(0 204)"><rect width="330" height="26" rx="13" fill="#9FB0CF" fill-opacity="0.18"/><rect width="130" height="26" rx="13" fill="#9FB0CF"/><text x="14" y="18" font-size="14" font-weight="700" fill="#0B1120">osoby i marki</text></g>
+        <g transform="translate(0 240)"><rect width="330" height="26" rx="13" fill="#9FB0CF" fill-opacity="0.18"/><rect width="112" height="26" rx="13" fill="#7F90B3"/><text x="14" y="18" font-size="14" font-weight="700" fill="#0B1120">zachowanie</text></g>
+      </g>
+      <text x="0" y="296" font-size="13" fill="#7F90B3">Długość paska: przykład ilustracyjny, wymyślone wartości.</text>
+    </g>
+  </g>
+</svg>

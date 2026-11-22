@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 420" width="1280" height="420" role="img" aria-labelledby="t d">
+  <title id="t">Potok analizy SCAM DNA</title>
+  <desc id="d">Wejście (URL, zrzut, HAR, nagranie, ZIP sprawy), sześć etapów potoku Temporal i wynik: krawędź z dowodami, kampania, operator.</desc>
+  <defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#647BFF"/></marker></defs>
+  <g font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <rect width="1280" height="420" rx="20" fill="#0B1120"/>
+  <text x="48" y="52" font-size="15" font-weight="700" fill="#7F90B3" letter-spacing="2.5">WEJŚCIE</text>
+  <g font-size="15" fill="#C5D1E8">
+<rect x="48" y="66" width="55" height="34" rx="17" fill="#10203A" stroke="#2A3F66"/><text x="62" y="88">URL</text>
+<rect x="115" y="66" width="145" height="34" rx="17" fill="#10203A" stroke="#2A3F66"/><text x="129" y="88">zrzut reklamy</text>
+<rect x="272" y="66" width="100" height="34" rx="17" fill="#10203A" stroke="#2A3F66"/><text x="286" y="88">plik HAR</text>
+<rect x="384" y="66" width="100" height="34" rx="17" fill="#10203A" stroke="#2A3F66"/><text x="398" y="88">nagranie</text>
+<rect x="496" y="66" width="118" height="34" rx="17" fill="#10203A" stroke="#2A3F66"/><text x="510" y="88">ZIP sprawy</text>
+<rect x="626" y="66" width="181" height="34" rx="17" fill="#10203A" stroke="#2A3F66"/><text x="640" y="88">biblioteki reklam</text>
+</g>
+<rect x="48" y="150" width="176" height="150" rx="16" fill="#10203A" stroke="#3D9BE0" stroke-opacity="0.8" stroke-width="1.5"/>
+<rect x="48" y="150" width="176" height="6" rx="3" fill="#3D9BE0"/>
+<circle cx="78" cy="192" r="15" fill="#3D9BE0"/><text x="78" y="198" font-size="17" font-weight="800" fill="#0B1120" text-anchor="middle">1</text>
+<text x="102" y="198" font-size="17.5" font-weight="700" fill="#FFFFFF">Przyjęcie</text>
+<text x="64" y="226" font-size="12" fill="#3D9BE0" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">ingest</text>
+<text x="64" y="252" font-size="15" fill="#C5D1E8">rekord reklamy</text>
+<line x1="226" y1="225" x2="246" y2="225" stroke="#647BFF" stroke-width="2.5" marker-end="url(#ar)"/>
+<rect x="248" y="150" width="176" height="150" rx="16" fill="#10203A" stroke="#E0A12B" stroke-opacity="0.8" stroke-width="1.5"/>
+<rect x="248" y="150" width="176" height="6" rx="3" fill="#E0A12B"/>
+<circle cx="278" cy="192" r="15" fill="#E0A12B"/><text x="278" y="198" font-size="17" font-weight="800" fill="#0B1120" text-anchor="middle">2</text>
+<text x="302" y="198" font-size="17.5" font-weight="700" fill="#FFFFFF">Strona</text>
+<text x="264" y="226" font-size="12" fill="#E0A12B" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">crawl</text>
+<text x="264" y="252" font-size="15" fill="#C5D1E8">HTML, HAR, łańcuch</text>
+<text x="264" y="272" font-size="15" fill="#C5D1E8">przekierowań</text>
+<line x1="426" y1="225" x2="446" y2="225" stroke="#647BFF" stroke-width="2.5" marker-end="url(#ar)"/>
+<rect x="448" y="150" width="176" height="150" rx="16" fill="#10203A" stroke="#25B48A" stroke-opacity="0.8" stroke-width="1.5"/>
+<rect x="448" y="150" width="176" height="6" rx="3" fill="#25B48A"/>
+<circle cx="478" cy="192" r="15" fill="#25B48A"/><text x="478" y="198" font-size="17" font-weight="800" fill="#0B1120" text-anchor="middle">3</text>
+<text x="502" y="198" font-size="17.5" font-weight="700" fill="#FFFFFF">Cechy</text>
+<text x="464" y="226" font-size="12" fill="#25B48A" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">extract</text>
+<text x="464" y="252" font-size="15" fill="#C5D1E8">markery w 7</text>
+<text x="464" y="272" font-size="15" fill="#C5D1E8">rodzinach</text>
+<line x1="626" y1="225" x2="646" y2="225" stroke="#647BFF" stroke-width="2.5" marker-end="url(#ar)"/>
+<rect x="648" y="150" width="176" height="150" rx="16" fill="#10203A" stroke="#EF7A3C" stroke-opacity="0.8" stroke-width="1.5"/>
+<rect x="648" y="150" width="176" height="6" rx="3" fill="#EF7A3C"/>
+<circle cx="678" cy="192" r="15" fill="#EF7A3C"/><text x="678" y="198" font-size="17" font-weight="800" fill="#0B1120" text-anchor="middle">4</text>
+<text x="702" y="198" font-size="17.5" font-weight="700" fill="#FFFFFF">Wzbogacanie</text>
+<text x="664" y="226" font-size="12" fill="#EF7A3C" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">enrich</text>
+<text x="664" y="252" font-size="15" fill="#C5D1E8">RDAP, CERT, crt.sh,</text>
+<text x="664" y="272" font-size="15" fill="#C5D1E8">DNS i ASN</text>
+<line x1="826" y1="225" x2="846" y2="225" stroke="#647BFF" stroke-width="2.5" marker-end="url(#ar)"/>
+<rect x="848" y="150" width="176" height="150" rx="16" fill="#10203A" stroke="#D26FA9" stroke-opacity="0.8" stroke-width="1.5"/>
+<rect x="848" y="150" width="176" height="6" rx="3" fill="#D26FA9"/>
+<circle cx="878" cy="192" r="15" fill="#D26FA9"/><text x="878" y="198" font-size="17" font-weight="800" fill="#0B1120" text-anchor="middle">5</text>
+<text x="902" y="198" font-size="17.5" font-weight="700" fill="#FFFFFF">Łączenie</text>
+<text x="864" y="226" font-size="12" fill="#D26FA9" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">fuse</text>
+<text x="864" y="252" font-size="15" fill="#C5D1E8">bity dowodów,</text>
+<text x="864" y="272" font-size="15" fill="#C5D1E8">model fs-5.1</text>
+<line x1="1026" y1="225" x2="1046" y2="225" stroke="#647BFF" stroke-width="2.5" marker-end="url(#ar)"/>
+<rect x="1048" y="150" width="176" height="150" rx="16" fill="#10203A" stroke="#33D9BC" stroke-opacity="0.8" stroke-width="1.5"/>
+<rect x="1048" y="150" width="176" height="6" rx="3" fill="#33D9BC"/>
+<circle cx="1078" cy="192" r="15" fill="#33D9BC"/><text x="1078" y="198" font-size="17" font-weight="800" fill="#0B1120" text-anchor="middle">6</text>
+<text x="1102" y="198" font-size="17.5" font-weight="700" fill="#FFFFFF">Grupowanie</text>
+<text x="1064" y="226" font-size="12" fill="#33D9BC" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">cluster</text>
+<text x="1064" y="252" font-size="15" fill="#C5D1E8">kampania i</text>
+<text x="1064" y="272" font-size="15" fill="#C5D1E8">operator</text>
+<text x="48" y="336" font-size="14" fill="#7F90B3">Każdy etap zapisuje wynik i zdarzenie postępu w bazie, więc Temporal ponawia go osobno, a interfejs pokazuje przebieg na żywo (SSE).</text>
+  <text x="48" y="372" font-size="15" font-weight="700" fill="#7F90B3" letter-spacing="2.5">WYNIK</text>
+  <g font-size="15" fill="#0B1120" font-weight="700">
+    <rect x="140" y="354" width="250" height="30" rx="15" fill="#33D9BC"/><text x="156" y="374">krawędź z dowodami w bitach</text>
+    <rect x="404" y="354" width="130" height="30" rx="15" fill="#647BFF"/><text x="420" y="374" fill="#fff">kampania</text>
+    <rect x="548" y="354" width="130" height="30" rx="15" fill="#647BFF"/><text x="564" y="374" fill="#fff">operator</text>
+    <rect x="692" y="354" width="250" height="30" rx="15" fill="#FFC15A"/><text x="708" y="374">ocena nowego materiału</text>
+    <rect x="956" y="354" width="226" height="30" rx="15" fill="#F16C92"/><text x="972" y="374">alert o znanej grupie</text>
+  </g>
+  </g>
+</svg>

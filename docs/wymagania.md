@@ -7,7 +7,7 @@
 | Kryterium | Waga | Na czym się opieramy |
 |---|---|---|
 | Jakość metody korelacji i grupowania | 30% | model dowodowy par, trzy relacje, kampanie i operatorzy: [metodyka.md](metodyka.md), wyniki: [dane-organizatora.md](dane-organizatora.md) |
-| Użyteczność i trafność cech oraz źródeł danych | 30% | 7 rodzin markerów, ok. 50 typów; lista CERT Polska, RDAP, biblioteki reklam |
+| Użyteczność i trafność cech oraz źródeł danych | 30% | 7 rodzin markerów, 62 typy (57 niosących dowód, 5 kluczy wyszukiwania; 22 rozstrzygające), lista CERT Polska, RDAP, crt.sh, biblioteki reklam: [README, genom reklamy](../README.md#genom-reklamy) |
 | Kompletność demonstratora, proces end-to-end | 15% | wejście plikiem lub adresem, przebieg na żywo, wynik z dowodami |
 | Czytelność i interpretowalność powiązań | 15% | każda krawędź ma listę dowodów z wkładem w bitach |
 | Potencjał wdrożeniowy, skalowalność, przenośność | 10% | `docker compose up`, Temporal, wyszukiwanie kandydatów indeksem |
@@ -32,9 +32,14 @@
 | Duplikaty i warianty tego samego przekazu | jest | znacznik `duplicate`, relacja `same_campaign` |
 | Metoda podobieństwa i grupowania w kampanie lub grupy podobnych kampanii | jest | kampania, operator, relacja `similar` |
 | Analiza nowego materiału względem zbioru, wskazanie nowych kampanii | jest | ocena: `duplicate`, `known_campaign`, `known_operator`, `similar_only`, `new_pattern` |
-| Prezentacja zależności w czytelnej formie | tak | graf sąsiedztwa reklamy, kampanii i operatora w interfejsie (`/investigation`, z API `/api/graph`), lista powiązań, panel dowodów z wkładem rodzin, karta operatora |
+| Prezentacja zależności w czytelnej formie | tak | graf sąsiedztwa reklamy, kampanii i operatora w interfejsie (`/investigation`, z API `/api/graph`), lista powiązań, panel dowodów z wkładem rodzin, karta operatora, zrzuty z powiększeniem (lightbox), podsumowanie pliku HAR (`GET /api/artifacts/{sha}/har`) zamiast surowego odnośnika |
 | Wskazanie cech i przesłanek powiązania | jest | `GET /api/edges/{id}` |
-| Prosty interfejs graficzny | jest | Next.js, ekran Discovery |
+| Prosty interfejs graficzny | jest | Next.js 16: ekran Analiza (Discovery), kolejka „Do oceny”, graf, karty kampanii, operatorów i reklam, alerty, łowca domen, wagi, zakwestionowania. Tryb prosty (domyślny) i przełącznik „Szczegóły techniczne”. Układ responsywny z dolną nawigacją na telefonie. Własna marka: znak z pasmami genomu, granat i kobalt, pięć kolorów rodzin śladów |
+| Zakwestionowanie przesłanki w całym korpusie | jest, dodatkowo | podgląd, zapis i przywrócenie: `POST /api/premises/preview`, `POST /api/premises`, `POST /api/premises/{id}/restore`, historia `GET /api/premises`; ekran „Zakwestionowania” |
+| Kolejka par do oceny z powodem uwagi | jest, dodatkowo | `GET /api/review`, ekran „Do oceny”, decyzja przypięta do wersji dowodów |
+| Laboratorium dowodów, najsłabsze ogniwo, dwie twarze jednego linku | jest, dodatkowo | `POST /api/edges/{id}/simulate`, `.../weakest-link`, `GET /api/observations/compare`; [laboratorium.md](laboratorium.md), [dwie-twarze.md](dwie-twarze.md) |
+| Eksport dla analityków i zespołów CERT | jest, dodatkowo | pakiet dowodowy ZIP (raport, SHA-256, STIX 2.1, `weryfikuj.py`), `GET /api/export/stix`, `GET /api/export` |
+| Łowca domen i alerty | jest, dodatkowo | `manage.py hunt`, `GET /api/hunt`, `GET /api/alerts`; [metodyka.md](metodyka.md) sekcja 8a |
 | Udokumentowana metodyka | jest | [metodyka.md](metodyka.md) |
 | Niekompletne dane | jest | strona niedostępna, brak HAR, brak adresu, sam zrzut: analiza się kończy, cech jest mniej |
 | Dodatkowo: automatyczne wyszukiwanie w bibliotekach reklam, okresowa aktualizacja | częściowo | harmonogramy Temporal i konektor Microsoft działają; Meta wymaga tokenu |
@@ -61,7 +66,7 @@ Organizator przetestuje rozwiązanie na nieudostępnionym zbiorze z nowymi waria
 | Przypisywanie nowych materiałów do istniejących grup | sprawy z drugiej paczki dołączyły do kampanii i operatora z pierwszej |
 | Niełączenie tego, co nie powinno być połączone | 14 stron bez operatora; kopia treści na innym zapleczu i ten sam silnik lejka bez śladu operatora to tylko `similar`; każda krawędź między sprawami przejrzana ręcznie ([dane-organizatora.md](dane-organizatora.md)) |
 | Przydatność i różnorodność cech | 7 rodzin |
-| Odporność na duplikaty, niekompletne dane, różne formaty | duplikat oznaczony; obsługa zapisanych stron, HAR, `page-capture`, archiwum NASK, zrzutów, wideo; pomiar: bez HAR zostaje 19 z 33 połączeń, bez zapisu strony 30, bez zrzutów 32, w żadnym wariancie zero fałszywych połączeń ([dane-organizatora.md](dane-organizatora.md)) |
+| Odporność na duplikaty, niekompletne dane, różne formaty | duplikat oznaczony; obsługa zapisanych stron, HAR, `page-capture`, archiwum NASK, zrzutów, wideo; pomiar: bez HAR zostaje 18 z 32 połączeń, bez zapisu strony 30, bez zrzutów 32, w żadnym wariancie zero fałszywych połączeń ([dane-organizatora.md](dane-organizatora.md)) |
 | Interpretowalność | dowody przy każdej krawędzi |
 | Kompletność od wczytania do wyniku | `import_bundle` albo upload w interfejsie |
 

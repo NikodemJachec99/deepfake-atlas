@@ -50,6 +50,18 @@ psycopg jest na LGPL: używamy go jako biblioteki bez modyfikacji, co nie nakła
 | tailwindcss, @tailwindcss/turbopack | 4.3.3 | MIT | pakiet |
 | typescript | 5.9.3 | Apache-2.0 | pakiet |
 | eslint, eslint-config-next | 9.39.5, 16.4.6 | MIT | pakiet |
+| sigma (graf powiązań) | 4.0.6 | MIT | pakiet |
+| graphology, graphology-layout-forceatlas2, graphology-types | 0.26.0, 0.10.1, 0.24.8 | MIT | pakiet |
+| @sigma/node-border | 4.0.0 | MIT | pakiet |
+| lucide-react (ikony) | 1.77.0 | ISC | pakiet |
+| motion (animacje) | 14.14.0 | MIT | pakiet |
+| @types/node, @types/react, @types/react-dom (tylko typy, deweloperskie) | 20.x, 19.x | MIT | projekt |
+
+### Czcionki i grafika
+
+- Czcionki Geist i Geist Mono (Vercel) są ładowane przez `next/font/google` i dołączane do paczki podczas budowania interfejsu; licencja SIL Open Font License 1.1 (źródło: projekt). W repozytorium nie ma plików czcionek. Przy budowaniu obrazu `frontend` potrzebny jest dostęp do fonts.google.com.
+- Znak SCAM DNA (`frontend/src/app/icon.svg`, `frontend/src/components/logo.tsx`) i wszystkie ilustracje README w `docs/img/*.svg` narysowaliśmy od zera w trakcie wydarzenia. Nie używają cudzych logo, zdjęć ani czcionek osadzonych w pliku.
+- Ikony z lucide-react (ISC) są częścią biblioteki.
 
 ## Modele
 
@@ -69,6 +81,15 @@ Model mowy działa lokalnie i niczego nie wysyła na zewnątrz. Nie ma modeli ro
 `backend/people/face_refs.json`: dla każdej osoby nazwisko, identyfikator Wikidata, plik z Wikimedia Commons, strona pliku, licencja, autor i wektor SFace (128 liczb). Samych zdjęć w repozytorium nie ma. Zdjęcie bierzemy z właściwości P18 w Wikidata i tylko wtedy, gdy licencja na Commons jest wolna (CC0, CC BY, CC BY-SA, GFDL, domena publiczna). Bazę odtwarza `python manage.py build_face_refs`. Gdy zdjęcie z Wikidata nie ma wolnej licencji, builder szuka w kategorii osoby na Commons (z podkategoriami) portretu z jedną twarzą na wolnej licencji i przyjmuje go tylko wtedy, gdy zgadza się z drugim niezależnym zdjęciem. Plik można też wskazać ręcznie: `--file "Osoba=File:..."`.
 
 Porównujemy wyłącznie z tą bazą osób publicznych, jak dopuszcza opis wyzwania (pkt 5). Wektorów twarzy spoza bazy nie zapisujemy, zostaje tylko marker "twarz osoby X" z wynikiem podobieństwa. Przed użyciem poza konkursem trzeba ustalić podstawę prawną przetwarzania danych biometrycznych (RODO art. 9).
+
+## Obrazy bazowe i pakiety systemowe w obrazach
+
+| Obraz lub pakiet | Gdzie | Licencja | Źródło |
+|---|---|---|---|
+| `python:3.12-slim` (Debian, lustro `public.ecr.aws/docker/library/`) | backend, worker, crawler, crawler-egress | PSF (Python) i licencje pakietów Debiana, w tym GPL dla narzędzi systemowych uruchamianych jako osobne procesy | projekt |
+| `node:24-alpine` (Alpine, lustro ECR) | frontend | MIT (Node.js), licencje pakietów Alpine | projekt |
+| libgl1, libglib2.0-0 (Debian) | backend: biblioteki wymagane przez OpenCV | LGPL | projekt |
+| libatomic1 (Debian) | crawler | GPL-3.0 z wyjątkiem uruchomieniowym GCC | projekt |
 
 ## Usługi uruchamiane lokalnie (kontenery)
 

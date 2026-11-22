@@ -18,7 +18,7 @@ SCAM DNA łączy pozornie niezależne fałszywe reklamy w kampanie i operatorów
 
 ## Opis
 
-Z każdego materiału (adres, zrzut reklamy, zapisana strona, HAR, archiwum NASK, ZIP sprawy) system wyciąga ok. 50 typów markerów w 7 rodzinach: infrastruktura, tracking i lejek, szablon strony, kreacja, narracja, osoby i marki, zachowanie. Parę materiałów ocenia model Fellegi-Sunter z ważeniem rzadkością: adres z puli Cloudflare jest wart ułamek bita, identyfikator strony w panelu lejka 18 bitów. Wspólne źródło wymaga rzadkiego markera albo dwóch niezależnych potwierdzeń, z których jedno dotyczy zaplecza, więc skopiowana treść, wspólna twarz celebryty ani kupiony silnik lejka nie sklejają różnych operatorów.
+Z każdego materiału (adres, zrzut reklamy, zapisana strona, HAR, archiwum NASK, ZIP sprawy) system wyciąga 62 typy markerów w 7 rodzinach: infrastruktura, tracking i lejek, szablon strony, kreacja, narracja, osoby i marki, zachowanie. Parę materiałów ocenia model Fellegi-Sunter z ważeniem rzadkością: adres z puli Cloudflare jest wart ułamek bita, identyfikator strony w panelu lejka 18 bitów. Wspólne źródło wymaga rzadkiego markera albo dwóch niezależnych potwierdzeń, z których jedno dotyczy zaplecza, więc skopiowana treść, wspólna twarz celebryty ani kupiony silnik lejka nie sklejają różnych operatorów.
 
 Wynik to trzy relacje (ta sama kampania, ten sam operator, podobna koncepcja), kampanie i operatorzy jako składowe grafu oraz ocena nowego materiału: duplikat, nowa odsłona znanej kampanii, nowa kampania znanego operatora, tylko podobieństwo albo nowy wzorzec.
 

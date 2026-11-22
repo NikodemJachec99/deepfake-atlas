@@ -4,7 +4,7 @@ Plan ułożony tak, jakby projekt miał rok na rozwój u analityków NASK. Czter
 
 ## Punkt wyjścia
 
-Działa całość od wczytania materiału do wyniku: import przechwyceń i uploadów, ok. 50 typów markerów w 7 rodzinach, model par Fellegi-Sunter z ważeniem rzadkością i regułą niezależnych potwierdzeń, kampanie i operatorzy, interfejs z grafem i panelem dowodów, laboratorium dowodów, porównanie przechwyceń, twarze, nagrania, znaczenie treści, eksport ZIP i STIX 2.1. Szczegóły: [metodyka.md](metodyka.md), wyniki: [dane-organizatora.md](dane-organizatora.md).
+Działa całość od wczytania materiału do wyniku: import przechwyceń i uploadów, 62 typy markerów w 7 rodzinach, model par Fellegi-Sunter z ważeniem rzadkością i regułą niezależnych potwierdzeń, kampanie i operatorzy, interfejs z grafem i panelem dowodów, laboratorium dowodów, porównanie przechwyceń, twarze, nagrania, znaczenie treści, eksport ZIP i STIX 2.1. Szczegóły: [metodyka.md](metodyka.md), wyniki: [dane-organizatora.md](dane-organizatora.md).
 
 ## Etap 1: zbieranie (kwartał 1)
 

@@ -22,6 +22,8 @@ Jedna strona docelowa to jedna jednostka analizy. Zapisana strona i HAR tej same
 
 ## 3. Potok analizy
 
+![Potok analizy: sześć etapów](img/pipeline.svg)
+
 Sześć etapów (`workflows/pipeline.py`). Każdy zapisuje wynik do bazy i zdarzenia postępu, więc orkiestrator (Temporal) może ponowić dowolny z nich, a interfejs pokazuje przebieg na żywo.
 
 1. **Przyjęcie.** Utworzenie rekordu reklamy.
@@ -38,6 +40,8 @@ Brak danych nie zatrzymuje analizy. Strona niedostępna, sprawa bez HAR albo sam
 ## 4. Cechy
 
 Każdą cechę zapisujemy jako marker: typ i znormalizowana wartość. Markery dzielą się na twarde (porównywane dokładnie) i miękkie (porównywane przez podobieństwo). Rejestr typów z parametrami: `evidence/kinds.py`.
+
+Rejestr ma 62 typy: 57 niesie dowód, 5 to klucze wyszukiwania kandydatów (pasma LSH, bez wkładu w bity). 22 typy są rozstrzygające (samotny, rzadki ślad wystarcza do wspólnego źródła), 7 to markery miękkie. Pełny katalog z limitami wkładu: [README](../README.md#genom-reklamy).
 
 ### Siedem rodzin
 
@@ -114,6 +118,8 @@ Wynik na danych organizatora i ocena stabilności: [dane-organizatora.md](dane-o
 
 ## 6. Od pewności do relacji
 
+![Trzy relacje i ich warunki](img/relations.svg)
+
 Sama wysoka suma nie wystarcza. Reguły:
 
 | Relacja | Warunek |
@@ -182,6 +188,14 @@ Ograniczenia łowcy: crt.sh nie szuka po dacie ani po fragmencie nazwy szybko, w
 ## 9. Interpretowalność
 
 Każda krawędź ma w bazie listę dowodów (`EdgeEvidence`): rodzina, typ, wartości po obu stronach, liczba źródeł z tą wartością, wkład w bitach, znacznik rozstrzygania i odnośniki do plików, z których cecha pochodzi. Krawędź bez dowodów nie powstaje. Decyzja analityka (potwierdź, odrzuć, niepewne) zapisuje się w dzienniku audytu.
+
+### Co widzi analityk
+
+- **Kolejka „Do oceny”** (`GET /api/review`): krawędzie bez werdyktu, z jednym powodem uwagi (zakwestionowany ślad, zmiana po decyzji, relacja bez śladu zaplecza, wynik na granicy, nowa reklama w znanej grupie, reszta według relacji). Hipoteza modelu jest pokazana osobno od oceny człowieka, a każda krawędź ma zdania o tym, czego nie dowodzi (`limitations`).
+- **Przesłanki w bitach** przy każdej krawędzi, z oznaczeniem „rozstrzyga”, plus odnośniki do plików, z których ślad pochodzi.
+- **Podsumowanie HAR** (`GET /api/artifacts/{sha256}/har`): lista żądań, łańcuch przekierowań i żądania ze śladami, z adresami po redakcji tokenów i bez treści odpowiedzi. Surowy plik zostaje drugim odnośnikiem (zawsze jako załącznik).
+- **Laboratorium, najsłabsze ogniwo, dwie twarze jednego linku**: [laboratorium.md](laboratorium.md), [dwie-twarze.md](dwie-twarze.md).
+- **Tryb prosty i „Szczegóły techniczne”**: domyślnie wnioski prostym językiem, bez bitów i identyfikatorów; pełne dane po przełączeniu.
 
 ### Pakiet dowodowy i łańcuch dowodu
 

@@ -471,8 +471,62 @@ export interface Stats {
   edges: Partial<Record<Relation, number>>;
   by_source: Partial<Record<Source, number>>;
   alerts_unseen: number;
+  // Krawędzie według werdyktu (none to bez decyzji) i pozycje kolejki /api/review dla source=capture.
+  verdicts: { none: number; confirmed: number; rejected: number; unsure: number };
+  review_pending: number;
   cert_pl_listed: number;
   last_analysis: string | null;
+}
+
+export type ReviewReason = "changed_after_decision" | "unbacked" | "borderline" | "new_in_group" | "other";
+
+export interface ReviewAd {
+  id: number;
+  external_id: string;
+  source: Source;
+  title: string;
+  // Host z adresu docelowego po redakcji tokenów.
+  domain: string;
+  first_seen: string | null;
+  // Pierwsza kreacja albo zrzut strony; obraz pod `image` (/api/artifacts/{sha256}/image).
+  thumbnail: { sha256: string; image: string } | null;
+}
+
+export interface ReviewItem {
+  id: number;
+  relation: Relation;
+  probability: number;
+  bits: number;
+  model_version: string;
+  // Wersja krawędzi: ta sama wartość jako edge_version przy decyzji.
+  updated_at: string;
+  reason: ReviewReason;
+  reason_label: string;
+  ad_a: ReviewAd;
+  ad_b: ReviewAd;
+  // Najwyżej 3 najmocniejsze ślady, malejąco po weight_bits. value po redakcji, strona A.
+  evidence: {
+    kind: string;
+    label: string;
+    family: Family;
+    family_label: string;
+    weight_bits: number;
+    value: string;
+    artifact_a: string | null;
+    artifact_b: string | null;
+  }[];
+  // Zdania o tym, czego krawędź nie dowodzi (może być puste).
+  limitations: string[];
+}
+
+export type ReviewPage = Page<ReviewItem>;
+
+export interface ReviewParams {
+  page?: number;
+  // Domyślnie "capture"; "all" bez filtra źródła.
+  source?: Source | "all";
+  relation?: Relation;
+  reason?: ReviewReason;
 }
 
 export type AlertKind = "joined_campaign" | "new_campaign_known_operator" | "joined_operator" | "hunt_confirmed";
@@ -910,6 +964,13 @@ export const api = {
   kinds: () => request<Kinds>("/api/kinds"),
   weights: () => request<Weights>("/api/weights"),
   stats: () => request<Stats>("/api/stats"),
+  // Kolejka "Do oceny": krawędzie bez werdyktu z powodem uwagi, od najpilniejszych.
+  review: (params: ReviewParams = {}) => {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) if (value !== undefined && value !== "") query.set(key, String(value));
+    const text = query.toString();
+    return request<ReviewPage>(`/api/review${text ? `?${text}` : ""}`);
+  },
   // Alerty: nowy materiał w znanej kampanii albo u znanego operatora. unseenOnly zostawia nieprzejrzane.
   alerts: (unseenOnly = false) => request<Page<Alert>>(`/api/alerts${unseenOnly ? "?unseen=1" : ""}`),
   markAlertSeen: (id: number, seen = true) =>

@@ -249,7 +249,7 @@ function Decision({ edge, onSaved, refresh }: { edge: EdgeDetail; refresh: () =>
         placeholder="Uzasadnienie (opcjonalne). Trafia do dziennika audytu razem z decyzją."
         className="w-full resize-none rounded-sm border border-line bg-bg px-2 py-1 outline-none placeholder:text-faint focus:border-accent"
       /></label>
-      <div className="flex items-center gap-1.5 pt-1.5">
+      <div className="flex flex-wrap items-center gap-1.5 pt-1.5">
         {DECISIONS.map(({ verdict, label, key, icon: Icon }) => (
           <Btn key={verdict} disabled={busy || stale} active={selected === verdict} onClick={() => edit({ selected: verdict })} className="flex-1">
             <Icon size={13} />
@@ -287,7 +287,7 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
   const crossDomain = a && b && hostOf(a.landing_url) && hostOf(b.landing_url) && hostOf(a.landing_url) !== hostOf(b.landing_url);
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 min-w-0 flex-col">
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="flex flex-col gap-2 border-b border-line p-2">
           <h2 className="text-lg font-semibold">Hipoteza modelu</h2>

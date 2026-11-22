@@ -15,6 +15,8 @@ System łączy pozornie niezależne fałszywe reklamy w kampanie i operatorów n
 - Biblioteki, modele, usługi, dane i ich licencje: [docs/licencje.md](docs/licencje.md)
 - Plan rozwoju na rok: [docs/plan-roczny.md](docs/plan-roczny.md)
 - Łowca domen (nowe domeny znanych operatorów z logów CT, `manage.py hunt`): [docs/metodyka.md](docs/metodyka.md), sekcja 8a
+- Stanowisko oceny powiązania (ekran "Do oceny", `GET /api/review`) i zakwestionowanie przesłanki w całym korpusie (`/api/premises`): [docs/api.md](docs/api.md), [docs/metodyka.md](docs/metodyka.md) sekcja 7
+- Próba "spróbuj zgubić kampanię" (`scripts/proba_jury.py`): [docs/dane-organizatora.md](docs/dane-organizatora.md)
 
 ## Start
 
@@ -38,7 +40,7 @@ docker compose exec backend python manage.py import_bundle /data/raw/nask --name
 docker compose exec backend python manage.py collect cert_pl        # opcjonalnie
 ```
 
-Wymagania: Docker z Compose, ok. 6 GB RAM na wszystkie usługi, ok. 8 GB miejsca na obrazy, dostęp do internetu przy pierwszym budowaniu obrazów i przy pierwszym użyciu OCR (pobranie modelu). Pierwsze `up --build` pobiera obrazy usług i paczki Pythona (m.in. onnxruntime, OpenCV, numpy). Sprawdzone 2026-11-21 na świeżym klonie z pustymi wolumenami: na Windowsie przy łączu ok. 100 KB/s `up --build` trwało 31 minut, import paczki `nask` (13 stron) 58 sekund; na Linuksie (Ubuntu 24.04 w WSL2, klon w systemie plików Linuksa, bash) 16 minut i 161 sekund, z tym samym wynikiem. Na macOS nie sprawdzaliśmy. CI przy każdym PR stawia cały stos na ubuntu i importuje zmyśloną sprawę (`backend/tests/smoke_compose.py`).
+Wymagania: Docker z Compose, ok. 6 GB RAM na wszystkie usługi, ok. 8 GB miejsca na obrazy, dostęp do internetu przy pierwszym budowaniu obrazów i przy pierwszym użyciu OCR (pobranie modelu). Pierwsze `up --build` pobiera obrazy usług i paczki Pythona (m.in. onnxruntime, OpenCV, numpy). Sprawdzone 2026-11-21 na świeżym klonie z pustymi wolumenami: na Windowsie przy łączu ok. 100 KB/s `up --build` trwało 31 minut, import paczki `nask` (13 stron) 58 sekund; na Linuksie (Ubuntu 24.04 w WSL2, klon w systemie plików Linuksa, bash) 16 minut i 161 sekund, z tym samym wynikiem. Na macOS nie sprawdzaliśmy. Test dymny całego stosu na zmyślonej sprawie: `backend/tests/smoke_compose.py` (dawniej w CI, które wyłączyliśmy 21.11 z powodu limitu płatności GitHub Actions; od tej pory testy lokalne po scaleniu z main w `scripts/praca.py oddaj`).
 
 Porty zmienisz w `.env`: `BACKEND_PORT`, `FRONTEND_PORT`, a jeśli masz zajęte porty usług pomocniczych (np. własny Postgres na 5432), także `DB_PORT`, `TEMPORAL_PORT`, `S3_PORT`, `NEO4J_HTTP_PORT`, `OPENSEARCH_PORT` i pozostałe z `.env.example`. Po zmianie `FRONTEND_PORT` dopisz nowy adres interfejsu do `CORS_ALLOWED_ORIGINS`, a po zmianie `BACKEND_PORT` przebuduj interfejs (`docker compose up -d --build frontend`), bo adres API jest wkompilowany w czasie budowania.
 

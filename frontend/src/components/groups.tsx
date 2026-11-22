@@ -139,14 +139,14 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
     <header className="flex flex-wrap items-center justify-between gap-3"><div className="min-w-0 grow basis-72">
       <p className="text-sm text-muted">{expert
         ? <>{group.key}{!group.label && representative && " · nazwa robocza według tytułu reklamy"}</>
-        : <>{operator ? "Operator" : "Kampania"} {group.key}{!group.label && representative && " · nazwa robocza z tytułu reklamy"}</>}</p>
+        : <>{operator ? "Operator" : "Kampania"}{!group.label && representative && " · nazwa robocza z tytułu reklamy"}</>}</p>
       <h1 className="atlas-title text-pretty">{name}</h1></div>
       {group.ads.length > 0 && <a className="rounded-md border border-line-strong px-3 py-2 text-accent" href={packageUrl} download>Pobierz pakiet (ZIP)</a>}
       <Link className="rounded-md bg-accent px-3 py-2 font-medium text-white" href={`/investigation?${operator ? "operator" : "campaign"}=${id}`}>Otwórz graf grupy</Link></header>
     <Expert fallback={<section className="grid gap-1">
       <p className="text-lg text-pretty"><strong>{summary}</strong>{seen && <>, widziane {seen.includes(" do ") ? `od ${seen}` : seen}</>}.</p>
       {cert > 0 && <p className="text-muted">{cert} {plural(cert, "domena jest", "domeny są", "domen jest")} na liście ostrzeżeń CERT Polska.</p>}
-      {latest && <p className="text-sm text-muted">Ostatnio: <Link href={`/ads/${latest.id}`} className="text-accent underline">{adTitle(latest)}</Link></p>}
+      {latest && adTitle(latest) !== name && <p className="text-sm text-muted">Ostatnio: <Link href={`/ads/${latest.id}`} className="text-accent underline">{adTitle(latest)}</Link></p>}
     </section>}>
       <section><dl className="flex flex-wrap gap-x-8 gap-y-3">{metrics.map(([name,value]) => <div key={name}><dt className="text-muted">{name}</dt><dd className="text-2xl font-semibold">{value}</dd></div>)}</dl>
         {latest?.last_seen && <p className="mt-2 text-sm text-muted">{lastSeenLabel(latest.source)} · reklama <Link href={`/ads/${latest.id}`} className="text-accent underline">#{latest.id}</Link> · {dateTime(latest.last_seen)}</p>}

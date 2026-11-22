@@ -180,11 +180,25 @@ const DECISIONS: { verdict: Exclude<Verdict, "">; label: string; key: string; ic
 
 function Decision({ edge, onSaved, refresh }: { edge: EdgeDetail; refresh: () => void; onSaved: (edge: EdgeDetail & { regroup?: Regroup }) => void }) {
   const reasons = useApi("verdict-reasons", api.kinds);
-  const [reason, setReason] = useState<Exclude<VerdictReason, "unknown"> | "">(
-    edge.verdict_reason && edge.verdict_reason !== "unknown" ? edge.verdict_reason : ""
-  );
-  const [selected, setSelected] = useState<Verdict>(edge.verdict);
-  const [note, setNote] = useState(edge.verdict_note);
+  const storageKey = `atlas:decision:${edge.id}:${edge.updated_at}`;
+  const savedReason = edge.verdict_reason && edge.verdict_reason !== "unknown" ? edge.verdict_reason : "";
+  type Draft = { selected: Verdict; note: string; reason: Exclude<VerdictReason, "unknown"> | "" };
+  const [draft, setDraft] = useState<Draft>(() => {
+    try {
+      const raw = sessionStorage.getItem(storageKey);
+      const stored = raw && JSON.parse(raw);
+      if (stored && typeof stored.note === "string" && typeof stored.reason === "string" &&
+        ["", ...DECISIONS.map(d => d.verdict)].includes(stored.selected)) return stored;
+    } catch { /* Storage can be unavailable in private browsing. */ }
+    return { selected: edge.verdict, note: edge.verdict_note, reason: savedReason };
+  });
+  const { reason, selected, note } = draft;
+  const dirty = selected !== edge.verdict || note !== edge.verdict_note || reason !== savedReason;
+  function edit(change: Partial<Draft>) {
+    const next = { ...draft, ...change };
+    setDraft(next);
+    try { sessionStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* Keep the in-memory draft. */ }
+  }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -193,7 +207,9 @@ function Decision({ edge, onSaved, refresh }: { edge: EdgeDetail; refresh: () =>
     setBusy(true);
     setError("");
     try {
-      onSaved(await api.setVerdict(edge.id, verdict, note, reason || undefined, utcEdgeVersion(edge.updated_at)));
+      const saved = await api.setVerdict(edge.id, verdict, note, reason || undefined, utcEdgeVersion(edge.updated_at));
+      try { sessionStorage.removeItem(storageKey); } catch { /* Storage unavailable. */ }
+      onSaved(saved);
     } catch (reason) {
       if (reason instanceof ApiError && reason.status === 409) setStale(true);
       else setError(errorText(reason));
@@ -203,9 +219,9 @@ function Decision({ edge, onSaved, refresh }: { edge: EdgeDetail; refresh: () =>
   }
 
   useHotkey((event) => {
-    if (isTyping(event) || event.ctrlKey || event.metaKey || event.altKey || busy || stale) return;
+    if (event.repeat || isTyping(event) || event.ctrlKey || event.metaKey || event.altKey || busy || stale) return;
     const decision = DECISIONS.find((d) => d.key.toLowerCase() === event.key.toLowerCase());
-    if (decision) setSelected(decision.verdict);
+    if (decision) edit({ selected: decision.verdict });
   });
 
   return (
@@ -213,6 +229,7 @@ function Decision({ edge, onSaved, refresh }: { edge: EdgeDetail; refresh: () =>
       <div className="flex items-center justify-between gap-2 pb-1.5">
         <span className="cap">Twoja ocena powiązania</span>
         <span className="flex items-center gap-2 text-[0.85rem] text-muted">
+          <span role="status">{busy ? "Zapisywanie…" : dirty ? "Szkic" : edge.verdict ? "Zapisana ocena" : "Do oceny"}</span>
           <VerdictTag verdict={edge.verdict} />
           {edge.verdict_at && <Mono>{dateTime(edge.verdict_at)}</Mono>}
         </span>
@@ -220,22 +237,21 @@ function Decision({ edge, onSaved, refresh }: { edge: EdgeDetail; refresh: () =>
       <label className="flex flex-wrap items-center gap-2 py-1">Powód decyzji
         <select className="max-w-full border border-line bg-panel p-1" value={reason}
           disabled={!reasons.data?.verdict_reasons?.length || busy}
-          onChange={event => setReason(event.target.value as typeof reason)}>
+          onChange={event => edit({ reason: event.target.value as typeof reason })}>
           <option value="">{reasons.loading ? "Pobieranie powodów…" : reasons.data?.verdict_reasons?.length ? "Bez podanego powodu" : "Lista powodów niedostępna"}</option>
           {reasons.data?.verdict_reasons?.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
         </select>
       </label>
-      <textarea
-        aria-label="Dodaj uzasadnienie"
+      <label className="block">Dodaj uzasadnienie<textarea disabled={busy}
         value={note}
-        onChange={(event) => setNote(event.target.value)}
+        onChange={(event) => edit({ note: event.target.value })}
         rows={2}
         placeholder="Uzasadnienie (opcjonalne). Trafia do dziennika audytu razem z decyzją."
         className="w-full resize-none rounded-sm border border-line bg-bg px-2 py-1 outline-none placeholder:text-faint focus:border-accent"
-      />
+      /></label>
       <div className="flex items-center gap-1.5 pt-1.5">
         {DECISIONS.map(({ verdict, label, key, icon: Icon }) => (
-          <Btn key={verdict} disabled={busy || stale} active={selected === verdict} onClick={() => setSelected(verdict)} className="flex-1">
+          <Btn key={verdict} disabled={busy || stale} active={selected === verdict} onClick={() => edit({ selected: verdict })} className="flex-1">
             <Icon size={13} />
             {label}
             <Kbd>{key}</Kbd>

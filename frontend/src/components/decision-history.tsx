@@ -26,10 +26,10 @@ export function DecisionHistory({ edge, open, onToggle }: { edge: EdgeDetail; op
         <p>{prior.data.notice}</p>
         {!prior.data.precedents.length && <p>Brak podobnych rozstrzygnięć.</p>}
         {prior.data.precedents.map(d => <article key={d.decision} className="border-t border-line py-1">
-          <h4>{dateTime(d.created_at)} · {VERDICT_LABELS[d.verdict]}</h4>
+          <h4 className="font-medium">{dateTime(d.created_at)} · {VERDICT_LABELS[d.verdict]}</h4>
           <p>{d.reason_known ? d.reason_label : "Brak podanego powodu"}</p>{d.note && <p>{d.note}</p>}
-          <dl><dt>Podobieństwa</dt><dd>{d.why.join(" ") || "Brak wskazanych podobieństw."}</dd>
-          <dt>Różnice</dt><dd>{d.differences.join(" ") || "Brak wskazanych różnic."}</dd></dl>
+          <dl><dt className="font-semibold">Podobieństwa</dt><dd>{d.why.join(" ") || "Brak wskazanych podobieństw."}</dd>
+          <dt className="mt-1 font-semibold">Różnice</dt><dd>{d.differences.join(" ") || "Brak wskazanych różnic."}</dd></dl>
           {d.edge && <Link className="text-accent underline" href={`/investigation?scope=all&edge=${d.edge}`}>Dowody powiązania #{d.edge}</Link>}
         </article>)}
       </>}

@@ -3,17 +3,21 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { api, type Evidence, type Regroup } from "@/lib/api";
-import { bits, dateTime, errorText } from "@/lib/format";
+import { bits, dateTime, errorText, plural } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 import { ErrorBox, GroupLink, Loading } from "./ui";
+
+const groupKind = (key: string) => (key.startsWith("O") ? "Operator" : "Kampania");
+const adList = (ids: number[]) => ids.map(id => "#" + id).join(", ") || "brak";
+const adCount = (n: number) => `${n} ${plural(n, "reklama", "reklamy", "reklam")}`;
 
 function GroupChanges({ changes }: { changes: Regroup }) {
   const rows = [...changes.campaign, ...changes.operator];
   const merges = [...(changes.merged?.campaign ?? []), ...(changes.merged?.operator ?? [])];
   return <div role="status"><strong>Przeliczono grupy</strong>
-    {rows.length > 0 && <ul>{rows.map(r => <li key={r.group}>{r.group} → {r.after.map(a => a.key + " (" + a.ads.length + ")").join(", ") || "brak grup"} · Reklamy poza grupą: {r.released.join(", ") || "brak"}</li>)}</ul>}
+    {rows.length > 0 && <ul>{rows.map(r => <li key={r.group}>{groupKind(r.group)} {r.group} → {r.after.map(a => a.key + " (" + adCount(a.ads.length) + ")").join(", ") || "grupa rozwiązana"} · Reklamy poza grupą: {adList(r.released)}</li>)}</ul>}
     {merges.length > 0 && <ul>{merges.map(m => <li key={m.group}>
-      {m.from.join(", ")} → <GroupLink group={m.group}/> · Reklamy po scaleniu: {m.ads.length}
+      {groupKind(m.group)}: {m.from.join(", ")} → <GroupLink group={m.group}/> · Reklamy po scaleniu: {m.ads.length}
       {m.joined.length > 0 && <span> · Dołączone reklamy: {m.joined.map(id => <Link key={id} href={`/ads/${id}`} className="mr-1 text-accent underline">#{id}</Link>)}</span>}
     </li>)}</ul>}
     {!rows.length && !merges.length && <p>Skład grup pozostał ten sam.</p>}
@@ -71,7 +75,7 @@ export function PremiseChallenge({ item, refresh }: { item: Evidence; refresh: (
         <p>Krawędzie korzystające ze śladu: {preview.data.edge_count}. Podziały grup: {preview.data.split_count}.</p>
         <details><summary>Krawędzie przed i po zmianie</summary><ul>{preview.data.edges.map(e => <li key={e.id}>{adLabel(e.ad_a)} ↔ {adLabel(e.ad_b)} · {e.before.relation_label} ({bits(e.before.bits)} bita) → {e.removed ? "usunięcie powiązania" : e.after.relation_label + " (" + bits(e.after.bits) + " bita)"}</li>)}</ul></details>
         {Object.values(preview.data.groups).map((group, i) => <div key={i}>
-          {group.split.map(g => <p key={g.key}>Podział {g.key} · {g.after.map(part => (part.key || "Nowa grupa") + ": " + part.ads.join(", ")).join(" · ")} · Uwolnione reklamy: {g.released.join(", ") || "brak"}</p>)}
+          {group.split.map(g => <p key={g.key}>Podział: {groupKind(g.key)} {g.key} na {g.after.map(part => (part.key || "nową grupę") + " (" + adList(part.ads) + ")").join(" i ")} · Reklamy poza grupą: {adList(g.released)}</p>)}
           {group.stay.map(g => <p key={g.key}>{g.key} pozostaje razem · {g.supported_by.map(s => s.label + " (" + bits(s.bits) + " bita)").join(", ") || "brak dodatkowych śladów w odpowiedzi"}</p>)}
         </div>)}
         {preview.data.warnings.map(w => <p key={w}>{w}</p>)}

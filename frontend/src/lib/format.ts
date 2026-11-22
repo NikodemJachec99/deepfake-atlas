@@ -92,7 +92,7 @@ export function groupColor(key: string | null | undefined, theme: "dark" | "ligh
 
 export function errorText(reason: unknown): string {
   const text = reason instanceof Error ? reason.message : String(reason);
-  if (/Failed to fetch|NetworkError|Load failed/i.test(text)) return "Brak połączenia z API. Sprawdź, czy backend działa i czy adres w NEXT_PUBLIC_API_URL jest poprawny.";
+  if (/Failed to fetch|NetworkError|Load failed/i.test(text)) return "Brak połączenia z API.";
   return text;
 }
 

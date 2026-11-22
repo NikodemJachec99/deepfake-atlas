@@ -55,7 +55,8 @@ export default function Alerts() {
         {!item.seen && <button className="justify-self-start text-accent underline" disabled={saving !== null}
           onClick={() => void markSeen(item.id)}>Oznacz jako przejrzany</button>}
       </li>)}</ul>
-      {!list.data?.results.length && <p>{unseen ? "Brak nieprzejrzanych alertów." : "Brak alertów."}</p>}
+      {!list.data?.results.length && <div className="grid justify-items-start gap-2"><p>{unseen ? "Brak nieprzejrzanych alertów." : "Brak alertów w korpusie."}</p>
+        {unseen ? <button className="text-accent underline" onClick={() => { setUnseen(false); setPage(1); }}>Pokaż wszystkie alerty</button> : <button className="text-accent underline" onClick={list.reload}>Odśwież alerty</button>}</div>}
       {(page > 1 || list.data?.next) && <nav aria-label="Strony alertów" className="flex gap-3">
         <button disabled={page <= 1 || saving !== null} onClick={() => setPage(page - 1)}>Poprzednia</button>
         <span>Strona {page}</span>

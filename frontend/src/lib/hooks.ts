@@ -7,6 +7,7 @@ import { errorText } from "./format";
 
 interface ApiState<T> {
   key: string | null;
+  nonce: number;
   data?: T;
   error?: string;
   status?: number;
@@ -14,7 +15,7 @@ interface ApiState<T> {
 
 // Pobranie z API ze stanami: ładowanie, błąd, dane. `key` identyfikuje zapytanie; null wyłącza pobieranie.
 export function useApi<T>(key: string | null, fetcher: () => Promise<T>) {
-  const [state, setState] = useState<ApiState<T>>({ key: null });
+  const [state, setState] = useState<ApiState<T>>({ key: null, nonce: 0 });
   const [nonce, setNonce] = useState(0);
   const latest = useRef(fetcher);
   useEffect(() => {
@@ -24,14 +25,14 @@ export function useApi<T>(key: string | null, fetcher: () => Promise<T>) {
     if (key === null) return;
     let live = true;
     latest.current().then(
-      (data) => live && setState({ key, data }),
-      (reason) => live && setState({ key, error: errorText(reason), status: reason instanceof ApiError ? reason.status : undefined }),
+      (data) => live && setState({ key, nonce, data }),
+      (reason) => live && setState({ key, nonce, error: errorText(reason), status: reason instanceof ApiError ? reason.status : undefined }),
     );
     return () => {
       live = false;
     };
   }, [key, nonce]);
-  const fresh = state.key === key;
+  const fresh = state.key === key && state.nonce === nonce;
   const reload = useCallback(() => setNonce((n) => n + 1), []);
   const set = useCallback((data: T) => setState((s) => ({ ...s, data })), []);
   return {

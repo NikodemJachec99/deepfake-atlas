@@ -8,7 +8,7 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { API_URL, api, artifactImageUrl, type AdDetail, type Edge } from "@/lib/api";
-import { SOURCE_LABELS, adTitle, dateTime, day, hostOf } from "@/lib/format";
+import { SOURCE_LABELS, adTitle, dateTime, day, hostOf, lastSeenLabel } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 
 import { ObservationPanel } from "./observation-panel";
@@ -164,7 +164,7 @@ export function AdMeta({ ad }: { ad: AdDetail }) {
         {SOURCE_LABELS[ad.source] ?? ad.source} <Mono className="text-muted">{ad.external_id}</Mono>
       </Field>
       <Field label="Pierwsza obserwacja"><Mono>{dateTime(ad.first_seen) || "brak daty"}</Mono></Field>
-      <Field label={ad.source === "capture" || ad.source === "manual" ? "Import do systemu" : "Ostatnia obserwacja"}><Mono>{dateTime(ad.last_seen) || "brak daty"}</Mono></Field>
+      <Field label={lastSeenLabel(ad.source)}><Mono>{dateTime(ad.last_seen) || "brak daty"}</Mono></Field>
     </dl>
   );
 }
@@ -252,7 +252,7 @@ export function AdCard({ adId, onEdge, selectedEdge, full = false }: { adId: num
       {edges.loading ? <Loading /> : edges.error ? <ErrorBox message={edges.error} onRetry={edges.reload} /> : <EdgeRows edges={edges.data ?? []} adId={adId} onEdge={onEdge} selected={selectedEdge} />}</>}
       {(!full || tab === "Ślady") && <><p className="cap flex h-7 items-center border-y border-line px-2">Markery</p>
       <MarkerList videos={data.videos} genome={data.genome} initiallyOpen={full} /></>}
-      {full && tab === "Historia" && <dl className="p-4"><Field label="Pierwsza obserwacja">{dateTime(data.first_seen) || "Brak daty"}</Field><Field label={["capture", "manual"].includes(data.source) ? "Import do systemu" : "Ostatnia obserwacja"}>{dateTime(data.last_seen) || "Brak daty"}</Field></dl>}
+      {full && tab === "Historia" && <dl className="p-4"><Field label="Pierwsza obserwacja">{dateTime(data.first_seen) || "Brak daty"}</Field><Field label={lastSeenLabel(data.source)}>{dateTime(data.last_seen) || "Brak daty"}</Field></dl>}
     </div>
   );
 }

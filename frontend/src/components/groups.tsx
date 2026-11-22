@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { api, artifactImageUrl, campaignPackageUrl, operatorPackageUrl } from "@/lib/api";
-import { bits, dateTime, markerValue, adTitle, hostOf, SOURCE_LABELS } from "@/lib/format";
+import { bits, dateTime, markerValue, adTitle, hostOf, lastSeenLabel, SOURCE_LABELS } from "@/lib/format";
 import { allGroups as loadGroups } from "@/lib/group-pages";
 import { useApi } from "@/lib/hooks";
 import { ObservationTimeline } from "./observation-timeline";
@@ -105,7 +105,7 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
       {group.ads.length > 0 && <a className="rounded-md border border-line-strong px-3 py-2 text-accent" href={packageUrl} download>Pobierz pakiet (ZIP)</a>}
       <Link className="rounded-md bg-accent px-3 py-2 font-medium text-white" href={`/investigation?${operator ? "operator" : "campaign"}=${id}`}>Otwórz graf grupy</Link></header>
     <section><dl className="flex flex-wrap gap-x-8 gap-y-3">{metrics.map(([name,value]) => <div key={name}><dt className="text-muted">{name}</dt><dd className="text-2xl font-semibold">{value}</dd></div>)}</dl>
-      {latest?.last_seen && <p className="mt-2 text-sm text-muted">Ostatnia obserwacja reklamy <Link href={`/ads/${latest.id}`} className="text-accent underline">#{latest.id}</Link> · {dateTime(latest.last_seen)}</p>}
+      {latest?.last_seen && <p className="mt-2 text-sm text-muted">{lastSeenLabel(latest.source)} · reklama <Link href={`/ads/${latest.id}`} className="text-accent underline">#{latest.id}</Link> · {dateTime(latest.last_seen)}</p>}
     </section>
     <section><h2>Dlaczego razem</h2>
       {strongest.length ? <ol className="grid gap-3 md:grid-cols-3">{strongest.map(marker => <li key={JSON.stringify([marker.kind, marker.value])} className="min-w-0">

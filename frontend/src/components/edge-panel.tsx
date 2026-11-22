@@ -189,7 +189,9 @@ function Decision({ edge, onSaved, refresh }: { edge: EdgeDetail; refresh: () =>
   const savedDraft: Draft = { selected: edge.verdict, note: edge.verdict_note, reason: savedReason };
   const [draft, setDraft] = useState<Draft>(() => {
     try {
-      const raw = sessionStorage.getItem(storageKey);
+      const carryKey = `atlas:decision:${edge.id}:carry`;
+      const raw = sessionStorage.getItem(storageKey) ?? sessionStorage.getItem(carryKey);
+      sessionStorage.removeItem(carryKey);
       const stored = raw && JSON.parse(raw);
       if (stored && typeof stored.note === "string" && typeof stored.reason === "string" &&
         ["", ...DECISIONS.map(d => d.verdict)].includes(stored.selected)) return stored;
@@ -221,7 +223,11 @@ function Decision({ edge, onSaved, refresh }: { edge: EdgeDetail; refresh: () =>
       try { sessionStorage.removeItem(storageKey); } catch { /* Storage unavailable. */ }
       onSaved(saved);
     } catch (reason) {
-      if (reason instanceof ApiError && reason.status === 409) setStale(true);
+      if (reason instanceof ApiError && reason.status === 409) {
+        // Szkic przechodzi na nową wersję krawędzi po odświeżeniu danych.
+        try { sessionStorage.setItem(`atlas:decision:${edge.id}:carry`, JSON.stringify(draft)); } catch { /* Szkic zostanie tylko w pamięci. */ }
+        setStale(true);
+      }
       else setError(errorText(reason));
     } finally {
       setBusy(false);

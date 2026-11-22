@@ -143,9 +143,9 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
           <dd className="break-all font-mono">{markerValue(marker.value, marker.display_value)}</dd>
           <dd className="text-sm text-muted">Bity: {marker.bits == null ? "—" : bits(marker.bits)} · Powiązania: {marker.edges} · Reklamy w grupie: {marker.in_group} · W korpusie: {marker.ad_count}</dd>
         </div>)}</dl>
-        <table className="dense hidden md:table"><thead><tr><th>Marker</th><th>Wartość</th><th>Bity</th><th>Powiązania</th><th>Reklamy w grupie</th><th>W korpusie</th></tr></thead>
+        <table className="dense hidden md:table"><thead><tr><th>Marker</th><th>Wartość</th><th>Bity</th><th>Powiązania</th><th className="whitespace-normal!">Reklamy w grupie</th><th>W korpusie</th></tr></thead>
         <tbody>{markers.map(marker => <tr key={JSON.stringify([marker.kind, marker.value])}>
-          <td><FamilyDot family={marker.family} /> {marker.label}</td><td className="break-all font-mono">{markerValue(marker.value, marker.display_value)}</td>
+          <td className="whitespace-normal!"><FamilyDot family={marker.family} /> {marker.label}</td><td className="whitespace-normal! break-all font-mono">{markerValue(marker.value, marker.display_value)}</td>
           <td>{marker.bits == null ? "—" : bits(marker.bits)}</td><td>{marker.edges}</td><td>{marker.in_group}</td><td>{marker.ad_count}</td></tr>)}</tbody></table></> : !paths.length && <p>Brak markerów rdzeniowych.</p>}
       {!!paths.length && <details><summary>Ścieżki zaplecza ({paths.length})</summary><ul>{paths.map(m => <li key={m.value} className="break-all">{m.display_value || m.value} · bity: {m.bits == null ? "—" : bits(m.bits)} · powiązania: {m.edges} · w grupie {m.in_group}, w korpusie {m.ad_count}</li>)}</ul></details>}
     </section>

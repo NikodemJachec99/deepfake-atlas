@@ -185,6 +185,7 @@ function Decision({ edge, onSaved, refresh }: { edge: EdgeDetail; refresh: () =>
   const storageKey = `atlas:decision:${edge.id}:${edge.updated_at}`;
   const savedReason = edge.verdict_reason && edge.verdict_reason !== "unknown" ? edge.verdict_reason : "";
   type Draft = { selected: Verdict; note: string; reason: Exclude<VerdictReason, "unknown"> | "" };
+  const savedDraft: Draft = { selected: edge.verdict, note: edge.verdict_note, reason: savedReason };
   const [draft, setDraft] = useState<Draft>(() => {
     try {
       const raw = sessionStorage.getItem(storageKey);
@@ -192,7 +193,7 @@ function Decision({ edge, onSaved, refresh }: { edge: EdgeDetail; refresh: () =>
       if (stored && typeof stored.note === "string" && typeof stored.reason === "string" &&
         ["", ...DECISIONS.map(d => d.verdict)].includes(stored.selected)) return stored;
     } catch { /* Storage can be unavailable in private browsing. */ }
-    return { selected: edge.verdict, note: edge.verdict_note, reason: savedReason };
+    return savedDraft;
   });
   const { reason, selected, note } = draft;
   const dirty = selected !== edge.verdict || note !== edge.verdict_note || reason !== savedReason;
@@ -203,6 +204,12 @@ function Decision({ edge, onSaved, refresh }: { edge: EdgeDetail; refresh: () =>
   }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  function discardDraft() {
+    setDraft(savedDraft);
+    setError("");
+    try { sessionStorage.removeItem(storageKey); } catch { /* Keep the reset in memory. */ }
+  }
 
   const [stale, setStale] = useState(false);
   async function decide(verdict: Exclude<Verdict, "">) {
@@ -261,6 +268,7 @@ function Decision({ edge, onSaved, refresh }: { edge: EdgeDetail; refresh: () =>
         ))}
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-muted" title={edge.updated_at}>Wersja dowodów · {dateTime(edge.updated_at)}</span>
+        {dirty && <button type="button" disabled={busy} onClick={discardDraft} className="text-accent underline">Cofnij zmiany szkicu</button>}
         <Btn disabled={!selected || busy || stale} onClick={() => selected && decide(selected)}>Zapisz ocenę</Btn></div>
       {stale && <p role="alert">Dane krawędzi zmieniły się. <button className="text-accent underline" onClick={refresh}>Odśwież dane</button></p>}
       {error && <p className="pt-1 text-rejected">Decyzja nie została zapisana: {error}</p>}

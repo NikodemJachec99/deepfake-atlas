@@ -5,7 +5,8 @@ from django.db import connection
 from ads.models import Ad, Advertiser, Analysis
 from enrichment.models import DomainRecord
 from evidence.models import Artifact, Marker
-from similarity.models import Campaign, Operator
+from hunting.models import HuntCandidate, HuntRun
+from similarity.models import Alert, Campaign, Operator, Premise
 
 
 class Command(BaseCommand):
@@ -18,7 +19,9 @@ class Command(BaseCommand):
         if not options["yes"]:
             raise CommandError("To usuwa cały korpus. Uruchom z --yes, jeśli na pewno tego chcesz.")
         counts = {}
-        models = (Analysis, Ad, Advertiser, Marker, Campaign, Operator, Artifact, DomainRecord)
+        # Przesłanki, alerty łowcy i kandydaci nie wiszą na reklamach, więc usuwamy je wprost:
+        # zakwestionowany ślad z poprzedniego korpusu nie może osłabiać powiązań nowego.
+        models = (Premise, Alert, HuntCandidate, HuntRun, Analysis, Ad, Advertiser, Marker, Campaign, Operator, Artifact, DomainRecord)
         # Krawędzie, przypisania i zdarzenia znikają kaskadowo razem z reklamami i analizami.
         for model in models:
             counts[model.__name__] = model.objects.all().delete()[0]

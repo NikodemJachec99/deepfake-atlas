@@ -154,6 +154,10 @@ Plan B: te same trzy kroki z `curl -X POST localhost:8000/api/analyses/upload -F
 
 Uczciwie, gdy padnie pytanie "a mocniejsze przebranie?": zmieniliśmy 3 zdania i domenę, szablon i reszta tekstu zostały, wszystkie 7 wariantów wróciło do swojej grupy. Przepisanego całego artykułu na innym szablonie nie sprawdzaliśmy. Pułapka pokazuje, że z samej kopii treści system nie zrobi operatora.
 
+## Tryb prosty i Szczegóły techniczne
+
+Interfejs startuje w trybie prostym: wnioski prostym językiem (ocena, jedno zdanie "dlaczego", z czym się łączy), bez bitów, prawdopodobieństw, identyfikatorów krawędzi, wersji modelu, skrótów i nazw etapów potoku; pasek stanu korpusu jest ukryty. Pełne dane włącza przełącznik "Szczegóły techniczne" w nagłówku (na telefonie w menu "Więcej"). Wybór zostaje w przeglądarce, a dane są te same, zmienia się tylko to, co widać.
+
 ## Pytania, których się spodziewamy
 
 | Pytanie | Odpowiedź |

@@ -422,7 +422,7 @@ export function Discovery() {
         </div>
         {archive.loading ? <p className="text-muted">Pobieranie materiałów…</p> : archive.error ? <button onClick={archive.reload} className="justify-self-start text-accent underline">Ponów pobranie materiałów</button> :
           archive.data?.length ? <ul className="flex flex-col overflow-hidden rounded-xl border border-line">{archive.data.map(item => <li key={item.id} className="min-w-0 border-b border-line last:border-0">
-            <Link href={`/ads/${item.id}`} className="flex items-center gap-4 px-4 py-3 transition-colors duration-150 hover:bg-panel">
+            <Link href={`/ads/${item.id}`} className="flex items-center gap-4 px-4 py-3 transition-colors duration-150 hover:bg-panel focus-visible:-outline-offset-2">
               <strong className="min-w-0 flex-1 truncate font-medium">{adTitle(item)}</strong>
               <span className="shrink-0 text-sm text-muted">sprawa {item.case}</span>
               <ArrowUpRight size={16} className="shrink-0 text-muted" aria-hidden />

@@ -40,13 +40,13 @@ function AdSide({ ad, detail, side, onOpenAd }: { ad: AdSummary; detail?: AdDeta
   const creative = detail?.creatives[0];
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-2">
-      <div className="flex items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         <Tag>Materiał {side}</Tag>
         <Mono className="text-muted">#{ad.id}</Mono>
         {ad.case && <span className="text-muted">sprawa {ad.case}</span>}
         {"cert_pl" in ad.labels && <Tag tone="rejected" title="Domena jest na Liście Ostrzeżeń CERT Polska">CERT</Tag>}
       </div>
-      <p className="line-clamp-2 min-h-[2.8em] font-medium" title={ad.title}>
+      <p className="break-words font-medium sm:line-clamp-2 sm:min-h-[2.8em]" title={ad.title}>
         {adTitle(ad)}
       </p>
       <Mono className="truncate" title={ad.landing_url}>
@@ -81,12 +81,12 @@ function EvidenceCard({ item, max, refresh }: { item: Evidence; max: number; ref
   const discounted = item.raw_bits - item.weight_bits > 0.05;
   return (
     <li className="border-b border-line">
-      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="grid min-h-9 w-full grid-cols-[12px_minmax(0,1fr)_auto] items-center gap-x-2 px-2 py-1 text-left hover:bg-hover">
+      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="grid min-h-9 w-full grid-cols-[12px_minmax(0,1fr)] sm:grid-cols-[12px_minmax(0,1fr)_auto] items-center gap-x-2 px-2 py-1 text-left hover:bg-hover">
         {open ? <ChevronDown size={12} className="text-muted" /> : <ChevronRight size={12} className="text-muted" />}
         <span className="flex min-w-0 flex-col">
-          <span className="flex items-center gap-1.5">
+          <span className="flex flex-wrap items-center gap-1.5">
             <FamilyDot family={item.family} />
-            <span className="truncate">{item.label}</span>
+            <span className="break-words">{item.label}</span>
             {item.decisive && <Tag tone="accent" title="Rzadki marker rozstrzygający: sam wystarcza do stwierdzenia wspólnego źródła">rozstrzyga</Tag>}
           </span>
           {soft ? (
@@ -94,12 +94,12 @@ function EvidenceCard({ item, max, refresh }: { item: Evidence; max: number; ref
               podobieństwo <Mono className="text-fg">{num(item.similarity, 2)}</Mono>
             </span>
           ) : (
-            <Mono className="truncate text-muted" title={same ? left : `${left} | ${right}`}>
+            <Mono className="break-all text-muted" title={same ? left : `${left} | ${right}`}>
               {same ? left : `${left} | ${right}`}
             </Mono>
           )}
         </span>
-        <span className="flex flex-col items-end">
+        <span className="col-start-2 flex flex-wrap items-center gap-x-3 sm:col-start-auto sm:flex-col sm:items-end">
           <span className="flex items-center gap-2">
             <span className="h-1.5 w-14 bg-line">
               <span className="block h-full" style={{ width: `${Math.min(100, (item.weight_bits / max) * 100)}%`, background: famVar(item.family) }} />
@@ -338,7 +338,7 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
           <FamilyBar families={data.families} legend />
         </div>
 
-        <div className="flex divide-x divide-line border-b border-line">
+        <div className="grid grid-cols-1 divide-y divide-line border-b border-line sm:grid-cols-2 sm:divide-x sm:divide-y-0">
           {a && <AdSide ad={a} detail={adA.data} side="A" onOpenAd={onOpenAd} />}
           {b && <AdSide ad={b} detail={adB.data} side="B" onOpenAd={onOpenAd} />}
         </div>
@@ -353,7 +353,7 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
         <EvidenceLab open={section === "lab"} onToggle={() => toggle("lab")} key={data.id + ":" + data.updated_at} edge={data} refresh={edge.reload} />
 </>}
         {tab === "Źródła" && <ul className="grid gap-2 p-3">{evidence.map(item => <li key={item.id}><strong>{item.label}</strong> · {([["A", item.artifact_a], ["B", item.artifact_b]] as const).map(([side,sha]) => sha ? <a className="mr-2 text-accent underline" key={side} href={artifactDownloadUrl(sha)} download>Sprawdź źródło {side}</a> : <span className="mr-2 text-muted" key={side}>{side} · brak pliku</span>)}</li>)}</ul>}
-        {tab === "Dowody" && <>        <div className="flex h-7 items-center justify-between border-b border-line px-2">
+        {tab === "Dowody" && <>        <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1 border-b border-line px-2 py-1">
           <span className="cap">Co uzasadnia tę hipotezę</span>
           <span className="text-xs text-faint">wersja modelu oceny powiązań · {data.model_version}</span>
         </div>

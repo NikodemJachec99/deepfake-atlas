@@ -4,7 +4,8 @@ import Link from "next/link";
 import { RotateCcw, RotateCw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type Group, type Graph } from "@/lib/api";
-import { groupColor } from "@/lib/format";
+import { groupColor, plural } from "@/lib/format";
+import { useExpert } from "@/lib/expert";
 import { allGroups as loadGroups } from "@/lib/group-pages";
 import { useApi } from "@/lib/hooks";
 
@@ -13,6 +14,7 @@ function CampaignNode({ group, x, y, angle, color, expanded, toggle }: {
 }) {
   const result = useApi(expanded ? String(group.id) : null, () => api.graph(`?campaign=${group.id}`));
   const [all, setAll] = useState(false);
+  const { expert } = useExpert();
   const layout = useMemo(() => {
     const nodes = (result.data?.nodes ?? []).filter(n => n.member ?? n.campaign === group.key);
     const positions = new Map(nodes.map((n, i) => {
@@ -35,7 +37,7 @@ function CampaignNode({ group, x, y, angle, color, expanded, toggle }: {
       <title>{group.label || group.key} · {group.size} reklam</title>
       <circle r="20" fill={expanded ? color : "var(--raised)"} stroke={color} strokeWidth="2" />
       <text textAnchor="middle" dy="5" fill={expanded ? "white" : "var(--accent)"} fontSize="14" fontWeight="600">{group.size}</text>
-      <text textAnchor="middle" y={expanded ? -88 : 38} fill="var(--fg)" fontSize="13">{group.key}</text>
+      <text textAnchor="middle" y={expanded ? -88 : 38} fill="var(--fg)" fontSize="13">{group.key}{!expert && ` · ${group.size} ${plural(group.size, "reklama", "reklamy", "reklam")}`}</text>
     </g>
     {expanded && <>
       {layout.nodes.map(n => <Link key={n.id} href={`/ads/${n.id}`} prefetch={false} aria-label={`Reklama #${n.id}`}>
@@ -64,7 +66,7 @@ function CampaignNode({ group, x, y, angle, color, expanded, toggle }: {
     </>}
     {expanded && <foreignObject transform={`rotate(${-angle})`} x="-92" y="84" width="184" height="65">
       <div className="text-center text-xs">{result.loading ? "Pobieranie reklam…" : result.error ? <button onClick={result.reload}>Ponów pobranie</button> :
-        <button aria-pressed={all} onClick={() => setAll(!all)} className="text-accent underline">{all ? "Najsilniejsze połączenia" : `Połączenia wewnętrzne (${layout.total})`}</button>}
+        <button aria-pressed={all} onClick={() => setAll(!all)} className="text-accent underline">{expert ? (all ? "Najsilniejsze połączenia" : `Połączenia wewnętrzne (${layout.total})`) : (all ? "Pokaż tylko najsilniejsze" : `Pokaż wszystkie powiązania (${layout.total})`)}</button>}
         {result.data?.truncated && <p>Pobrano {result.data.edges.length} z {result.data.total} powiązań zakresu.</p>}
       </div>
     </foreignObject>}
@@ -102,6 +104,7 @@ export function CampaignMap({ groups, expanded, onToggle, loadOperators }: {
   const surface = useRef<SVGSVGElement>(null);
   const drag = useRef<{x:number; y:number} | null>(null);
   const operators = useApi("map-operators", loadOperators);
+  const { expert } = useExpert();
   const locations = groups.map((group, index) => ({
     group, x: 125 + (index % Math.ceil(Math.sqrt(groups.length))) * 215,
     y: 155 + Math.floor(index / Math.ceil(Math.sqrt(groups.length))) * 270,
@@ -124,11 +127,14 @@ export function CampaignMap({ groups, expanded, onToggle, loadOperators }: {
   }, []);
   return <section className="flex min-h-[55vh] flex-1 flex-col rounded-lg border border-line">
     <div className="flex flex-wrap items-center gap-3 border-b border-line p-2">
-      <span id="campaign-map-help" className="basis-full">Kliknij węzeł kampanii, aby rozwinąć lub zwinąć jej reklamy. Kółko zmienia skalę, Shift z kółkiem obraca mapę. Po ustawieniu fokusu na mapie strzałki ją przesuwają.</span>
+      {expert ? <span id="campaign-map-help" className="basis-full">Kliknij węzeł kampanii, aby rozwinąć lub zwinąć jej reklamy. Kółko zmienia skalę, Shift z kółkiem obraca mapę. Po ustawieniu fokusu na mapie strzałki ją przesuwają.</span>
+        : <span id="campaign-map-help" className="basis-full text-pretty">Koło to kampania, liczba w środku to jej reklamy. Kolorowa etykieta nad kołem to operator, który za nią stoi. Kliknij kampanię, żeby zobaczyć jej reklamy: kropka to reklama, linia to powiązanie z dowodami.</span>}
       <button aria-label="Oddal" onClick={() => setScale(v => Math.max(.4,v/1.4))}>−</button>
       <button aria-label="Przybliż" onClick={() => setScale(v => Math.min(8,v*1.4))}>＋</button>
-      <button aria-label="Obróć mapę w lewo" title="Obróć mapę w lewo" className="grid size-10 place-items-center" onClick={() => setAngle(v => v - 15)}><RotateCcw size={18}/></button>
-      <button aria-label="Obróć mapę w prawo" title="Obróć mapę w prawo" className="grid size-10 place-items-center" onClick={() => setAngle(v => v + 15)}><RotateCw size={18}/></button>
+      {expert && <>
+        <button aria-label="Obróć mapę w lewo" title="Obróć mapę w lewo" className="grid size-10 place-items-center" onClick={() => setAngle(v => v - 15)}><RotateCcw size={18}/></button>
+        <button aria-label="Obróć mapę w prawo" title="Obróć mapę w prawo" className="grid size-10 place-items-center" onClick={() => setAngle(v => v + 15)}><RotateCw size={18}/></button>
+      </>}
       <button onClick={() => {setScale(1);setAngle(0);setOffset({x:0,y:0});}}>Dopasuj widok</button>
       {selected && <button onClick={() => {
         setAngle(0); setScale(1); setOffset({ x: width/2 - selected.x, y: height/2 - selected.y });

@@ -54,9 +54,12 @@ export const STRENGTH_LABELS: Record<Strength, string> = {
   weak: "Słaby ślad",
 };
 
-/** Ślad twardy: jedna konkretna wartość, która coś znaczy dla wyniku. Tylko taki ma sens kwestionować. */
-export function isHardTrace(trace: Trace & { df: number }): boolean {
-  return trace.df > 0 && (trace.decisive || trace.weight_bits >= 3);
+// Rodziny motywu (treść, osoby i marki) nie wskazują zaplecza, więc ich nie kwestionujemy jako przesłanki.
+const MOTIF_FAMILIES = new Set(["narr", "pers"]);
+
+/** Ślad twardy: jedna konkretna wartość techniczna, która coś wnosi do wyniku. Tylko taki ma sens kwestionować. */
+export function isHardTrace(trace: Trace & { df: number; family: string }): boolean {
+  return trace.df > 0 && trace.weight_bits > 0 && (trace.decisive || !MOTIF_FAMILIES.has(trace.family));
 }
 
 /** Rzadkość słowem zamiast "w 5 z 92 źródeł". */

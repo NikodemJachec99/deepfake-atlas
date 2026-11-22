@@ -133,7 +133,9 @@ Zgodnie z pkt 8 opisu wyzwania materiały wolno wykorzystywać wyłącznie na po
 
 ## Narzędzia i zasoby użyte przy pisaniu kodu
 
-- Kod powstał w trakcie wydarzenia z pomocą asystenta programowania Claude Code (Anthropic).
+- Kod powstał w trakcie wydarzenia z pomocą asystenta programowania **Claude Code** (Anthropic). Używaliśmy go we wszystkich obszarach: backend (ekstraktory, model par, grupowanie, API), frontend (ekrany w Next.js), testy (pytest), dokumentacja (README, `docs/`), projekt architektury, skrypty pomocnicze (`scripts/`) i wdrożenie na serwer. Zespół decydował o metodzie i zakresie, sprawdzał wyniki na danych organizatora, ręcznie przeglądał krawędzie między sprawami i akceptował każdą zmianę (lokalne testy, lint i build przed scaleniem).
+- **Claude Design** (Anthropic) posłużył do makiet interfejsu na podstawie [design-prompt.md](design-prompt.md). Makiety były wzorem układu ekranów, a interfejs w `frontend/` napisaliśmy od nowa. Eksport makiet nie jest częścią rozwiązania (usunięty w #501).
+- Prezentacja zgłoszeniowa powstała w Claude (Anthropic) jako talia slajdów z wizualizacjami narysowanymi na podstawie rzeczywistych danych z API. Zrzuty i nagranie demo robimy skryptami Playwright z repo (`scripts/prezentacja/zrzuty.py`, `scripts/nagranie_demo.py`).
 - Szkielet interfejsu wygenerowało `create-next-app`.
 - Przed startem wydarzenia (21.11, godz. 10:09) w repo był tylko pusty szkielet: FastAPI z jednym endpointem `/health` i plik compose z bazą. Został w całości zastąpiony kodem napisanym w trakcie wydarzenia.
 - Nie używaliśmy cudzego kodu poza bibliotekami wymienionymi wyżej.

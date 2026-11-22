@@ -567,7 +567,7 @@ Cztery etapy po kwartale (zbieranie, metoda, analiza wizualna i dźwięk, wdroż
 
 ## Licencje i prawa
 
-Repozytorium **celowo nie ma pliku licencji**. Zgodnie z regulaminem zadania (§4) zwycięzcy przenoszą wyłączne autorskie prawa majątkowe na NASK-PIB, więc nie udzielamy licencji nikomu innemu. Zależności są wyłącznie na licencjach otwartych, a usługi z warunkami (Neo4j GPL-3.0, ffmpeg LGPL/GPL) działają jako osobne procesy. Kod jest napisany w trakcie wydarzenia z pomocą asystenta programowania Claude Code (Anthropic), co jest ujawnione w licencjach. Wszystkie biblioteki, modele, obrazy Dockera, dane i usługi zewnętrzne z licencjami i ograniczeniami: [docs/licencje.md](docs/licencje.md). Zgodność z regulaminem punkt po punkcie: [docs/wymagania.md](docs/wymagania.md).
+Repozytorium **celowo nie ma pliku licencji**. Zgodnie z regulaminem zadania (§4) zwycięzcy przenoszą wyłączne autorskie prawa majątkowe na NASK-PIB, więc nie udzielamy licencji nikomu innemu. Zależności są wyłącznie na licencjach otwartych, a usługi z warunkami (Neo4j GPL-3.0, ffmpeg LGPL/GPL) działają jako osobne procesy. Kod jest napisany w trakcie wydarzenia z pomocą asystenta programowania Claude Code (Anthropic) we wszystkich obszarach (backend, frontend, testy, dokumentacja, architektura, wdrożenie), a makiety interfejsu powstały w Claude Design. Zakres i rola zespołu: [docs/licencje.md](docs/licencje.md#narzędzia-i-zasoby-użyte-przy-pisaniu-kodu). Wszystkie biblioteki, modele, obrazy Dockera, dane i usługi zewnętrzne z licencjami i ograniczeniami: [docs/licencje.md](docs/licencje.md). Zgodność z regulaminem punkt po punkcie: [docs/wymagania.md](docs/wymagania.md).
 
 ## Indeks dokumentacji
 

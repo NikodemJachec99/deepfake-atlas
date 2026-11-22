@@ -554,7 +554,7 @@ export interface Stats {
   last_analysis: string | null;
 }
 
-export type ReviewReason = "challenged" | "changed_after_decision" | "unbacked" | "borderline" | "new_in_group" | "other";
+export type ReviewReason = "challenged" | "changed_after_decision" | "unbacked" | "borderline" | "new_in_group" | "operator_to_confirm" | "campaign_to_confirm" | "content_only" | "other";
 
 export interface ReviewAd {
   id: number;

@@ -49,7 +49,7 @@ def test_challenged_premise_trace_takes_priority():
     restored = Premise.objects.create(kind="ip", value="203.0.113.6", reason="x", status="restored")
     assert restored.status == "restored"
     got = reasons()
-    assert got[hit.pk] == "challenged" and got[other.pk] == "other"
+    assert got[hit.pk] == "challenged" and got[other.pk] == "operator_to_confirm"
     first = get().json()["results"][0]
     assert first["id"] == hit.pk and first["reason_label"].startswith("Krawędź używa śladu")
     assert [r["id"] for r in get("?reason=challenged").json()["results"]] == [hit.pk]
@@ -61,7 +61,7 @@ def test_unbacked_without_infrastructure_and_single_decisive():
     fine = pair()
     got = reasons()
     assert got[concept_only.pk] == "unbacked" and got[single.pk] == "unbacked"
-    assert got[fine.pk] == "other"
+    assert got[fine.pk] == "operator_to_confirm"
     item = next(r for r in get().json()["results"] if r["id"] == concept_only.pk)
     assert "brak śladu zaplecza" in item["limitations"]
     assert "kopia treści bez wspólnej infrastruktury" in item["limitations"]
@@ -73,7 +73,7 @@ def test_similar_relation_is_not_unbacked_and_borderline_score():
     similar = pair(relation="similar", probability=0.7, evidence=CONCEPT)
     sure = pair(relation="similar", probability=0.95, evidence=CONCEPT)
     got = reasons()
-    assert got[similar.pk] == "borderline" and got[sure.pk] == "other"
+    assert got[similar.pk] == "borderline" and got[sure.pk] == "content_only"
 
 
 def test_changed_after_decision_in_group():
@@ -87,11 +87,11 @@ def test_changed_after_decision_in_group():
     outside = pair()
     got = reasons()
     assert got[changed.pk] == "changed_after_decision"
-    assert got[outside.pk] == "other"
+    assert got[outside.pk] == "operator_to_confirm"
     assert decided.pk not in got  # krawędź z werdyktem nie wchodzi do kolejki
     # decyzja późniejsza niż zmiana krawędzi zdejmuje powód
     EdgeDecision.objects.create(edge=decided, ad_a=a, ad_b=b, verdict="confirmed", created_at=timezone.now() + timedelta(hours=1))
-    assert reasons()[changed.pk] == "other"
+    assert reasons()[changed.pk] == "operator_to_confirm"
 
 
 def test_new_in_group_needs_joined_alert_and_no_decision_on_its_edges():
@@ -109,7 +109,7 @@ def test_new_in_group_needs_joined_alert_and_no_decision_on_its_edges():
     hunted = edge(hunt_ad, ad())
     got = reasons()
     assert got[flagged.pk] == "new_in_group"
-    assert got[handled.pk] == "other" and got[hunted.pk] == "other"
+    assert got[handled.pk] == "operator_to_confirm" and got[hunted.pk] == "operator_to_confirm"
 
 
 def test_order_is_priority_then_probability():
@@ -134,10 +134,22 @@ def test_relation_and_reason_filters_and_validation():
     op = pair()
     sim = pair(relation="similar", probability=0.7, evidence=CONCEPT)
     assert [r["id"] for r in get("?relation=similar").json()["results"]] == [sim.pk]
-    assert [r["id"] for r in get("?reason=other").json()["results"]] == [op.pk]
+    assert [r["id"] for r in get("?reason=operator_to_confirm").json()["results"]] == [op.pk]
     assert [r["id"] for r in get("?reason=borderline&relation=same_operator").json()["results"]] == []
     assert get("?reason=zly").status_code == 400
     assert get("?relation=zly").status_code == 400
+
+
+def test_remainder_split_by_relation_and_priority():
+    camp = pair(relation="same_campaign")
+    op = pair(relation="same_operator")
+    content = pair(relation="similar", evidence=CONCEPT)
+    got = reasons()
+    assert (got[camp.pk], got[op.pk], got[content.pk]) == ("campaign_to_confirm", "operator_to_confirm", "content_only")
+    order = [r["reason"] for r in get().json()["results"]]
+    assert order == ["operator_to_confirm", "campaign_to_confirm", "content_only"]
+    assert [r["reason_label"] for r in get("?reason=content_only").json()["results"]] == ["Podobna treść bez wspólnego zaplecza"]
+    assert get("?reason=other").json()["count"] == 0
 
 
 def test_pagination():

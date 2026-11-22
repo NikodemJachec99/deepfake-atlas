@@ -20,8 +20,12 @@ REASONS: list[tuple[str, str]] = [
     ("unbacked", "Relacja bez śladu zaplecza albo oparta na jednym decydującym śladzie"),
     ("borderline", "Wynik modelu na granicy (0,5 do 0,9)"),
     ("new_in_group", "Nowa reklama w znanej grupie, bez decyzji na jej krawędziach"),
+    ("operator_to_confirm", "Wspólne zaplecze do potwierdzenia"),
+    ("campaign_to_confirm", "Ta sama kampania do potwierdzenia"),
+    ("content_only", "Podobna treść bez wspólnego zaplecza"),
     ("other", "Bez decyzji"),
 ]
+RELATION_REASON = {"same_operator": "operator_to_confirm", "same_campaign": "campaign_to_confirm", "similar": "content_only"}
 REASON_LABELS = dict(REASONS)
 PRIORITY = {code: i for i, (code, _) in enumerate(REASONS)}
 
@@ -116,7 +120,7 @@ def queue(source: str = "capture", relation: str = "", reason: str = "") -> list
         elif joined & {edge.ad_a_id, edge.ad_b_id} and not ({edge.ad_a_id, edge.ad_b_id} & decided_ads):
             code = "new_in_group"
         else:
-            code = "other"
+            code = RELATION_REASON.get(edge.relation, "other")
         if reason and code != reason:
             continue
         out.append({"edge": edge, "rows": rows, "reason": code})

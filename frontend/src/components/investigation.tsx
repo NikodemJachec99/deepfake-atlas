@@ -67,7 +67,12 @@ export function Investigation() {
 
   const overview = !all && [operatorId, campaignId, adId, edgeId, nodeId].every(id => id === null);
   const operators = useApi(overview ? null : "operators", () => loadGroups("operators"));
-  const [allGroups, setAllGroups] = useState(false);
+  const allGroups = params.get("groups") === "all";
+  const expanded = new Set((params.get("expanded") ?? "").split(",").map(Number).filter(id => Number.isSafeInteger(id) && id > 0));
+  function toggleCampaign(id: number) {
+    const next = toggle(expanded, id, !expanded.has(id));
+    set({ expanded: [...next].join(",") });
+  }
   const captureOnly = overview && !allGroups;
   const campaigns = useApi("campaigns:" + captureOnly, () => loadGroups("campaigns", captureOnly ? "capture" : undefined));
   const stats = useApi(all ? "graph-stats" : null, api.stats);
@@ -131,9 +136,10 @@ export function Investigation() {
       <h1 className="atlas-title">Śledztwo</h1>
       <Link href="/investigation?scope=all" className="rounded-md border border-line-strong px-3 py-2 text-accent hover:bg-panel">Cały graf</Link>
     </header>
-    <label><input type="checkbox" checked={allGroups} onChange={event => setAllGroups(event.target.checked)} /> Wszystkie grupy (również z bibliotek reklam)</label>
+    <label><input type="checkbox" checked={allGroups} onChange={event => set({ groups: event.target.checked ? "all" : null })} /> Wszystkie grupy (również z bibliotek reklam)</label>
     {campaigns.loading ? <Loading label="Pobieranie kampanii" /> : campaigns.error ?
-      <ErrorBox message={campaigns.error} onRetry={campaigns.reload} /> : campaigns.data?.results.length ? <CampaignTree groups={[...campaigns.data.results].sort((a,b) => Number(b.cases > 0) - Number(a.cases > 0))} /> : <Empty title="Brak kampanii">Wszystkie dostępne reklamy znajdziesz w całym grafie.</Empty>}
+      <ErrorBox message={campaigns.error} onRetry={campaigns.reload} /> : campaigns.data?.results.length ? <CampaignTree map={params.get("view") === "map"} onMapChange={map => set({ view: map ? "map" : null })}
+      expanded={expanded} toggleCampaign={toggleCampaign} groups={[...campaigns.data.results].sort((a,b) => Number(b.cases > 0) - Number(a.cases > 0))} /> : <Empty title="Brak kampanii">Wszystkie dostępne reklamy znajdziesz w całym grafie.</Empty>}
   </main>;
 
   const filters = (

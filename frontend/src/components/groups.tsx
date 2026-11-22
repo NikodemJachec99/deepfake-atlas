@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { api, campaignPackageUrl, operatorPackageUrl } from "@/lib/api";
@@ -16,6 +16,12 @@ export function GroupList({ kind }: { kind: GroupKind }) {
   const params = useSearchParams();
   const all = params.get("scope") === "all";
   const query = params.get("q") ?? "";
+  const searchInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const current = new URLSearchParams(window.location.search).get("q") ?? "";
+    if (searchInput.current && searchInput.current.value !== current) searchInput.current.value = current;
+  }, [query]);
+
   function updateFilter(key: "scope" | "q", value: string) {
     const url = new URL(window.location.href);
     if (value) url.searchParams.set(key, value);
@@ -32,7 +38,7 @@ export function GroupList({ kind }: { kind: GroupKind }) {
   return <main className="atlas-page">
     <h1 className="atlas-title">{kind === "operators" ? "Operatorzy" : "Kampanie"}</h1>
     <label className="grid max-w-sm gap-1">Szukaj po identyfikatorze lub nazwie
-      <input type="search" className="rounded-md border border-line bg-panel px-3 py-2" value={query} onChange={e => updateFilter("q", e.target.value)} />
+      <input type="search" className="rounded-md border border-line bg-panel px-3 py-2" ref={searchInput} defaultValue={query} onChange={e => updateFilter("q", e.target.value)} />
     </label>
     <label className="flex items-center gap-2"><input type="checkbox" checked={all} onChange={e => updateFilter("scope", e.target.checked ? "all" : "")} />Wszystkie grupy</label>
     <p className="text-muted">{groups.data && totals.data && `Pokazano ${matches.length} z ${totals.data[kind]} grup · `}{all ? "wszystkie źródła" : "tylko sprawy"}</p>

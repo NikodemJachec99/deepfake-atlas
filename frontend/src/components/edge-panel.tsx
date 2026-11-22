@@ -17,7 +17,7 @@ import { EvidenceLab } from "./evidence-lab";
 import { useRef, useState } from "react";
 
 import { api, ApiError, artifactDownloadUrl, artifactImageUrl, type AdDetail, type AdSummary, type EdgeDetail, type Evidence, type Verdict } from "@/lib/api";
-import { SOURCE_LABELS, utcEdgeVersion, markerValue, RELATION_HINT, adTitle, bits, dateTime, errorText, famVar, hostOf, num, plural } from "@/lib/format";
+import { SOURCE_LABELS, reviewReasonLabel, utcEdgeVersion, markerValue, RELATION_HINT, adTitle, bits, dateTime, errorText, famVar, hostOf, num, plural } from "@/lib/format";
 import { isTyping, useApi, useHotkey } from "@/lib/hooks";
 import { useExpert } from "@/lib/expert";
 import { hypothesisSentence, isHardTrace, overallStrength, plainLimitation, rarityWords, STRENGTH_LABELS, traceStrength, type Strength } from "@/lib/hypothesis";
@@ -61,8 +61,8 @@ function AdSide({ ad, detail, side, onOpenAd, large }: { ad: AdSummary; detail?:
         <GroupLink group={ad.campaign} />
         <GroupLink group={ad.operator} />
       </div> : <p className="flex flex-wrap items-center gap-x-3 text-xs text-muted">
-        <span className="whitespace-nowrap">Kampania <GroupLink group={ad.campaign} /></span>
-        <span className="whitespace-nowrap">Operator <GroupLink group={ad.operator} /></span>
+        {ad.campaign ? <span className="whitespace-nowrap">Kampania <GroupLink group={ad.campaign} /></span> : <span className="whitespace-nowrap">Bez kampanii</span>}
+        {ad.operator ? <span className="whitespace-nowrap">Operator <GroupLink group={ad.operator} /></span> : <span className="whitespace-nowrap">Bez operatora</span>}
       </p>}
       {creative ? <Creative sha={creative} label={`Zrzut reklamy ${side}`} height={imageHeight} /> : <div className={`flex ${imageHeight} items-center justify-center rounded border border-dashed border-line text-faint`}>{detail ? "brak zrzutu reklamy" : "…"}</div>}
       {onOpenAd ? (
@@ -410,7 +410,7 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
               <RelationTag relation={data.relation} duplicate={data.duplicate} />
             </span>
             <span className={`rounded-full border px-2 py-0.5 ${strength.tone === "confirmed" ? "border-confirmed text-confirmed" : strength.tone === "unsure" ? "border-unsure text-unsure" : "border-line-strong text-muted"}`}>{strength.label}</span>
-            {review && <span className="text-muted">Do oceny, bo: {review.reason_label.charAt(0).toLowerCase() + review.reason_label.slice(1)}</span>}
+            {review && <span className="text-muted">Do oceny, bo: {(l => l.charAt(0).toLowerCase() + l.slice(1))(reviewReasonLabel(review.reason, review.reason_label, false))}</span>}
           </div>
         </div>}
         {expert && <div className="flex flex-col gap-2 border-b border-line p-2">

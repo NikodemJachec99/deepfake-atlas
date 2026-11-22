@@ -115,3 +115,9 @@ export function markerValue(value: string, display?: string): string {
   const label = display || value;
   return /^person:\d+$/.test(label) ? "Osoba bez dostępnej etykiety" : label;
 }
+
+// Powód w kolejce "Do oceny" prostym językiem. Progi modelu (0,5 do 0,9) widać w szczegółach technicznych.
+export function reviewReasonLabel(reason: string, label: string, expert: boolean): string {
+  if (!expert && reason === "borderline") return "Model nie jest pewny";
+  return label;
+}

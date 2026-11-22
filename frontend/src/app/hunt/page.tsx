@@ -39,7 +39,7 @@ function Candidate({ item }: { item: HuntCandidate }) {
     <p>{expert && <>{item.status_label} · </>}{!expert && "Operator "}<Link className="text-accent" href={`/operators/${item.operator_id}`}>{item.operator}</Link> · {item.sources.map(source => source === "crtsh" ? "crt.sh" : "CERT Polska").join(", ")}</p>
     {expert ? <p>Ocena wstępna: {item.prelim_score.toLocaleString("pl-PL")} · Siła dowodu: {item.bits == null ? "brak oceny" : bits(item.bits) + " bita"} · Prawdopodobieństwo: {item.probability == null ? "brak oceny" : item.probability.toLocaleString("pl-PL", { style: "percent" })}</p>
       : <p>Zgodność z operatorem: {match(item.probability)}</p>}
-    <p className={expert ? undefined : "text-sm text-muted"}>{item.note} · Sprawdzenie: {dateTime(item.checked_at) || "jeszcze nie sprawdzono"}</p>
+    <p className={expert ? undefined : "text-sm text-muted"}>{expert ? item.note : item.note.replace(/ dla crawlera/i, "")} · Sprawdzenie: {dateTime(item.checked_at) || "jeszcze nie sprawdzono"}</p>
     <details><summary>Szczegóły kandydata</summary>
       {item.cert && <p>Certyfikat · {item.cert.issuer} · {item.cert.serial} · {dateTime(item.cert.not_before)}</p>}
       <p>Składniki oceny · {[...item.score_parts.tokens.map(t => t.token + " (" + t.weight + ")"), item.score_parts.template, item.score_parts.issuer].filter(Boolean).join(", ") || "brak"}</p>
@@ -91,8 +91,8 @@ export default function HuntPage() {
     if (list.data && window.location.hash) document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
   }, [list.data]);
   const { expert } = useExpert();
-  return <main className="atlas-page"><h1 className="atlas-title">Łowca domen</h1>
-    <p className="max-w-3xl text-muted">Szuka nowych domen operatorów w certyfikatach (crt.sh) i na Liście Ostrzeżeń CERT Polska. Kandydata można zgłosić do pełnej analizy.</p>
+  return <main className="atlas-page"><header className="grid gap-2"><h1 className="atlas-title">Łowca domen</h1>
+    <p className="max-w-3xl text-pretty text-muted">Szuka nowych domen znanych operatorów w certyfikatach (crt.sh) i na Liście Ostrzeżeń CERT Polska. Kandydata można zgłosić do pełnej analizy.</p></header>
     <button className="justify-self-start rounded bg-accent px-3 py-2 text-on-accent" disabled={pending || running} onClick={start}>Uruchom przebieg</button>
     {run && <p role="status">Przebieg · {({ queued: "w kolejce", running: "w toku", done: "zakończony", failed: "błąd" })[run.status]} {run.error}</p>}
     {error && <ErrorBox message={error}/>}

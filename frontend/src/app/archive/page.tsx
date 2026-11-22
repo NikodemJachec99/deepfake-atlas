@@ -38,14 +38,6 @@ export default function Archive() {
       <h1 className="atlas-title">Archiwum reklam</h1>
       <p className="max-w-3xl text-pretty text-muted">Wszystkie reklamy w systemie: ze spraw i z bibliotek reklam. Szukaj po tytule, domenie albo słowie kluczowym i otwórz kartę reklamy.</p>
     </header>
-    <details className="rounded-md border border-line p-3">
-      <summary className="font-medium">Pobierz wzbogacony korpus</summary>
-      <p className="my-2 text-muted">ZIP zawiera reklamy z markerami, powiązania z dowodami, grupy i opis danych. Tokeny zapisano wyłącznie jako skróty.</p>
-      <label>Zakres eksportu <select className="border border-line p-1" value={wholeCorpus ? "all" : "capture"} onChange={event => setWholeCorpus(event.target.value === "all")}>
-        <option value="capture">Materiały spraw</option><option value="all">Cały korpus</option>
-      </select></label>
-      <a className="ml-3 text-accent underline" download href={exportCorpusUrl(wholeCorpus ? undefined : "capture")}>Pobierz ZIP</a>
-    </details>
     <form key={query} onReset={() => { if (query) router.push("/archive"); }} className="atlas-filters" onSubmit={event => {
       event.preventDefault();
       const form = new FormData(event.currentTarget);
@@ -84,10 +76,18 @@ export default function Archive() {
       </tr>)}</tbody></table></div> : <div className="grid justify-items-start gap-2 rounded-xl border border-dashed border-line-strong p-6"><p className="text-lg font-medium">{query ? "Brak reklam odpowiadających filtrom." : "Archiwum jest puste."}</p>
         <p className="text-muted">{query ? "Spróbuj krótszego hasła albo wyczyść filtry." : "Dodaj materiał w Analizie albo zaimportuj paczkę."}</p>
         <Link className="text-accent underline" href={query ? "/archive" : "/#input-kind"}>{query ? "Wyczyść filtry" : "Dodaj materiał"}</Link></div>}
-      <nav aria-label="Strony wyników" className="flex gap-3">
-        <button disabled={!data.data.previous} className="disabled:opacity-40" onClick={() => turnPage(page - 1)}>Poprzednia</button>
-        <span>Strona {page}</span>
-        <button disabled={!data.data.next} className="disabled:opacity-40" onClick={() => turnPage(page + 1)}>Następna</button>
-      </nav></>}
+      {(data.data.previous || data.data.next) && <nav aria-label="Strony wyników" className="flex items-center gap-3">
+        <button disabled={!data.data.previous} className="min-h-9 rounded-md border border-line-strong px-3 hover:bg-hover disabled:opacity-40" onClick={() => turnPage(page - 1)}>Poprzednia</button>
+        <span className="text-muted">Strona {page}</span>
+        <button disabled={!data.data.next} className="min-h-9 rounded-md border border-line-strong px-3 hover:bg-hover disabled:opacity-40" onClick={() => turnPage(page + 1)}>Następna</button>
+      </nav>}</>}
+    <details className="rounded-md border border-line p-3">
+      <summary className="font-medium">Pobierz dane do dalszej analizy (ZIP)</summary>
+      <p className="my-2 text-muted">ZIP zawiera reklamy z markerami, powiązania z dowodami, grupy i opis danych. Tokeny zapisano wyłącznie jako skróty.</p>
+      <label>Zakres eksportu <select className="border border-line p-1" value={wholeCorpus ? "all" : "capture"} onChange={event => setWholeCorpus(event.target.value === "all")}>
+        <option value="capture">Materiały spraw</option><option value="all">Cały korpus</option>
+      </select></label>
+      <a className="ml-3 text-accent underline" download href={exportCorpusUrl(wholeCorpus ? undefined : "capture")}>Pobierz ZIP</a>
+    </details>
   </main>;
 }

@@ -13,7 +13,7 @@ const PAGE_SIZE = 50;
 const URGENT = new Set<ReviewReason>(["challenged", "changed_after_decision", "unbacked"]);
 import { EdgePanel, regroupMessage } from "@/components/edge-panel";
 import { ErrorBox, Loading } from "@/components/ui";
-import { plural, VERDICT_LABELS } from "@/lib/format";
+import { plural, reviewReasonLabel, VERDICT_LABELS } from "@/lib/format";
 import { useExpert } from "@/lib/expert";
 import { CircleCheck, Lightbulb, X } from "lucide-react";
 
@@ -49,6 +49,9 @@ export default function ReviewPage() {
   }, [outOfRange, first.data, page, selected, comparing]);
   const [message, setMessage] = useState("");
   const rows = queue.data?.results ?? [];
+  // Te same domeny w kilku parach wyglądają jak duplikaty: wtedy w widoku prostym pokazujemy numery reklam.
+  const pairLabel = (row: (typeof rows)[number]) => [row.ad_a.domain, row.ad_b.domain].sort().join(" ");
+  const repeated = new Set(rows.map(pairLabel).filter((label, index, all) => all.indexOf(label) !== index));
   const current = selected === null ? rows[0] : rows.find(row => row.id === selected);
   const missing = selected !== null && queue.data && !current;
   const queuePanel = useRef<HTMLElement>(null);
@@ -79,10 +82,10 @@ export default function ReviewPage() {
             <span className="min-w-0 font-medium break-words">{row.ad_a.domain && row.ad_a.domain === row.ad_b.domain
               ? `${row.ad_a.domain} · ta sama domena`
               : `${row.ad_a.domain || "Brak domeny"} ↔ ${row.ad_b.domain || "Brak domeny"}`}</span>
-            {expert && <span className="shrink-0 font-mono text-xs text-muted">#{row.ad_a.id} ↔ #{row.ad_b.id}</span>}
           </span>
           {(!row.ad_a.domain || !row.ad_b.domain) && <span className="line-clamp-2 text-muted">{[!row.ad_a.domain && row.ad_a.title, !row.ad_b.domain && row.ad_b.title].filter(Boolean).join(" ↔ ")}</span>}
-          <span className={`justify-self-start rounded-full border px-2 py-0.5 text-xs ${URGENT.has(row.reason) ? "border-unsure text-unsure" : "border-line-strong text-muted"}`}>{row.reason_label}</span></button></li>)}</ul>
+          <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1"><span className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-xs ${URGENT.has(row.reason) ? "border-unsure text-unsure" : "border-line-strong text-muted"}`}>{reviewReasonLabel(row.reason, row.reason_label, expert)}</span>
+            {(expert || repeated.has(pairLabel(row))) && <span className={`shrink-0 text-xs text-muted ${expert ? "font-mono" : ""}`} title="Numery reklam w archiwum">#{row.ad_a.id} ↔ #{row.ad_b.id}</span>}</span></button></li>)}</ul>
         {pages > 1 && <nav aria-label="Strony kolejki" className="mt-3 flex items-center justify-between gap-2 px-1">
           <button className="min-h-9 rounded-md border border-line-strong px-3 hover:bg-hover disabled:opacity-40" disabled={page === 1} onClick={() => navigate(page-1, null, false)}>Poprzednia</button>
           <span className="text-muted">Strona {page} z {pages}</span>

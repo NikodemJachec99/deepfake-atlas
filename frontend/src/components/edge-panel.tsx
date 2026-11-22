@@ -94,7 +94,7 @@ function StrengthPill({ item }: { item: Evidence }) {
 const READABLE_FAMILIES = new Set(["pers", "narr"]);
 
 // Karta dowodu. Tryb prosty: nazwa śladu, siła i rzadkość słowem. Tryb ekspercki: wartości, bity, df, artefakty.
-function EvidenceCard({ item, max, refresh }: { item: Evidence; max: number; refresh: () => void }) {
+function EvidenceCard({ item, max, refresh, more = 0 }: { item: Evidence; max: number; refresh: () => void; more?: number }) {
   const { expert } = useExpert();
   const [open, setOpen] = useState(false);
   const soft = item.df === 0;
@@ -137,7 +137,7 @@ function EvidenceCard({ item, max, refresh }: { item: Evidence; max: number; ref
         {open ? <ChevronDown size={12} className="mt-1.5 text-muted" /> : <ChevronRight size={12} className="mt-1.5 text-muted" />}
         <span className="flex min-w-0 flex-col gap-0.5">
           <span className="flex items-center gap-2 font-medium"><FamilyDot family={item.family} /><span className="break-words">{item.label}</span></span>
-          <span className="text-xs text-muted">{rarityWords(item.df, item.corpus_n)}{!soft && READABLE_FAMILIES.has(item.family) && left && <> · <span className="text-fg">{left}</span></>}</span>
+          <span className="text-xs text-muted">{rarityWords(item.df, item.corpus_n)}{!soft && READABLE_FAMILIES.has(item.family) && left && <> · <span className="text-fg">{left}</span></>}{more > 0 && ` · i jeszcze ${more} ${plural(more, "wartość", "wartości", "wartości")}`}</span>
         </span>
         <StrengthPill item={item} />
       </button>}
@@ -374,6 +374,11 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
 
   const evidence = [...data.evidence].sort((a, b) => b.weight_bits - a.weight_bits);
   const max = Math.max(1, ...evidence.map((e) => e.weight_bits));
+  // Tryb prosty: jeden wiersz na rodzaj śladu (najmocniejsza wartość), reszta jako liczba podobnych wartości.
+  const repeats = new Map<string, number>();
+  for (const item of evidence) repeats.set(item.label, (repeats.get(item.label) ?? -1) + 1);
+  const listed = expert ? evidence : evidence.filter((item, index) => evidence.findIndex(other => other.label === item.label) === index);
+  const sources = expert ? evidence : evidence.filter((item, index) => evidence.findIndex(other => other.label === item.label && other.artifact_a === item.artifact_a && other.artifact_b === item.artifact_b) === index);
   const [a, b] = [data.ads.find((ad) => ad.id === data.ad_a) ?? data.ads[0], data.ads.find((ad) => ad.id === data.ad_b) ?? data.ads[1]];
   const crossDomain = a && b && hostOf(a.landing_url) && hostOf(b.landing_url) && hostOf(a.landing_url) !== hostOf(b.landing_url);
   // Ostrożne brzmienie, gdy kolejka wskazuje słabe podstawy albo wynik modelu jest poniżej progu relacji.
@@ -455,7 +460,7 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
         <EdgeSuggestions open={section === "suggestions"} onToggle={() => toggle("suggestions")} key={`suggestions-${data.id}`} edgeId={data.id} />
         <EvidenceLab open={section === "lab"} onToggle={() => toggle("lab")} key={data.id + ":" + data.updated_at} edge={data} refresh={edge.reload} />
 </>}
-        {tab === "Źródła" && <ul className="grid gap-2 p-3">{evidence.map(item => <li key={item.id}><strong>{item.label}</strong> · {([["A", item.artifact_a], ["B", item.artifact_b]] as const).map(([side,sha]) => sha ? <a className="mr-2 text-accent underline" key={side} href={artifactDownloadUrl(sha)} download>Sprawdź źródło {side}</a> : <span className="mr-2 text-muted" key={side}>{side} · brak pliku</span>)}</li>)}</ul>}
+        {tab === "Źródła" && <ul className="grid gap-2 p-3">{sources.map(item => <li key={item.id}><strong>{item.label}</strong> · {([["A", item.artifact_a], ["B", item.artifact_b]] as const).map(([side,sha]) => sha ? <a className="mr-2 text-accent underline" key={side} href={artifactDownloadUrl(sha)} download>Sprawdź źródło {side}</a> : <span className="mr-2 text-muted" key={side}>{side} · brak pliku</span>)}</li>)}</ul>}
         {tab === "Dowody" && <>        <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1 border-b border-line px-2 py-1">
           <span className="cap">Co uzasadnia tę hipotezę</span>
           {expert ? <span className="text-xs text-faint">wersja modelu oceny powiązań · {data.model_version}</span>
@@ -465,12 +470,12 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
           <Empty title="Krawędź nie ma zapisanych dowodów">To nie powinno się zdarzyć: silnik nie tworzy krawędzi bez dowodów. Zgłoś identyfikator krawędzi.</Empty>
         ) : (
           <ul>
-            {(showAll ? evidence : evidence.slice(0, 3)).map((item, index) => (
-              <EvidenceCard key={`${item.kind}:${item.value_a}:${index}`} item={item} max={max} refresh={edge.reload} />
+            {(showAll ? listed : listed.slice(0, 3)).map((item, index) => (
+              <EvidenceCard key={`${item.kind}:${item.value_a}:${index}`} item={item} max={max} refresh={edge.reload} more={expert ? 0 : repeats.get(item.label) ?? 0} />
             ))}
           </ul>
         )}
-        {evidence.length > 3 && <button className="min-h-9 px-2 text-accent" onClick={() => setShowAll(!showAll)}>{showAll ? "Zwiń listę" : `Wszystkie przesłanki (${evidence.length})`}</button>}
+        {listed.length > 3 && <button className="min-h-9 px-3 text-accent" onClick={() => setShowAll(!showAll)}>{showAll ? "Zwiń listę" : `Wszystkie przesłanki (${listed.length})`}</button>}
         {!!review?.limitations.length && <aside className="m-3 rounded-lg border border-line bg-bg p-3">
           <h3 className="mb-1 flex items-center gap-2 font-medium text-muted"><Info size={16} aria-hidden/>Czego te dowody nie pokazują</h3>
           <ul className="list-disc space-y-1 pl-5">{review.limitations.map(text => <li key={text}>{expert ? text.replace(/^ślad (.+) współdzielony przez (\d+) reklam$/, "Ślad $1 występuje w $2 reklamach") : plainLimitation(text)}</li>)}</ul>

@@ -175,7 +175,7 @@ export function Investigation() {
           </select>
           {scoped && (
             <Link
-              className="text-[0.85rem] text-accent underline"
+              className="text-xs text-accent underline"
               href={campaignId !== null ? `/campaigns/${campaignId}` : `/operators/${scopeOperator}`}
             >
               {campaignId !== null ? `Karta kampanii ${campaignKey ?? "#" + campaignId}` : `Karta operatora ${operatorKey ?? "#" + scopeOperator}`}
@@ -203,7 +203,7 @@ export function Investigation() {
               <Mono className="text-muted">{edges.filter((e) => (e.families[family] ?? 0) > 0).length}</Mono>
             </Check>
           ))}
-          <p className="px-2 pt-1 text-[0.85rem] text-faint">Krawędź zostaje, gdy wkład ma choć jedna zaznaczona rodzina. Kolor krawędzi to rodzina o największym wkładzie.</p>
+          <p className="px-2 pt-1 text-xs text-faint">Krawędź zostaje, gdy wkład ma choć jedna zaznaczona rodzina. Kolor krawędzi to rodzina o największym wkładzie.</p>
         </div>
 
         <div className="flex flex-col gap-1 px-2">
@@ -233,7 +233,7 @@ export function Investigation() {
           </div>
         </div>
 
-        <p className="border-t border-line px-2 pt-2 text-[0.85rem] text-faint">
+        <p className="border-t border-line px-2 pt-2 text-xs text-faint">
           Zakres dat, pivot po markerze i minimapa czekają na API osi czasu i wyszukiwania po markerach.
         </p>
       </div>

@@ -107,7 +107,7 @@ function EvidenceCard({ item, max, refresh }: { item: Evidence; max: number; ref
             <Mono className="w-[3.2em] text-right">{bits(item.weight_bits)}</Mono>
             <span className="text-faint">bita</span>
           </span>
-          <span className="text-[0.85rem] text-muted">{soft ? "marker miękki" : `w ${item.df} z ${item.corpus_n} źródeł`}</span>
+          <span className="text-xs text-muted">{soft ? "marker miękki" : `w ${item.df} z ${item.corpus_n} źródeł`}</span>
         </span>
       </button>
       <PremiseChallenge item={item} refresh={refresh}/>
@@ -229,7 +229,7 @@ function Decision({ edge, onSaved, refresh }: { edge: EdgeDetail; refresh: () =>
     <footer className="shrink-0 border-t border-line bg-panel p-2">
       <div className="flex items-center justify-between gap-2 pb-1.5">
         <span className="cap">Twoja ocena powiązania</span>
-        <span className="flex items-center gap-2 text-[0.85rem] text-muted">
+        <span className="flex items-center gap-2 text-xs text-muted">
           <span role="status">{busy ? "Zapisywanie…" : dirty ? "Szkic" : edge.verdict ? "Zapisana ocena" : "Do oceny"}</span>
           <VerdictTag verdict={edge.verdict} />
           {edge.verdict_at && <Mono>{dateTime(edge.verdict_at)}</Mono>}
@@ -354,7 +354,7 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
         {tab === "Źródła" && <ul className="grid gap-2 p-3">{evidence.map(item => <li key={item.id}><strong>{item.label}</strong> · {([["A", item.artifact_a], ["B", item.artifact_b]] as const).map(([side,sha]) => sha ? <a className="mr-2 text-accent underline" key={side} href={artifactDownloadUrl(sha)} download>Sprawdź źródło {side}</a> : <span className="mr-2 text-muted" key={side}>{side} · brak pliku</span>)}</li>)}</ul>}
         {tab === "Dowody" && <>        <div className="flex h-7 items-center justify-between border-b border-line px-2">
           <span className="cap">Co uzasadnia tę hipotezę</span>
-          <span className="text-[0.85rem] text-faint">wersja modelu oceny powiązań · {data.model_version}</span>
+          <span className="text-xs text-faint">wersja modelu oceny powiązań · {data.model_version}</span>
         </div>
         {evidence.length === 0 ? (
           <Empty title="Krawędź nie ma zapisanych dowodów">To nie powinno się zdarzyć: silnik nie tworzy krawędzi bez dowodów. Zgłoś identyfikator krawędzi.</Empty>

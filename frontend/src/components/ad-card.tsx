@@ -121,7 +121,7 @@ export function Labels({ ad }: { ad: Pick<AdDetail, "labels"> }) {
         <Tag key={topic} tone="accent">{topic}</Tag>
       ))}
       {(expanded ? keywords : keywords.slice(0, 8)).map((keyword) => (
-        <Link key={keyword} href={`/archive?q=${encodeURIComponent(keyword)}`} className="rounded-sm border border-line px-1 text-[0.85rem] text-muted hover:border-line-strong hover:text-fg" title="Słowo kluczowe. Kliknij, aby szukać w archiwum.">
+        <Link key={keyword} href={`/archive?q=${encodeURIComponent(keyword)}`} className="rounded-sm border border-line px-1 text-xs text-muted hover:border-line-strong hover:text-fg" title="Słowo kluczowe. Kliknij, aby szukać w archiwum.">
           {keyword}
         </Link>
       ))}

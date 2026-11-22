@@ -437,7 +437,7 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
         Wszystkie połączenia
       </label>}
       {legend && (
-        <details className="absolute bottom-8 left-2 rounded-md border border-line bg-panel p-2 text-[0.85rem] text-muted"><summary>Legenda</summary>
+        <details className="absolute bottom-8 left-2 rounded-md border border-line bg-panel p-2 text-xs text-muted"><summary>Legenda</summary>
           {RELATIONS.map((relation) => (
             <span key={relation} className="flex items-center gap-2">
               <RelationLine relation={relation} />
@@ -465,7 +465,7 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
         </details>
       )}
 
-      <div className={cx("absolute inset-x-0 bottom-0 flex h-6 items-center gap-3 border-t border-line bg-panel/95 px-2 text-[0.85rem]", !hover && "text-faint")}>
+      <div className={cx("absolute inset-x-0 bottom-0 flex h-6 items-center gap-3 border-t border-line bg-panel/95 px-2 text-xs", !hover && "text-faint")}>
         {hoveredEdge ? (
           <>
             <Mono>

@@ -51,7 +51,7 @@ export function GenomeBands({ genome, other, caption }: { genome: Genome; other?
           <Mono className="w-6 shrink-0 text-right text-muted">{band.markers.length}</Mono>
         </div>
       ))}
-      <p className="pt-1 text-[0.85rem] text-faint">
+      <p className="pt-1 text-xs text-faint">
         Wypełniony znacznik: marker wspólny z inną reklamą. Pusty: tylko w tej reklamie. Wysoki: rozstrzygający.
       </p>
     </div>

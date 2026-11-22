@@ -197,6 +197,7 @@ select {
     left: 0;
     z-index: 1;
     max-width: 9rem;
+    white-space: normal;
     overflow-wrap: anywhere;
     background: var(--panel);
     box-shadow: 3px 0 4px -3px var(--line-strong);

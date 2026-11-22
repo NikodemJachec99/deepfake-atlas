@@ -26,6 +26,11 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | POST | `/api/edges/{id}/simulate` | `{"exclude":[<id dowodu>],"edge_version":"<Edge.updated_at>"}` | `Simulation`: krawędź przed i po wyłączeniu dowodów, nic nie zapisuje |
 | GET | `/api/edges/{id}/suggestions` | | `Suggestions`: co sprawdzić dalej, z brakujących dowodów tej pary |
 | POST | `/api/edges/{id}/weakest-link` | `{"max_group_size":2,"max_scenarios":500,"time_limit_ms":3000,"edge_version":"..."}` | `WeakestLink`: najmniejsze zestawy grup śladów, których utrata zmienia relację |
+| POST | `/api/premises/preview` | `{"kind":"funnel_id","value":"..."}` | `PremisePreview`: krawędzie i grupy przed i po bez tego śladu, nic nie zapisuje (opis niżej) |
+| GET | `/api/premises` | `?status=challenged\|restored` | historia zakwestionowanych przesłanek, najnowsze pierwsze |
+| POST | `/api/premises` | `{"kind":"...","value":"...","reason":"..."}` | `Premise` plus `regroup` (201): ślad wyłączony w całym korpusie, krawędzie i grupy przeliczone |
+| GET | `/api/premises/{id}` | | `Premise` ze stanem przed, po i po przywróceniu |
+| POST | `/api/premises/{id}/restore` | | `Premise` plus `regroup`: ślad wraca, krawędzie i grupy przeliczone |
 | GET | `/api/campaigns` | `?page=`, `?source=capture` (po przecinku kilka) | strona `GroupListItem`: grupy z `size`, `sources`, `cases`, `cert_pl` |
 | GET | `/api/campaigns/{id}` | | reklamy, krawędzie, markery rdzeniowe |
 | GET | `/api/operators` | `?page=`, `?source=capture` | strona `GroupListItem`, jak kampanie |
@@ -328,6 +333,19 @@ Porównanie dwóch przechwyconych stron, np. tego samego adresu widzianego dwa r
 - `page_screenshot` to zrzut wyrenderowanej strony docelowej z crawlera z przeglądarką (`{sha256, image}`), dla materiałów z przechwycenia `null`. Zrzut reklamy (`ad_creatives`) to reklama, nie strona docelowa.
 - HAR i HTML są tylko do pobrania (`/api/artifacts/{sha256}`), nigdy do renderowania. Odpowiedź nie zawiera HTML ani skryptów, adresy mają zredagowane sekrety.
 - Błędy: brak albo zły parametr `400`, ta sama reklama dwa razy `400`, nieistniejąca reklama `404`.
+
+## Zakwestionowanie przesłanki (`Premise`)
+
+Analityk uznaje, że jeden ślad (rodzaj i wartość, np. identyfikator panelu albo piksel) nie identyfikuje operatora: pochodzi od wspólnego usługodawcy albo ze skopiowanego materiału. W odróżnieniu od laboratorium, które działa na jednej krawędzi, przesłanka obejmuje cały korpus.
+
+- `POST /api/premises/preview {kind, value}`: niczego nie zapisuje. Odpowiedź:
+  - `edges[]`: każda nieodrzucona krawędź z tym śladem, `before` i `after` (relacja, bity, wynik modelu), `removed` (krawędź znika), `relation_changed`, `after.kept_by_verdict` (krawędź z werdyktem analityka zostaje z dotychczasową relacją);
+  - `groups.campaign` i `groups.operator`: `split[]` (klucz, skład przed, części po: pierwsza zachowuje klucz, `released` to reklamy, które tracą członkostwo) i `stay[]` (grupy, które się trzymają, z `supported_by`: najmocniejsze pozostałe ślady w bitach);
+  - `edge_count`, `split_count`, `model_version`, `warnings`.
+- `POST /api/premises {kind, value, reason}` (201): zapisuje przesłankę. Od tej chwili `pair_inputs` pomija ten ślad przy budowie dowodów; reklamy z nim są łączone od nowa (`link_ad`), a grupy rozdzielane (`recluster`). Odpowiedź: `Premise` z `before`, `after` i `regroup` (jak przy decyzji o krawędzi).
+- `POST /api/premises/{id}/restore`: ślad wraca do dowodów, reklamy są łączone od nowa, grupy scalane i rozdzielane. `restored_state` i `regroup` w odpowiedzi.
+- `GET /api/premises`, `GET /api/premises/{id}`: historia. Wiersz zostaje po przywróceniu.
+- Błędy: 400 dla śladu miękkiego (podobieństwo nie ma jednej wartości; do tego służy laboratorium krawędzi) albo nieznanego rodzaju, 404 gdy żadna reklama nie ma śladu, 409 gdy przesłanka jest już zakwestionowana albo już przywrócona. Zapis chroni klucz `API_WRITE_KEY` jak każdy POST.
 
 ## Test najsłabszego ogniwa (`WeakestLink`)
 

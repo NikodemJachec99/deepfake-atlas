@@ -139,6 +139,16 @@ Dlaczego tak:
 - **Operator:** składowa spójna po krawędziach `same_campaign` i `same_operator`. Operator ma zwykle kilka kampanii.
 - Krawędź odrzucona przez analityka niczego nie spina. Odrzucenie rozdziela grupę: `service.recluster` liczy składowe po nieodrzuconych krawędziach, największa zachowuje klucz (remis: ta z najmniejszą reklamą), pozostałe składowe od 2 reklam dostają nowe grupy, reklamy bez sąsiada tracą członkostwo. Cofnięcie odrzucenia scala grupy z powrotem. Operatorzy rozdzielają się osobno od kampanii. Zmiana ląduje w dzienniku audytu z kluczami i składem przed i po, bez nowych alertów. `manage.py recluster_all` robi to samo dla wszystkich grup.
 
+### Zakwestionowanie przesłanki
+
+Ślad może być wspólny nie dlatego, że stoi za nim jeden operator: identyfikator należy do pośrednika, piksel do wspólnego panelu reklamowego, a fragment strony ktoś skopiował. Analityk może wtedy zakwestionować przesłankę, czyli jeden ślad (rodzaj i wartość) w całym korpusie, nie tylko na jednej krawędzi.
+
+1. Podgląd przelicza każdą krawędź z tym śladem bez niego (te same reguły co silnik, na zapisanych dowodach) i pokazuje, które grupy się rozpadną, a które trzymają się na innych, niezależnych śladach. Niczego nie zapisuje.
+2. Zapis wyłącza ślad z budowy dowodów, łączy dotknięte reklamy od nowa i rozdziela grupy (`recluster`). Krawędź z werdyktem analityka zostaje z dotychczasową relacją, bo decyzja człowieka ma pierwszeństwo.
+3. Przywrócenie odwraca zmianę. Przesłanka zostaje w historii ze stanem przed, po i po przywróceniu.
+
+Zakwestionować można tylko ślad o jednej wartości. Podobieństwo (tekst, obraz, DOM) wyłącza się w laboratorium krawędzi.
+
 Zwykłe składowe spójne wystarczają, bo każda krawędź przeszła regułę z sekcji 6. Nie ma tu łączenia po samym progu podobieństwa, więc nie ma efektu łańcucha.
 
 ## 8. Nowy materiał

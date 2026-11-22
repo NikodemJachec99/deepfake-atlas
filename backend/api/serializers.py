@@ -179,6 +179,15 @@ class SimulationSerializer(serializers.Serializer):
     edge_version = serializers.CharField(required=False, allow_blank=True)
 
 
+class PremiseSerializer(serializers.Serializer):
+    kind = serializers.CharField(max_length=32)
+    value = serializers.CharField(max_length=2000, trim_whitespace=False)
+
+
+class PremiseChallengeSerializer(PremiseSerializer):
+    reason = serializers.CharField(max_length=2000, trim_whitespace=True)
+
+
 class WeakestLinkSerializer(serializers.Serializer):
     max_group_size = serializers.IntegerField(min_value=1, max_value=2, default=2)
     max_scenarios = serializers.IntegerField(min_value=1, max_value=5000, default=500)

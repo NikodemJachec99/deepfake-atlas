@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { api, RELATION_LABELS, type Stats } from "@/lib/api";
 
 import { dateTime } from "@/lib/format";
+import { Expert, ExpertProvider, ExpertToggle } from "@/lib/expert";
 
 const sections: Record<string, string> = {
   "/review": "Do oceny", "/premises": "Historia zakwestionowań", "/hunt": "Łowca domen", "/": "Analiza", "/investigation": "Śledztwo", "/archive": "Archiwum",
@@ -56,7 +57,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     void refresh();
     return () => { active = false; clearTimeout(timer); };
   }, [revision]);
-  return <div className="flex h-dvh flex-col bg-bg text-fg">
+  return <ExpertProvider><div className="flex h-dvh flex-col bg-bg text-fg">
     <div className="flex min-h-0 flex-1">
       <nav aria-label="Nawigacja główna" className="flex shrink-0 flex-col gap-1 overflow-auto border-r border-line atlas-sidebar bg-panel p-1.5 md:p-3">
         <strong className="hidden px-2 py-3 text-xl tracking-tight md:block">SCAM DNA</strong>
@@ -71,7 +72,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between gap-2 border-b border-line bg-panel/95 px-4 py-2 font-semibold backdrop-blur">
           <span>{sections[root] ?? "SCAM DNA"}{id && " › #" + id}</span>
-          <Link href="/#input-kind" className="rounded border border-line-strong px-3 py-1.5 text-sm text-accent">Dodaj materiał</Link>
+          <div className="flex items-center gap-4"><ExpertToggle /><Link href="/#input-kind" className="rounded border border-line-strong px-3 py-1.5 text-sm text-accent">Dodaj materiał</Link></div>
         </header>
         <div className="flex min-h-0 flex-1 flex-col overflow-auto">{children}</div>
       </div>
@@ -79,11 +80,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
     <footer aria-label="Stan korpusu" className="flex shrink-0 gap-x-5 overflow-x-auto whitespace-nowrap md:flex-wrap text-xs text-muted border-t border-line bg-panel px-3 py-1 font-mono">
       {failed ? "Statystyki korpusu niedostępne" : !stats ? "Pobieranie statystyk…" : <>
         <Link href="/alerts" className="text-accent">Nieprzejrzane alerty {stats.alerts_unseen ?? "—"}</Link><span>Reklamy {stats.ads}</span><span>Kampanie {stats.campaigns}</span><span>Operatorzy {stats.operators}</span>
-        {Object.entries(RELATION_LABELS).map(([key, label]) => <span key={key}>Powiązania · {label.toLocaleLowerCase("pl")} {stats.edges[key as keyof Stats["edges"]] ?? 0}</span>)}
-        <span>Lista CERT {stats.cert_pl_listed}</span><span>Ostatnia analiza {stats.last_analysis ? dateTime(stats.last_analysis) : "brak"}</span>
+        <Expert>
+          {Object.entries(RELATION_LABELS).map(([key, label]) => <span key={key}>Powiązania · {label.toLocaleLowerCase("pl")} {stats.edges[key as keyof Stats["edges"]] ?? 0}</span>)}
+          <span>Lista CERT {stats.cert_pl_listed}</span><span>Ostatnia analiza {stats.last_analysis ? dateTime(stats.last_analysis) : "brak"}</span>
+        </Expert>
       </>}
     </footer>
-  </div>;
+  </div></ExpertProvider>;
 }
 
 export interface Crumb {

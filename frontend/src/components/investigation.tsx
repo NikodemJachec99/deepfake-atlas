@@ -161,10 +161,13 @@ export function Investigation() {
               ))}
             </optgroup>
           </select>
-          {scopeOperator !== null && campaignId === null && (
-            <span className="text-[0.85rem] text-muted">
-              Karta operatora: <GroupLink group={operatorKey} />
-            </span>
+          {scoped && (
+            <Link
+              className="text-[0.85rem] text-accent underline"
+              href={campaignId !== null ? `/campaigns/${campaignId}` : `/operators/${scopeOperator}`}
+            >
+              {campaignId !== null ? `Karta kampanii ${campaignKey ?? "#" + campaignId}` : `Karta operatora ${operatorKey ?? "#" + scopeOperator}`}
+            </Link>
           )}
         </div>
 

@@ -180,6 +180,7 @@ function createSigma(graph: Graph, container: HTMLElement) {
       labelDensity: 0.28,
       labelRenderedSizeThreshold: 5,
       stagePadding: 48,
+      zoomingRatio: 1.35,
       minCameraRatio: 0.05,
       maxCameraRatio: 8,
       allowInvalidContainer: true,

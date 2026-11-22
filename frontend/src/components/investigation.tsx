@@ -155,7 +155,7 @@ export function Investigation() {
           <label htmlFor="scope" className="cap">
             Zakres grafu
           </label>
-          <select id="scope" value={scopeValue} onChange={(event) => changeScope(event.target.value)} className="h-6 rounded-sm border border-line-strong bg-raised px-1">
+          <select id="scope" value={scopeValue} onChange={(event) => changeScope(event.target.value)} className="h-6 w-full min-w-0 rounded-sm border border-line-strong bg-raised px-1">
             <option value="all">Cały graf</option>
             {adId !== null && <option value={`a:${adId}`}>Sąsiedztwo reklamy #{adId}</option>}
             <optgroup label="Operatorzy">
@@ -399,8 +399,8 @@ export function Investigation() {
     <>
       <TopBar crumbs={crumbs} />
       <nav aria-label="Widok śledztwa" className="flex gap-2 px-3 min-[1000px]:hidden">{["Lista", "Porównanie", "Graf"].map(view => <button key={view} disabled={view === "Porównanie" && edgeId === null && nodeId === null} aria-pressed={view === mode} onClick={() => setMobileView(view)} className="rounded px-2 aria-pressed:bg-accent-soft disabled:opacity-50">{view}</button>)}</nav>
-      <div className="atlas-investigation" data-mode={mode}><Split id="inv-filters" dir="row" fixed="first" initial={208} min={180} max={360}>
-        <div className="flex h-full min-h-0 flex-col">
+      <div className="atlas-investigation" data-mode={mode}><Split id="inv-filters" dir="row" fixed="first" initial={242} min={208} max={360}>
+        <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
           <button type="button" className="self-start px-3 py-2 text-accent md:hidden" aria-expanded={mobileFilters} aria-controls="investigation-filters" onClick={() => setMobileFilters(!mobileFilters)}>{mobileFilters ? "Zwiń filtry" : "Zakres i filtry"}</button>
           <div id="investigation-filters" className={`min-h-0 overflow-auto md:block ${mobileFilters ? "block" : "hidden"}`}>{filters}</div>
         </div>

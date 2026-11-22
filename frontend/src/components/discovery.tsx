@@ -88,7 +88,10 @@ export function Discovery() {
   async function run(start: (() => Promise<Analysis | Analysis[]>) | Analysis) {
     const current = ++generation.current;
     stop.current?.();
-    if (typeof start === "function") setBatch([]);
+    if (typeof start === "function") {
+      setBatch([]);
+      setActiveId("");
+    }
     setBusy(true);
     setRetry(null);
     setError("");
@@ -109,7 +112,7 @@ export function Discovery() {
         (item) => {
           if (generation.current === current) setEvents(previous => [...previous, item]);
         },
-        async () => {
+        async (reason) => {
           try {
             const finished = await api.analysis(analysis.id);
             if (generation.current !== current) return;
@@ -117,6 +120,7 @@ export function Discovery() {
               setRetry(analysis);
               return;
             }
+            if (reason === "interrupted") setRetry(analysis);
             if (finished.status === "failed") {
               setError(finished.error || "Backend zgłosił błąd analizy.");
               return;
@@ -235,11 +239,11 @@ export function Discovery() {
         <span>Przerwano odbiór danych analizy.</span>
         <button className="text-accent underline" onClick={() => void run(retry)}>Wznów podgląd</button>
       </div>}
-      {error && <p className="rounded border border-rejected px-3 py-2 text-rejected">Analiza nie powiodła się: {error}</p>}
+      {error && <p role="alert" className="rounded border border-rejected px-3 py-2 text-rejected">Analiza nie powiodła się: {error}</p>}
 
       <div className="grid gap-6">
         <section className="flex min-w-0 flex-col gap-2">
-          {!activeId && <section className="mb-4">
+          {!busy && !activeId && <section className="mb-4">
             <div className="flex items-baseline justify-between border-b border-line pb-2"><h2 className="text-lg font-semibold">Ostatnie materiały ze spraw</h2><Link href="/archive" className="text-accent underline">Całe archiwum</Link></div>
             {archive.loading ? <p>Pobieranie materiałów…</p> : archive.error ? <button onClick={archive.reload} className="text-accent underline">Ponów pobranie materiałów</button> :
               archive.data?.length ? archive.data.map(item => <Link key={item.id} href={`/ads/${item.id}`} className="flex items-center gap-4 border-b border-line py-3 hover:bg-panel">

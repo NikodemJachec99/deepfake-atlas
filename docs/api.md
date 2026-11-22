@@ -344,7 +344,7 @@ Analityk uznaje, że jeden ślad (rodzaj i wartość, np. identyfikator panelu a
   - `groups.campaign` i `groups.operator`: `split[]` (klucz, skład przed, części po: pierwsza zachowuje klucz, `released` to reklamy, które tracą członkostwo) i `stay[]` (grupy, które się trzymają, z `supported_by`: najmocniejsze pozostałe ślady w bitach);
   - `edge_count`, `split_count`, `model_version`, `warnings`.
 - `POST /api/premises {kind, value, reason}` (201): zapisuje przesłankę. Od tej chwili `pair_inputs` pomija ten ślad przy budowie dowodów; reklamy z nim są łączone od nowa (`link_ad`), a grupy rozdzielane (`recluster`). Odpowiedź: `Premise` z `before`, `after` i `regroup` (jak przy decyzji o krawędzi).
-- `POST /api/premises/{id}/restore`: ślad wraca do dowodów, reklamy są łączone od nowa, grupy scalane i rozdzielane. `restored_state` i `regroup` w odpowiedzi.
+- `POST /api/premises/{id}/restore`: ślad wraca do dowodów, reklamy są łączone od nowa, grupy scalane i rozdzielane. `restored_state` i `regroup` w odpowiedzi. `regroup.merged` opisuje scalenia: dla kampanii i operatorów klucz grupy po, skład, `from` (klucze grup przed) i `joined` (reklamy, które wcześniej nie miały grupy).
 - `GET /api/premises`, `GET /api/premises/{id}`: historia. Wiersz zostaje po przywróceniu.
 - Błędy: 400 dla śladu miękkiego (podobieństwo nie ma jednej wartości; do tego służy laboratorium krawędzi) albo nieznanego rodzaju, 404 gdy żadna reklama nie ma śladu, 409 gdy przesłanka jest już zakwestionowana albo już przywrócona. Zapis chroni klucz `API_WRITE_KEY` jak każdy POST.
 

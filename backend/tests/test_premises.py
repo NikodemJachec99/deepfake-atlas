@@ -128,6 +128,9 @@ def test_restore_brings_state_back(client):
     resp = client.post(f"/api/premises/{pid}/restore")
     assert resp.status_code == 200 and resp.json()["status"] == "restored"
     assert memberships() == start
+    # odpowiedź mówi, że C wróciło do grupy A i B
+    merged = resp.json()["regroup"]["merged"]["operator"]
+    assert merged and merged[0]["ads"] == [a.pk, b.pk, c.pk] and merged[0]["joined"] == [c.pk]
     assert list(Edge.objects.order_by("pk").values_list("ad_a_id", "ad_b_id", "relation")) == start_edges
     assert Premise.objects.get(pk=pid).restored_at is not None
     # po przywróceniu ślad znów buduje dowody dla nowych reklam

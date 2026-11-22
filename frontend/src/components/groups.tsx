@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { api, artifactImageUrl, campaignPackageUrl, operatorPackageUrl } from "@/lib/api";
-import { bits, dateTime, markerValue, adTitle, hostOf, lastSeenLabel, plural, SOURCE_LABELS } from "@/lib/format";
+import { bits, dateTime, markerValue, adTitle, hostOf, lastSeenLabel, plural, reviewReasonLabel, SOURCE_LABELS } from "@/lib/format";
 import { Expert, useExpert } from "@/lib/expert";
 import { allGroups as loadGroups } from "@/lib/group-pages";
 import { useApi } from "@/lib/hooks";
@@ -45,6 +45,11 @@ export function GroupList({ kind }: { kind: GroupKind }) {
   );
   const sources = (group: (typeof matches)[number]) =>
     Object.entries(group.sources ?? {}).map(([key, count]) => `${SOURCE_LABELS[key] ?? key}: ${count}`).join(" · ") || "Brak danych";
+  // Widok prosty: liczba spraw zamiast nazw źródeł, biblioteki reklam z nazwą platformy.
+  const simpleSources = (group: (typeof matches)[number]) => [
+    group.cases ? `${group.cases} ${plural(group.cases, "sprawa", "sprawy", "spraw")}` : "",
+    ...Object.entries(group.sources ?? {}).filter(([key]) => key !== "capture" && key !== "manual").map(([key, count]) => `${count} z biblioteki ${SOURCE_LABELS[key] ?? key}`),
+  ].filter(Boolean).join(" · ") || sources(group);
   return <main className="atlas-page">
     <header className="grid gap-2">
       <h1 className="atlas-title">{kind === "operators" ? "Operatorzy" : "Kampanie"}</h1>
@@ -56,7 +61,8 @@ export function GroupList({ kind }: { kind: GroupKind }) {
       </label>
       <label className="flex items-center gap-2 py-2"><input type="checkbox" checked={all} onChange={e => updateFilter("scope", e.target.checked ? "all" : "")} />Wszystkie grupy, także z bibliotek reklam</label>
     </div>
-    <p className="text-muted">{groups.data && totals.data && `Pokazano ${matches.length} z ${totals.data[kind]} grup · `}{all ? "wszystkie źródła" : "tylko sprawy"}</p>
+    {expert ? <p className="text-muted">{groups.data && totals.data && `Pokazano ${matches.length} z ${totals.data[kind]} grup · `}{all ? "wszystkie źródła" : "tylko sprawy"}</p>
+      : groups.data && <p className="text-muted">{all ? `${matches.length} ${plural(matches.length, "grupa", "grupy", "grup")} ze spraw i z bibliotek reklam.` : `${matches.length} ${plural(matches.length, "grupa", "grupy", "grup")} ze spraw${totals.data && totals.data[kind] > matches.length ? `. Razem z bibliotekami reklam: ${totals.data[kind]}.` : "."}`}</p>}
     {groups.loading ? <Loading /> : groups.error ? <ErrorBox message={groups.error} onRetry={groups.reload} /> : matches.length ? expert ? <div className="atlas-table">
       <table className="dense"><thead><tr><th>Grupa</th><th>Nazwa</th><th>Reklamy</th><th>Źródła reklam</th><th>Sprawy</th><th>Reklamy z domeną na liście CERT</th></tr></thead>
         <tbody>{matches.map(group => <tr key={group.id}>
@@ -68,7 +74,7 @@ export function GroupList({ kind }: { kind: GroupKind }) {
         <Link href={`/${kind}/${group.id}`} className="grid h-full gap-1 rounded-xl border border-line bg-panel p-4 transition hover:border-accent">
           <span className="font-semibold text-accent">{group.label || group.key}</span>
           <span className="text-lg">{group.size} {plural(group.size, "reklama", "reklamy", "reklam")}</span>
-          <span className="text-sm text-muted">{group.label ? `${group.key} · ` : ""}{sources(group)}{group.cert_pl ? ` · ${group.cert_pl} na liście CERT` : ""}</span>
+          <span className="text-sm text-muted">{group.label ? `${group.key} · ` : ""}{simpleSources(group)}{group.cert_pl ? ` · ${group.cert_pl} na liście CERT` : ""}</span>
         </Link>
       </li>)}</ul> : <p>{term ? "Brak grup pasujących do wyszukiwania." : all ? "Brak grup w bazie. Dodaj materiał albo zaimportuj paczkę." : "Brak grup ze spraw. Zaznacz „Wszystkie grupy”, żeby zobaczyć grupy z bibliotek reklam."}</p>}
   </main>;
@@ -181,14 +187,14 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
         !pending.data?.length ? <p>Brak par do oceny dla tej grupy.</p> :
           <details><summary>Pokaż pary ({pending.data.length})</summary>
             <ul>{pending.data.map(({ row, page }) => <li key={row.id} className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-              <span className="grow">#{row.ad_a.id} ↔ #{row.ad_b.id} · {row.reason_label}</span>
+              <span className="grow">#{row.ad_a.id} ↔ #{row.ad_b.id} · {reviewReasonLabel(row.reason, row.reason_label, expert)}</span>
               <Link className="text-accent underline" href={`/review?page=${page}&edge=${row.id}&view=compare`}>Oceń parę</Link>
               <Link className="text-accent underline" href={`/investigation?${operator ? "operator" : "campaign"}=${id}&edge=${row.id}`}>Pokaż na grafie</Link>
             </li>)}</ul>
           </details>}
     </section>
     {"campaigns" in group && Array.isArray(group.campaigns) && <section><h2>Kampanie operatora</h2>
-      {group.campaigns.length ? <ul>{group.campaigns.map(key => <li key={key}><GroupLink group={key} /></li>)}</ul> : <p>Brak przypisanych kampanii.</p>}</section>}
+      {group.campaigns.length ? <ul>{group.campaigns.map(key => { const count = group.ads.filter(ad => ad.campaign === key).length; return <li key={key} className="flex flex-wrap items-baseline gap-x-2"><GroupLink group={key} />{count > 0 && <span className="text-sm text-muted">{count} {plural(count, "reklama", "reklamy", "reklam")} w tej grupie</span>}</li>; })}</ul> : <p>Brak przypisanych kampanii.</p>}</section>}
     <FoldSection title="Oś obserwacji"><ObservationTimeline key={kind + id} id={Number(id)} operator={operator} bare /></FoldSection>
     <FoldSection title={expert ? "Markery rdzeniowe" : `Wszystkie wspólne ślady (${markers.length + paths.length})`}>
       {markers.length ? <>
@@ -214,7 +220,7 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
         <Expert><p className="text-sm text-muted">Po rozpakowaniu sprawdź sumy plików poleceniem <code>python weryfikuj.py</code>. Skrót SHA-256 całego ZIP do osobnego porównania podaje API w nagłówku <code>X-Package-SHA256</code>.</p></Expert>
       </>}
     </section>
-    <FoldSection title={`Reklamy (${group.size})`}><ul>{group.ads.map(ad =>
+    <FoldSection title={expert ? `Reklamy (${group.size})` : `Lista reklam (${group.size})`}><ul>{group.ads.map(ad =>
       <li key={ad.id}><Link className="text-accent" href={`/ads/${ad.id}`}>#{ad.id} · {adTitle(ad)}</Link></li>)}</ul></FoldSection>
   </main>;
 }

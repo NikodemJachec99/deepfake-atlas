@@ -152,8 +152,10 @@ function MaterialWorkspace({ ad, edges }: { ad: AdDetail; edges?: Edge[] }) {
 
 export function Labels({ ad }: { ad: Pick<AdDetail, "labels"> }) {
   const [expanded, setExpanded] = useState(false);
+  const { expert } = useExpert();
   const topics = ad.labels.topics ?? [];
-  const keywords = ad.labels.keywords ?? [];
+  // Widok prosty: tematy, a słowa kluczowe tylko gdy reklama nie ma tematu (bez szumu typu „zero”, „banku”).
+  const keywords = !expert && topics.length ? [] : ad.labels.keywords ?? [];
   if (topics.length + keywords.length === 0) return null;
   return (
     <div className="flex flex-wrap items-center gap-1">
@@ -336,7 +338,7 @@ export function AdCard({ adId, onEdge, selectedEdge, full = false }: { adId: num
         <Fold title={`Wszystkie ślady (${data.genome.reduce((sum, band) => sum + band.markers.length, 0)})`}><MarkerList videos={data.videos} genome={data.genome} initiallyOpen={full} /></Fold>
       </div>}><p className="cap flex h-7 items-center border-y border-line px-2">Markery</p>
       <MarkerList videos={data.videos} genome={data.genome} initiallyOpen={full} /></Expert>}
-      {full && tab === "Historia" && <dl className="p-4"><Field label="Pierwsza obserwacja">{dateTime(data.first_seen) || "Brak daty"}</Field><Field label={lastSeenLabel(data.source)}>{dateTime(data.last_seen) || "Brak daty"}</Field></dl>}
+      {full && tab === "Historia" && <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1 p-3"><dt className="text-muted">Pierwsza obserwacja</dt><dd>{dateTime(data.first_seen) || "Brak daty"}</dd><dt className="text-muted">{lastSeenLabel(data.source)}</dt><dd>{dateTime(data.last_seen) || "Brak daty"}</dd></dl>}
     </div>
   );
 }

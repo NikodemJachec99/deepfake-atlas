@@ -258,9 +258,7 @@ export function Investigation() {
         </FiltersMore>
 
         {resetFilters && <div className="px-2">{resetFilters}</div>}
-        {scoped && <p className="border-t border-line px-2 pt-2 text-xs text-faint">
-          Oś obserwacji grupy jest na jej karcie.
-        </p>}
+
       </div>
     </Panel>
   );
@@ -291,7 +289,7 @@ export function Investigation() {
         value={table}
         onChange={setTable}
         items={[
-          { id: "edges", label: graph.data ? `Krawędzie · pokazano ${visible.length} z ${edges.length}` : "Krawędzie" },
+          { id: "edges", label: !expert ? (graph.data ? `Powiązania ${visible.length === edges.length ? edges.length : `${visible.length} z ${edges.length}`}` : "Powiązania") : graph.data ? `Krawędzie · pokazano ${visible.length} z ${edges.length}` : "Krawędzie" },
           { id: "ads", label: `Reklamy ${nodes.length}` },
         ]}
       />

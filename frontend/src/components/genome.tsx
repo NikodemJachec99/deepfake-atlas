@@ -52,7 +52,7 @@ export function GenomeBands({ genome, other, caption }: { genome: Genome; other?
         </div>
       ))}
       <p className="pt-1 text-xs text-faint">
-        Wypełniony znacznik: marker wspólny z inną reklamą. Pusty: tylko w tej reklamie. Wysoki: rozstrzygający.
+        Pełny znacznik: ślad wspólny z inną reklamą. Pusty: ślad tylko tej reklamy. Wysoki: ślad, który sam wystarcza do powiązania.
       </p>
     </div>
   );

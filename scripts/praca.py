@@ -34,7 +34,8 @@ for stream in (sys.stdout, sys.stderr):
 
 ROLES = ("glowny", "koder")
 # Strefy, z których dana maszyna bierze zadania. Główny ma moc na Dockera, import danych i modele.
-ZONES = {"koder": ["frontend"], "glowny": ["backend", "dane", "infra", "docs"]}
+# Od 22.11 ok. 03:20 (decyzja użytkownika) koder nie pracuje, więc główny ma też strefę frontend.
+ZONES = {"koder": ["frontend"], "glowny": ["backend", "dane", "infra", "docs", "frontend"]}
 # Pliki frontendu, które zmienia tylko główny: kontrakt API i budowanie kontenera.
 MAIN_ONLY_IN_FRONTEND = ("frontend/src/lib/api.ts", "frontend/Dockerfile", "frontend/.dockerignore")
 LABELS = {

@@ -95,10 +95,16 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
           </details>}
     </section>
     <section><h2>Markery rdzeniowe</h2>
-      {markers.length ? <table className="dense"><thead><tr><th>Marker</th><th>Wartość</th><th>Reklamy w grupie</th><th>W korpusie</th></tr></thead>
+      {markers.length ? <>
+        <dl className="grid gap-3 md:hidden">{markers.map(marker => <div key={JSON.stringify([marker.kind, marker.value])} className="min-w-0 border-b border-line pb-3">
+          <dt className="font-medium"><FamilyDot family={marker.family} /> {marker.label}</dt>
+          <dd className="break-all font-mono">{markerValue(marker.value, marker.display_value)}</dd>
+          <dd className="text-sm text-muted">Reklamy w grupie: {marker.in_group} · W korpusie: {marker.ad_count}</dd>
+        </div>)}</dl>
+        <table className="dense hidden md:table"><thead><tr><th>Marker</th><th>Wartość</th><th>Reklamy w grupie</th><th>W korpusie</th></tr></thead>
         <tbody>{markers.map(marker => <tr key={JSON.stringify([marker.kind, marker.value])}>
           <td><FamilyDot family={marker.family} /> {marker.label}</td><td className="break-all font-mono">{markerValue(marker.value, marker.display_value)}</td>
-          <td>{marker.in_group}</td><td>{marker.ad_count}</td></tr>)}</tbody></table> : !paths.length && <p>Brak markerów rdzeniowych.</p>}
+          <td>{marker.in_group}</td><td>{marker.ad_count}</td></tr>)}</tbody></table></> : !paths.length && <p>Brak markerów rdzeniowych.</p>}
       {!!paths.length && <details><summary>Ścieżki zaplecza ({paths.length})</summary><ul>{paths.map(m => <li key={m.value} className="break-all">{m.display_value || m.value} · w grupie {m.in_group}, w korpusie {m.ad_count}</li>)}</ul></details>}
     </section>
     {operator && <HuntProfile id={Number(id)}/>}

@@ -33,7 +33,7 @@ export default function ReviewPage() {
   const rows = queue.data?.results ?? [];
   const current = selected === null ? rows[0] : rows.find(row => row.id === selected);
   const missing = selected !== null && queue.data && !current;
-  return <main className="grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)] gap-3 lg:grid-rows-1 overflow-auto p-3 text-sm lg:grid-cols-[minmax(15rem,24%)_minmax(0,1fr)]">
+  return <main className="grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)] gap-3 lg:grid-rows-1 overflow-hidden p-3 text-sm lg:grid-cols-[minmax(15rem,24%)_minmax(0,1fr)]">
     <nav aria-label="Widok stanowiska oceny" className="flex gap-2 lg:hidden">
       <button aria-pressed={!comparing} className="rounded px-3 aria-pressed:bg-accent-soft" onClick={() => navigate(page, selected, false)}>Kolejka</button>
       <button disabled={!current} aria-pressed={comparing} className="rounded px-3 aria-pressed:bg-accent-soft" onClick={() => navigate(page, current?.id ?? null, true)}>Porównanie</button>
@@ -48,7 +48,7 @@ export default function ReviewPage() {
         <nav className="mt-3 flex justify-between"><button disabled={page === 1} onClick={() => navigate(page-1, null, false)}>Poprzednia</button><span>{page}</span><button disabled={!queue.data?.next} onClick={() => navigate(page+1, null, false)}>Następna</button></nav>
       </>}
     </aside>
-    <section className={`min-h-0 min-w-0 flex-col overflow-auto rounded-lg border border-line bg-panel lg:flex ${comparing ? "flex" : "hidden"}`}>
+    <section className={`min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-line bg-panel lg:flex ${comparing ? "flex" : "hidden"}`}>
       {message && <p role="status" className="border-b border-line p-3">{message}</p>}
       {missing && <div role="status" className="grid justify-items-start gap-3 p-4">
         <h2 className="font-semibold">Wskazanej pary nie ma na tej stronie kolejki.</h2>

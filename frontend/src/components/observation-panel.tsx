@@ -1,5 +1,6 @@
 "use client";
 
+import { SourceLink } from "./har-overview";
 import { CrawlShot } from "./crawl-shot";
 import Link from "next/link";
 import { useState } from "react";
@@ -28,10 +29,8 @@ function Capture({ side }: { side: ObservationSide }) {
       <figcaption className="text-muted">Fragment tekstu strony · {side.text_excerpt.source}</figcaption>
       <blockquote className="whitespace-pre-wrap border-l border-line pl-2">{side.text_excerpt.text}</blockquote>
     </figure> : <p>Fragment tekstu strony niedostępny.</p>}
-    {(["har", "html"] as const).map(kind => {
-      const file = side.artifacts?.[kind];
-      return file && <a key={kind} className="mr-3 text-accent underline" href={artifactDownloadUrl(file.sha256)} download>Pobierz {kind.toUpperCase()}</a>;
-    })}
+    {side.artifacts?.har && <SourceLink sha={side.artifacts.har.sha256} className="mr-3 text-accent underline">Pokaż ruch sieciowy strony (HAR)</SourceLink>}
+    {side.artifacts?.html && <a className="mr-3 text-accent underline" href={artifactDownloadUrl(side.artifacts.html.sha256)} download>Pobierz HTML</a>}
   </article>;
 }
 

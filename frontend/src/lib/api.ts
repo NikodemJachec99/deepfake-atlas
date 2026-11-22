@@ -965,6 +965,36 @@ export interface Page<T> {
 // z obcych stron i skryptów w sieci, a nie przed kimś, kto ma dostęp do samego interfejsu.
 const API_KEY = process.env.NEXT_PUBLIC_API_KEY ?? "";
 
+// Czytelne streszczenie pliku HAR (GET /api/artifacts/{sha256}/har). Bez treści odpowiedzi, adresy po redakcji.
+export interface HarEntry {
+  n: number;
+  method: string;
+  host: string;
+  path: string;
+  url: string;
+  status: number; // 0, gdy brak odpowiedzi
+  type: string; // dokument, skrypt, styl, obraz, czcionka, dane, wideo, dźwięk, inne
+  size: number | null;
+  ms: number | null;
+  ip: string;
+  redirect_to: string;
+  main: boolean; // dokument główny strony
+  traces: string[]; // kody typów markerów, klucze w trace_labels
+}
+export interface HarOverview {
+  sha256: string;
+  download: string;
+  total: number;
+  page_url: string;
+  started_at: string;
+  chain: { url: string; status: number }[];
+  hosts: { host: string; requests: number }[];
+  entries: HarEntry[];
+  truncated: boolean;
+  with_traces: number;
+  trace_labels: Record<string, string>;
+}
+
 export class ApiError extends Error {
   constructor(readonly status: number, detail: string) {
     super(`API ${status}: ${detail}`);
@@ -1037,6 +1067,8 @@ export const api = {
   premises: (status?: "challenged" | "restored") =>
     request<{ count: number; results: Premise[] }>(`/api/premises${status ? `?status=${status}` : ""}`),
   premise: (id: number) => request<Premise>(`/api/premises/${id}`),
+  // Czytelne streszczenie HAR. 404, gdy artefakt nie jest plikiem HAR (np. zapis HTML), 422, gdy plik jest uszkodzony.
+  harOverview: (sha256: string) => request<HarOverview>(`/api/artifacts/${sha256}/har`),
   // Dwie twarze jednego linku: obserwacja strony reklamy i strony do porównania; porównanie tylko do odczytu.
   adObservations: (id: number) => request<AdObservations>(`/api/ads/${id}/observations`),
   compareObservations: (a: number, b: number) => request<ObservationComparison>(`/api/observations/compare?a=${a}&b=${b}`),

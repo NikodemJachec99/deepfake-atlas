@@ -5,7 +5,7 @@ import { ContentSimilarity } from "./content-similarity";
 // Panel dowodów krawędzi: z czego wynika połączenie dwóch reklam. Najważniejszy ekran aplikacji.
 // Wszystko pochodzi z GET /api/edges/{id}; zrzuty reklam z GET /api/ads/{id}.
 
-import { Check, ChevronDown, ChevronRight, Download, HelpCircle, Info, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, FileSearch, HelpCircle, Info, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { EdgeSuggestions } from "./edge-suggestions";
@@ -16,12 +16,13 @@ import { PremiseChallenge } from "./premise-challenge";
 import { EvidenceLab } from "./evidence-lab";
 import { useRef, useState } from "react";
 
-import { api, ApiError, artifactDownloadUrl, type AdDetail, type AdSummary, type EdgeDetail, type Evidence, type Verdict } from "@/lib/api";
+import { api, ApiError, type AdDetail, type AdSummary, type EdgeDetail, type Evidence, type Verdict } from "@/lib/api";
 import { SOURCE_LABELS, reviewReasonLabel, utcEdgeVersion, markerValue, RELATION_HINT, adTitle, bits, dateTime, errorText, famVar, hostOf, num, plural } from "@/lib/format";
 import { isTyping, useApi, useHotkey } from "@/lib/hooks";
 import { useExpert } from "@/lib/expert";
 import { hypothesisSentence, isHardTrace, overallStrength, plainLimitation, rarityWords, STRENGTH_LABELS, traceStrength, type Strength } from "@/lib/hypothesis";
 
+import { SourceLink } from "./har-overview";
 import { ZoomImage } from "./zoom-image";
 import { Btn, Empty, ErrorBox, FamilyBar, FamilyDot, GroupLink, Kbd, Loading, Meter, Mono, RelationTag, Tag, VerdictTag } from "./ui";
 
@@ -142,10 +143,10 @@ function EvidenceCard({ item, max, refresh, more = 0 }: { item: Evidence; max: n
       <div className={`flex flex-wrap items-center gap-x-4 gap-y-1 text-xs ${expert ? "px-2 pb-1" : "px-3 pb-2.5 pl-8"}`}>
         {([["A", item.artifact_a], ["B", item.artifact_b]] as const).map(([side, sha]) =>
           sha ? (
-            <a key={side} href={artifactDownloadUrl(sha)} className="inline-flex items-center gap-1 text-accent hover:underline" title="Surowy dowód jako plik. Nigdy nie renderuje się w przeglądarce.">
-              <Download size={12} />
+            <SourceLink key={side} sha={sha} side={side} className="inline-flex items-center gap-1 text-accent hover:underline" title="Czytelne streszczenie dowodu. Surowy plik jest do pobrania w oknie.">
+              <FileSearch size={12} />
               Sprawdź źródło {side} {expert && <Mono className="text-muted">{sha.slice(0, 12)}</Mono>}
-            </a>
+            </SourceLink>
           ) : expert ? (
             <span key={side} className="text-faint">
               {side} · brak pliku źródłowego
@@ -458,7 +459,7 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
         <EdgeSuggestions open={section === "suggestions"} onToggle={() => toggle("suggestions")} key={`suggestions-${data.id}`} edgeId={data.id} />
         <EvidenceLab open={section === "lab"} onToggle={() => toggle("lab")} key={data.id + ":" + data.updated_at} edge={data} refresh={edge.reload} />
 </>}
-        {tab === "Źródła" && <ul className="grid gap-2 p-3">{sources.map(item => <li key={item.id}><strong>{item.label}</strong> · {([["A", item.artifact_a], ["B", item.artifact_b]] as const).map(([side,sha]) => sha ? <a className="mr-2 text-accent underline" key={side} href={artifactDownloadUrl(sha)} download>Sprawdź źródło {side}</a> : <span className="mr-2 text-muted" key={side}>{side} · brak pliku</span>)}</li>)}</ul>}
+        {tab === "Źródła" && <ul className="grid gap-2 p-3">{sources.map(item => <li key={item.id}><strong>{item.label}</strong> · {([["A", item.artifact_a], ["B", item.artifact_b]] as const).map(([side,sha]) => sha ? <SourceLink key={side} sha={sha} side={side} className="mr-2 text-accent underline" /> : <span className="mr-2 text-muted" key={side}>{side} · brak pliku</span>)}</li>)}</ul>}
         {tab === "Dowody" && <>        <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1 border-b border-line px-2 py-1">
           <span className="cap">Co uzasadnia tę hipotezę</span>
           {expert ? <span className="text-xs text-faint">wersja modelu oceny powiązań · {data.model_version}</span>

@@ -1,10 +1,11 @@
 "use client";
+import { SourceLink } from "./har-overview";
 
 import { ContentSimilarity } from "./content-similarity";
 
 import { WeakestLinkTest } from "./weakest-link-test";
 import { useState } from "react";
-import { api, artifactDownloadUrl, type EdgeDetail } from "@/lib/api";
+import { api, type EdgeDetail } from "@/lib/api";
 import { useExpert } from "@/lib/expert";
 import { bits, markerValue, utcEdgeVersion } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
@@ -30,7 +31,7 @@ export function EvidenceLab({ edge, refresh, open, onToggle }: { edge: EdgeDetai
           {expert && <ContentSimilarity kind={item.kind} similarity={item.similarity} />}
           <div className="flex gap-2 text-muted">{item.family_label}
             {([["A", item.artifact_a], ["B", item.artifact_b]] as const).map(([side, sha]) => sha &&
-              <a key={side} href={artifactDownloadUrl(sha)} className="text-accent underline">Źródło {side}</a>)}
+              <SourceLink key={side} sha={sha} side={side}>Źródło {side}</SourceLink>)}
           </div>
         </div>)}
       </fieldset>

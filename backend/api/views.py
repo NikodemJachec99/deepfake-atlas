@@ -27,6 +27,7 @@ from evidence import store
 from evidence.kinds import BAND_KINDS, FAMILIES, KINDS
 from evidence.models import AdMarker, Artifact, AuditLog
 from extractors import video
+from extractors.har import har_overview
 from extractors.url import redact_url
 from people.display import display_value, person_names
 from similarity import (
@@ -768,6 +769,19 @@ def artifact(request, sha256):
     response["X-Content-Type-Options"] = "nosniff"
     response["Content-Security-Policy"] = "sandbox; default-src 'none'"
     return response
+
+
+@api_view(["GET"])
+def artifact_har(request, sha256):
+    """Czytelne streszczenie pliku HAR: żądania, przekierowania i ślady. Bez treści odpowiedzi, adresy po redakcji."""
+    item = get_object_or_404(Artifact, pk=sha256, kind="har")
+    try:
+        data = json.loads(store.get(item.sha256))
+        overview = har_overview(data, redact_url)
+    except (ValueError, KeyError, TypeError, AttributeError):
+        return Response({"detail": "Plik HAR jest uszkodzony albo ma nieznany format."}, status=422)
+    labels = {code: KINDS[code].label for code in {t for row in overview["entries"] for t in row["traces"]} if code in KINDS}
+    return Response({"sha256": item.sha256, "download": f"/api/artifacts/{item.sha256}", "trace_labels": labels, **overview})
 
 
 IMAGE_SIGNATURES = {b"\x89PNG": "image/png", b"\xff\xd8\xff": "image/jpeg", b"RIFF": "image/webp", b"GIF8": "image/gif"}

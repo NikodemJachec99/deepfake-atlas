@@ -177,3 +177,82 @@ def parse_har(data: dict) -> HarSummary:
 
     summary.observations = list(dict.fromkeys(observations))
     return summary
+
+
+MAX_OVERVIEW_ENTRIES = 400
+_MIME_GROUPS = (
+    ("html", "dokument"), ("javascript", "skrypt"), ("ecmascript", "skrypt"), ("css", "styl"), ("image/", "obraz"),
+    ("font", "czcionka"), ("json", "dane"), ("video/", "wideo"), ("audio/", "dźwięk"),
+)
+
+
+def _mime_group(mime: str) -> str:
+    mime = mime.lower()
+    return next((label for needle, label in _MIME_GROUPS if needle in mime), "inne")
+
+
+def har_overview(data: dict, redact) -> dict:
+    """Czytelny opis HAR dla analityka: lista żądań, łańcuch przekierowań i żądania z kluczowymi śladami.
+
+    Bez treści odpowiedzi i bez treści żądań. Adresy przechodzą przez `redact`, więc tokeny są skrótami.
+    """
+    entries = data.get("log", {}).get("entries", [])
+    summary = parse_har(data)
+    own = registered_domain(urlsplit(summary.page_url).hostname or "")
+    main_url = summary.page_url
+    main_index = next((i for i, e in enumerate(entries) if e["request"]["method"] == "GET" and e["response"]["status"] == 200
+                       and "text/html" in (e["response"]["content"].get("mimeType") or "")), 0)
+    rows = []
+    for index, e in enumerate(entries):
+        request, response = e.get("request", {}), e.get("response", {})
+        url = request.get("url", "")
+        parts = urlsplit(url)
+        host = (parts.hostname or "").lower()
+        method = request.get("method", "")
+        traces = [kind for kind, pattern in _REQUEST_TRACKERS.items() if pattern.search(url)]
+        if registered_domain(host) == own:
+            template = path_template(parts.path)
+            depth = len([s for s in template.split("/") if s])
+            if not _GENERIC_PATH.search(parts.path) and (depth >= 2 or method == "POST"):
+                traces.append("kit_path")
+            if method == "POST":
+                body = (request.get("postData") or {}).get("text") or ""
+                if any("uuid" in k.lower() and _UUID.match(v) for k, v in parse_qsl(body, keep_blank_values=False)):
+                    traces.append("funnel_id")
+        elif index < main_index and 300 <= (response.get("status") or 0) < 400:
+            traces.append("redirect_domain")
+        elif host and registered_domain(host) not in COMMON_DOMAINS:
+            traces.append("asset_host")
+        content = response.get("content") or {}
+        size = response.get("bodySize")
+        if not isinstance(size, int) or size < 0:
+            size = content.get("size") if isinstance(content.get("size"), int) and content["size"] >= 0 else None
+        elapsed = e.get("time")
+        rows.append({
+            "n": index + 1,
+            "method": method,
+            "host": host,
+            "path": redact(parts.path + (f"?{parts.query}" if parts.query else "")),
+            "url": redact(url),
+            "status": response.get("status") if isinstance(response.get("status"), int) else 0,
+            "type": _mime_group(content.get("mimeType") or ""),
+            "size": size,
+            "ms": round(elapsed) if isinstance(elapsed, (int, float)) and elapsed >= 0 else None,
+            "ip": e.get("serverIPAddress") or "",
+            "redirect_to": redact(response["redirectURL"]) if response.get("redirectURL") else "",
+            "main": url == main_url and response.get("status") == 200 and not any(r["main"] for r in rows),
+            "traces": traces,
+        })
+    hosts: dict[str, int] = {}
+    for row in rows:
+        hosts[row["host"]] = hosts.get(row["host"], 0) + 1
+    return {
+        "total": len(rows),
+        "page_url": redact(summary.page_url),
+        "started_at": summary.started_at,
+        "chain": [{"url": redact(hop["url"]), "status": hop["status"]} for hop in summary.chain],
+        "hosts": [{"host": h, "requests": n} for h, n in sorted(hosts.items(), key=lambda item: -item[1])[:30]],
+        "entries": rows[:MAX_OVERVIEW_ENTRIES],
+        "truncated": len(rows) > MAX_OVERVIEW_ENTRIES,
+        "with_traces": sum(1 for row in rows if row["traces"]),
+    }

@@ -2,10 +2,11 @@
 
 // Genom reklamy: siedem pasm, każde to rodzina markerów. Znacznik na paśmie to jeden marker z API.
 
-import { ChevronDown, ChevronRight, Download } from "lucide-react";
+import { ChevronDown, ChevronRight, FileSearch } from "lucide-react";
 import { useState } from "react";
 
-import { API_URL, artifactImageUrl, artifactDownloadUrl, type AdDetail, type Marker } from "@/lib/api";
+import { SourceLink } from "./har-overview";
+import { API_URL, artifactImageUrl, type AdDetail, type Marker } from "@/lib/api";
 import { markerValue, famVar, plural } from "@/lib/format";
 
 import { FamilyDot, Mono, Tag, cx } from "./ui";
@@ -182,9 +183,9 @@ export function MarkerList({ genome, videos = [], initiallyOpen = false }: { gen
                         </td>
                         <td className="w-7 max-md:block max-md:h-auto max-md:border-0 max-md:p-0! max-md:empty:hidden">
                           {marker.artifact && (
-                            <a href={artifactDownloadUrl(marker.artifact)} title="Pobierz artefakt źródłowy (plik, nie otwiera się w przeglądarce)" className="text-muted hover:text-fg">
-                              <Download size={12} />
-                            </a>
+                            <SourceLink sha={marker.artifact} title="Pokaż źródło śladu (ruch sieciowy strony albo plik do pobrania)" className="text-muted hover:text-fg">
+                              <FileSearch size={12} aria-label="Pokaż źródło śladu" />
+                            </SourceLink>
                           )}
                         </td>
                       </tr>

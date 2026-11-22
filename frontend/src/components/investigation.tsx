@@ -29,7 +29,7 @@ export function useQuery() {
       else next.set(key, String(value));
     }
     const query = next.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
   };
   const int = (key: string) => {
     const value = Number.parseInt(params.get(key) ?? "", 10);

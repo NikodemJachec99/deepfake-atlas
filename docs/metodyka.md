@@ -137,7 +137,7 @@ Dlaczego tak:
 
 - **Kampania:** składowa spójna grafu po krawędziach `same_campaign`.
 - **Operator:** składowa spójna po krawędziach `same_campaign` i `same_operator`. Operator ma zwykle kilka kampanii.
-- Krawędź odrzucona przez analityka niczego nie spina.
+- Krawędź odrzucona przez analityka niczego nie spina. Odrzucenie rozdziela grupę: `service.recluster` liczy składowe po nieodrzuconych krawędziach, największa zachowuje klucz (remis: ta z najmniejszą reklamą), pozostałe składowe od 2 reklam dostają nowe grupy, reklamy bez sąsiada tracą członkostwo. Cofnięcie odrzucenia scala grupy z powrotem. Operatorzy rozdzielają się osobno od kampanii. Zmiana ląduje w dzienniku audytu z kluczami i składem przed i po, bez nowych alertów. `manage.py recluster_all` robi to samo dla wszystkich grup.
 
 Zwykłe składowe spójne wystarczają, bo każda krawędź przeszła regułę z sekcji 6. Nie ma tu łączenia po samym progu podobieństwa, więc nie ma efektu łańcucha.
 

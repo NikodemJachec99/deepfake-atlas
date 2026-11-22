@@ -19,6 +19,7 @@ from evidence.kinds import FAMILIES, KINDS
 from evidence.models import AuditLog
 from extractors.url import _META_TOKEN, redact_url, secret_hash
 
+from . import service, simulation
 from .models import Edge, EdgeDecision
 
 NOTE_MAX = 4000
@@ -84,9 +85,16 @@ def snapshot(edge: Edge) -> dict:
 
 
 @transaction.atomic
-def decide(edge_id: int, verdict: str, reason: str = EdgeDecision.Reason.UNKNOWN, note: str = "", user=None) -> EdgeDecision:
-    """Zapisuje decyzję atomowo: werdykt krawędzi, wpis historii z migawką i dziennik audytu."""
+def decide(edge_id: int, verdict: str, reason: str = EdgeDecision.Reason.UNKNOWN, note: str = "", user=None, edge_version: str | None = None) -> EdgeDecision:
+    """Zapisuje decyzję atomowo: werdykt krawędzi, wpis historii z migawką i dziennik audytu.
+
+    Z `edge_version` decyzja przechodzi tylko wtedy, gdy krawędź nie zmieniła się od wczytania
+    (inaczej SimulationError ze statusem 409). Po zapisie grupy obu reklam są przeliczane,
+    więc odrzucenie mostu rozdziela kampanię, a cofnięcie odrzucenia scala ją z powrotem.
+    Opis zmian grup leży w `decision.regroup`.
+    """
     edge = Edge.objects.select_for_update().get(pk=edge_id)
+    simulation.check_version(edge, edge_version, "decyzję")
     note = redact_note(note)
     now = timezone.now()
     decision = EdgeDecision.objects.create(
@@ -99,7 +107,15 @@ def decide(edge_id: int, verdict: str, reason: str = EdgeDecision.Reason.UNKNOWN
         user=user, action="edge.verdict", object_type="edge", object_id=str(edge.pk),
         payload={"verdict": verdict, "reason": reason, "note": note, "decision": decision.pk},
     )
+    edge.refresh_from_db()
+    if verdict != Edge.Verdict.REJECTED and decision.previous_verdict == Edge.Verdict.REJECTED:
+        # Cofnięcie odrzucenia: krawędź znów spina, więc scalamy z powrotem.
+        for ad in Ad.objects.filter(pk__in=[edge.ad_a_id, edge.ad_b_id]):
+            service.assign_campaign(ad)
+            service.assign_operator(ad)
+    decision.regroup = service.recluster([edge.ad_a_id, edge.ad_b_id])
     return decision
+
 
 
 def serialize(decision: EdgeDecision, with_snapshot: bool = True) -> dict:

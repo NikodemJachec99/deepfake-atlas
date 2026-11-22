@@ -31,7 +31,7 @@ from extractors.url import redact_url
 from people.display import display_value, person_names
 from similarity import assist_view, decisions, observations, package, precedents, simulation, stix, suggestions, timeline, weakest
 from similarity.models import Alert, Campaign, CampaignMembership, Edge, EdgeDecision, Operator, OperatorMembership
-from similarity.service import assign_campaign, assign_operator
+from similarity.service import assign_campaign, assign_operator, recluster
 from workflows import runner
 
 from . import serializers as s
@@ -225,9 +225,15 @@ def edge_verdict(request, pk):
     payload.is_valid(raise_exception=True)
     user = request.user if request.user.is_authenticated else None
     data = payload.validated_data
-    decisions.decide(edge.pk, data["verdict"], data.get("reason") or EdgeDecision.Reason.UNKNOWN, data.get("note", ""), user)
+    try:
+        decision = decisions.decide(
+            edge.pk, data["verdict"], data.get("reason") or EdgeDecision.Reason.UNKNOWN, data.get("note", ""), user,
+            data.get("edge_version") or None,
+        )
+    except simulation.SimulationError as exc:
+        return Response({"detail": str(exc), **exc.extra}, status=exc.status)
     edge.refresh_from_db()
-    return Response(s.EdgeDetailSerializer(edge).data)
+    return Response({**s.EdgeDetailSerializer(edge).data, "regroup": decision.regroup})
 
 
 @extend_schema(responses=dict)
@@ -707,7 +713,8 @@ def artifact_video(request, sha256):
 def ad_recluster(request, pk):
     """Ponownie przypisuje reklamę do kampanii i operatora, np. po odrzuceniu krawędzi."""
     ad = get_object_or_404(Ad, pk=pk)
-    return Response({**assign_campaign(ad), **assign_operator(ad)})
+    result = {**assign_campaign(ad), **assign_operator(ad)}
+    return Response({**result, "regroup": recluster([ad.pk])})
 
 
 class AlertList(generics.ListAPIView):

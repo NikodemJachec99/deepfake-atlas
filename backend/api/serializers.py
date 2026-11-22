@@ -170,6 +170,8 @@ class VerdictSerializer(serializers.Serializer):
     # Bez powodu decyzja zapisuje się z powodem "nieznany", żeby stary klient dalej działał.
     reason = serializers.ChoiceField(choices=[c for c, _ in EdgeDecision.Reason.choices if c != EdgeDecision.Reason.UNKNOWN], required=False)
     note = serializers.CharField(required=False, allow_blank=True, max_length=4000)
+    # Wersja krawędzi (`updated_at`) z chwili wczytania. Gdy się zmieniła, decyzja dostaje 409.
+    edge_version = serializers.CharField(required=False, allow_blank=True)
 
 
 class SimulationSerializer(serializers.Serializer):

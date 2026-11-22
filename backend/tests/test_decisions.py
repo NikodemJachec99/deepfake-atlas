@@ -93,7 +93,7 @@ def test_note_and_urls_are_redacted(edge):
     assert "sha256-" in saved and "utm=fb" in saved
     edge.refresh_from_db()
     assert META_TOKEN not in edge.verdict_note
-    assert META_TOKEN not in str(AuditLog.objects.get().payload)
+    assert META_TOKEN not in str(AuditLog.objects.get(action="edge.verdict").payload)
 
 
 def test_decision_is_atomic(edge):

@@ -24,9 +24,8 @@ function CampaignBranch({ group }: { group: Group }) {
     .sort((a,b) => b.probability - a.probability || a.id - b.id);
   return <div className="ml-4 grid min-w-0 gap-4 border-l-2 border-accent-soft py-3 pl-4 lg:grid-cols-[minmax(14rem,2fr)_minmax(18rem,3fr)]">
     <section className="min-w-0">
-      {[["Reklamy kampanii", members], ["Sąsiedzi spoza kampanii", neighbors]].map(([label, list]) => {
-        const rows = list as typeof nodes;
-        return <div key={String(label)}><h3 className="mb-2 font-semibold">{String(label)} ({rows.length})</h3>
+      {([["Reklamy kampanii", members], ["Sąsiedzi spoza kampanii", neighbors]] as const).map(([label, rows]) => {
+        return <div key={label}><h3 className="mb-2 font-semibold">{label} ({rows.length})</h3>
       <div className="max-h-80 overflow-auto rounded-md border border-line">
         {rows.map(n => <button key={n.id} type="button" aria-pressed={n.id === current.id} onClick={() => setChosen(n.id)}
           className="flex w-full items-baseline gap-2 border-b border-line px-3 py-2 text-left last:border-0 hover:bg-panel aria-pressed:bg-accent-soft aria-pressed:text-accent">

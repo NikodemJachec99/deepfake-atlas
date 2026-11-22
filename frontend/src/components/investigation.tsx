@@ -8,6 +8,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { FAMILY_LABELS, RELATION_LABELS, api, type Family, type Graph, type Relation } from "@/lib/api";
+import { allGroups as loadGroups } from "@/lib/group-pages";
 import { FAMILIES, RELATIONS, RELATION_HINT, bits, groupId, prob } from "@/lib/format";
 import { isTyping, useApi, useHotkey } from "@/lib/hooks";
 

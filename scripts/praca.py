@@ -325,6 +325,8 @@ def cmd_nowe(args) -> None:
 def outside_zone(me: str, files: list[str]) -> list[str]:
     if me == "koder":
         return [f for f in files if not f.startswith("frontend/") or f in MAIN_ONLY_IN_FRONTEND]
+    if "frontend" in ZONES.get(me, []):
+        return []  # od 22.11 03:20 główny ma też strefę frontend (koder skończył pracę)
     return [f for f in files if f.startswith("frontend/") and f not in MAIN_ONLY_IN_FRONTEND and not f.startswith("frontend/src/lib/")]
 
 

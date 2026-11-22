@@ -4,12 +4,18 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { useApi } from "@/lib/hooks";
+import { useApi, useStored } from "@/lib/hooks";
+import type { ReviewReason } from "@/lib/api";
+
+// Kolejka zwraca 50 par na stronę (docs/api.md, "Kolejka Do oceny").
+const PAGE_SIZE = 50;
+// Powody, przy których coś się zmieniło albo brakuje podstaw: wyróżniamy je kolorem.
+const URGENT = new Set<ReviewReason>(["challenged", "changed_after_decision", "unbacked"]);
 import { EdgePanel, regroupMessage } from "@/components/edge-panel";
 import { ErrorBox, Loading } from "@/components/ui";
-import { VERDICT_LABELS } from "@/lib/format";
+import { plural, VERDICT_LABELS } from "@/lib/format";
 import { useExpert } from "@/lib/expert";
-import { CircleCheck, X } from "lucide-react";
+import { CircleCheck, Lightbulb, X } from "lucide-react";
 
   function navigate(targetPage: number, edge: number | null, compare: boolean, replace = false) {
     const url = new URL(window.location.href);
@@ -45,24 +51,38 @@ export default function ReviewPage() {
   const rows = queue.data?.results ?? [];
   const current = selected === null ? rows[0] : rows.find(row => row.id === selected);
   const missing = selected !== null && queue.data && !current;
+  const [hint, setHint] = useStored("scamdna.review-hint", "1");
+  const [hintClosed, setHintClosed] = useState(false); // gdy przeglądarka nie zapisuje localStorage
+  const pages = queue.data ? Math.max(page, Math.ceil(queue.data.count / PAGE_SIZE)) : 1;
   return <main className="grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)] gap-3 lg:grid-rows-1 overflow-hidden p-3 text-sm lg:grid-cols-[minmax(15rem,24%)_minmax(0,1fr)]">
     <nav aria-label="Widok stanowiska oceny" className="flex gap-2 lg:hidden">
-      <button aria-pressed={!comparing} className="rounded px-3 aria-pressed:bg-accent-soft" onClick={() => navigate(page, selected, false)}>Kolejka</button>
-      <button disabled={!current} aria-pressed={comparing} className="rounded px-3 aria-pressed:bg-accent-soft" onClick={() => navigate(page, current?.id ?? null, true)}>Porównanie</button>
+      <button aria-pressed={!comparing} className="min-h-9 rounded-md px-3 aria-pressed:bg-accent-soft" onClick={() => navigate(page, selected, false)}>Kolejka</button>
+      <button disabled={!current} aria-pressed={comparing} className="min-h-9 rounded-md px-3 aria-pressed:bg-accent-soft" onClick={() => navigate(page, current?.id ?? null, true)}>Porównanie</button>
     </nav>
     <aside className={`min-h-0 min-w-0 overflow-auto rounded-lg border border-line bg-panel p-3 lg:block ${comparing ? "hidden" : "block"}`}>
-      <h1 className="mb-3 text-xl font-semibold">Do oceny {queue.data && <span className="text-muted">({queue.data.count})</span>}</h1>
+      <h1 className="mb-3 flex items-baseline gap-2 px-1 text-xl font-semibold">Do oceny {queue.data && <span className="rounded-full bg-accent-soft px-2 py-0.5 text-sm font-medium text-accent">{queue.data.count} {plural(queue.data.count, "para", "pary", "par")}</span>}</h1>
+      {hint === "1" && !hintClosed && <div className="mb-3 flex items-start gap-2 rounded-lg border border-line bg-bg p-3">
+        <Lightbulb size={16} aria-hidden className="mt-0.5 shrink-0 text-accent" />
+        <p className="min-w-0 flex-1">Wybierz parę z listy, sprawdź przesłanki i materiały, a potem zdecyduj: potwierdź, oznacz do wyjaśnienia albo odrzuć.</p>
+        <button type="button" aria-label="Zamknij wskazówkę" onClick={() => { setHintClosed(true); setHint("0"); }} className="shrink-0 text-muted hover:text-fg"><X size={16} aria-hidden /></button>
+      </div>}
       {queue.loading || first.loading ? <Loading/> : first.error ? <ErrorBox message={first.error} onRetry={first.reload}/> : queue.error ? <ErrorBox message={queue.error} onRetry={queue.reload}/> : <>
-        {rows.length === 0 && <p>Brak par do oceny.</p>}
-        {rows.map(row => <button key={row.id} aria-pressed={row.id === current?.id} onClick={() => navigate(page, row.id, true)}
-          className="grid w-full gap-1 border-b border-line px-2 py-3 text-left aria-pressed:bg-accent-soft">
-          <strong className="truncate">#{row.ad_a.id} ↔ #{row.ad_b.id}</strong>
-          <span className="truncate">{row.ad_a.domain && row.ad_a.domain === row.ad_b.domain
-            ? `${row.ad_a.domain} · ta sama domena`
-            : `${row.ad_a.domain || "Brak domeny"} ↔ ${row.ad_b.domain || "Brak domeny"}`}</span>
-          {(!row.ad_a.domain || !row.ad_b.domain) && <span className="line-clamp-2">{[!row.ad_a.domain && row.ad_a.title, !row.ad_b.domain && row.ad_b.title].filter(Boolean).join(" ↔ ")}</span>}
-          <span className="text-xs text-muted">{row.reason_label}</span></button>)}
-        <nav className="mt-3 flex justify-between"><button disabled={page === 1} onClick={() => navigate(page-1, null, false)}>Poprzednia</button><span>{page}</span><button disabled={!queue.data?.next} onClick={() => navigate(page+1, null, false)}>Następna</button></nav>
+        {rows.length === 0 && <p className="p-2 text-muted">Brak par do oceny. Wszystkie pary w kolejce mają już decyzję.</p>}
+        <ul className="grid gap-1">{rows.map(row => <li key={row.id}><button aria-pressed={row.id === current?.id} onClick={() => navigate(page, row.id, true)}
+          className="grid w-full gap-1.5 rounded-md border border-transparent px-3 py-2.5 text-left transition-colors hover:bg-hover aria-pressed:border-accent aria-pressed:bg-accent-soft">
+          <span className="flex items-baseline justify-between gap-2">
+            <span className="min-w-0 font-medium break-words">{row.ad_a.domain && row.ad_a.domain === row.ad_b.domain
+              ? `${row.ad_a.domain} · ta sama domena`
+              : `${row.ad_a.domain || "Brak domeny"} ↔ ${row.ad_b.domain || "Brak domeny"}`}</span>
+            {expert && <span className="shrink-0 font-mono text-xs text-muted">#{row.ad_a.id} ↔ #{row.ad_b.id}</span>}
+          </span>
+          {(!row.ad_a.domain || !row.ad_b.domain) && <span className="line-clamp-2 text-muted">{[!row.ad_a.domain && row.ad_a.title, !row.ad_b.domain && row.ad_b.title].filter(Boolean).join(" ↔ ")}</span>}
+          <span className={`justify-self-start rounded-full border px-2 py-0.5 text-xs ${URGENT.has(row.reason) ? "border-unsure text-unsure" : "border-line-strong text-muted"}`}>{row.reason_label}</span></button></li>)}</ul>
+        {pages > 1 && <nav aria-label="Strony kolejki" className="mt-3 flex items-center justify-between gap-2 px-1">
+          <button className="min-h-9 rounded-md border border-line-strong px-3 hover:bg-hover disabled:opacity-40" disabled={page === 1} onClick={() => navigate(page-1, null, false)}>Poprzednia</button>
+          <span className="text-muted">Strona {page} z {pages}</span>
+          <button className="min-h-9 rounded-md border border-line-strong px-3 hover:bg-hover disabled:opacity-40" disabled={!queue.data?.next} onClick={() => navigate(page+1, null, false)}>Następna</button>
+        </nav>}
       </>}
     </aside>
     <section className={`min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-line bg-panel lg:flex ${comparing ? "flex" : "hidden"}`}>

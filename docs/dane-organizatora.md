@@ -34,7 +34,7 @@ Jeden HAR albo jedna zapisana strona to jedna reklama w korpusie. Zapis HTML i H
 
 ## Wynik łączenia
 
-28 stron z 25 spraw. Silnik nie dostał żadnej informacji, które sprawy do siebie pasują. Po ponownym imporcie 2026-11-21: 20 krawędzi `same_campaign`, 13 `same_operator`, 30 `similar`; 3 operatorów, 4 kampanie, 14 stron bez operatora.
+28 stron z 25 spraw. Silnik nie dostał żadnej informacji, które sprawy do siebie pasują. Po ponownym imporcie 2026-11-22 (model `fs-5.1`): 19 krawędzi `same_campaign`, 13 `same_operator`, 35 `similar`; 3 operatorów, 4 kampanie, 14 stron bez operatora. Wcześniej (21.11, `fs-5`) było 20 i 34: jedna para z nask/61 przeszła z kampanii na podobieństwo po #267.
 
 ### Operator A: 8 stron, 7 domen, 2 kampanie
 
@@ -125,26 +125,26 @@ Czego ten pomiar nie pokazuje: ani jednego potwierdzenia nowej domeny z certyfik
 
 ### Odporność na brak materiału
 
-Obie paczki zaimportowaliśmy od zera w czterech wariantach, na osobnym stosie (2026-11-21, `scripts/odpornosc.py`): pełny, bez plików HAR (także `network.har` z archiwów NASK), bez zapisów stron z przeglądarki (HTML i katalogi `_files`) i bez zrzutów reklam. Liczymy połączenia wspólnego źródła (`same_campaign`, `same_operator`) między stronami z pełnego importu, których jest 33.
+Obie paczki zaimportowaliśmy od zera w czterech wariantach, na osobnym stosie (2026-11-22, model `fs-5.1`, `scripts/odpornosc.py`): pełny, bez plików HAR (także `network.har` z archiwów NASK), bez zapisów stron z przeglądarki (HTML i katalogi `_files`) i bez zrzutów reklam. Liczymy połączenia wspólnego źródła (`same_campaign`, `same_operator`) między stronami z pełnego importu, których jest 32 (było 33: jedna para z nask/61 nie jest już wspólnym źródłem po #267).
 
 | Wariant | Stron | Zostało | Zniknęło razem ze stroną | Zniknęło przez utratę śladów | Nowe połączenia wspólnego źródła |
 |---|---|---|---|---|---|
-| bez HAR | 27 z 28 | 19 | 2 | 12 | 0 |
-| bez zapisu strony | 26 z 28 | 30 | 3 | 0 | 0 |
-| bez zrzutów reklam | 28 z 28 | 32 | 0 | 1 | 0 |
+| bez HAR | 27 z 28 | 18 | 2 | 12 | 0 |
+| bez zapisu strony | 26 z 28 | 30 | 2 | 0 | 0 |
+| bez zrzutów reklam | 28 z 28 | 32 | 0 | 0 | 0 |
 
 Co z tego wynika:
 
 - **Brak materiału nie tworzy fałszywych połączeń.** W żadnym wariancie nie powstało połączenie wspólnego źródła, którego nie było w pełnym imporcie. Mniej danych daje mniej powiązań, a nie złe powiązania.
 - **HAR niesie ślady operatora.** Identyfikatory strony w panelu lejka i hosty zasobów są tylko w ruchu sieciowym, więc bez HAR odpada 12 połączeń operatora A między kampaniami. Zostają połączenia, które stoją na treści, pikselu z kodu strony i domenie. Strona `healthlinkq.pro` z drugiego HAR w sprawie 2 znika w całości, bo była tylko w HAR.
 - **Zapis strony jest zastępowalny.** Gdy brakuje HTML z przeglądarki, dokument strony jest w HAR, więc żadne połączenie nie ginie przez utratę śladów. Giną tylko strony, które miały wyłącznie zapis HTML.
-- **Zrzut reklamy rzadko rozstrzyga.** Bez zrzutów znika jedno połączenie między stronami sprawy 61, spięte zrzutem reklamy i nazwą reklamodawcy z OCR.
+- **Zrzut reklamy nie rozstrzyga.** Bez zrzutów żadne połączenie nie znika (32 z 32). Wcześniej znikało jedno, między stronami sprawy 61, spięte zrzutem reklamy i nazwą reklamodawcy z OCR, ale po #267 ta para jest tylko `similar`.
 
 Odtworzenie (czyści korpus, więc tylko na osobnym stosie): `python scripts/odpornosc.py --paczki data/raw/nask data/raw/nask-backup`.
 
 ### Wrażliwość na wagi modelu
 
-Wagi są eksperckie, więc sprawdziliśmy, jak bardzo wynik od nich zależy (2026-11-21, `python manage.py weight_sensitivity`, tylko odczyt). Na 67 krawędziach między stronami z obu paczek (33 wspólnego źródła) przeliczyliśmy relacje tym samym silnikiem przy zmienionych wagach i progach.
+Wagi są eksperckie, więc sprawdziliśmy, jak bardzo wynik od nich zależy (2026-11-22, model `fs-5.1`, `python manage.py weight_sensitivity`, tylko odczyt). Na 67 krawędziach między stronami z obu paczek (32 wspólnego źródła) przeliczyliśmy relacje tym samym silnikiem przy zmienionych wagach i progach.
 
 | Zmiana | Krawędzie ze zmienioną relacją | Utrata wspólnego źródła | Nowe wspólne źródło |
 |---|---|---|---|
@@ -152,12 +152,12 @@ Wagi są eksperckie, więc sprawdziliśmy, jak bardzo wynik od nich zależy (202
 | próg pewności 0,8 albo 0,95 zamiast 0,9 | 0 | 0 | 0 |
 | niezależne potwierdzenie od 5 bitów zamiast 4 | 0 | 0 | 0 |
 | niezależne potwierdzenie od 3 bitów | 2 | 0 | 2 |
-| siła wszystkich dowodów ×0,5 | 7 | 2 | 0 |
+| siła wszystkich dowodów ×0,5 | 6 | 1 | 0 |
 | siła wszystkich dowodów ×1,5 | 4 | 0 | 3 |
-| siła jednego typu ×0,5 albo ×1,5 (30 typów po kolei) | najwyżej 4 | najwyżej 1 | najwyżej 1 |
+| siła jednego typu ×0,5 albo ×1,5 (31 typów po kolei) | najwyżej 4 | 0 | najwyżej 1 |
 
 - **Rdzeń operatora A nie zależy od wag.** Połączenia spięte identyfikatorami z panelu lejka i pikselem Meta nie zmieniają się w żadnym scenariuszu.
-- **Ruszają się 4 pary graniczne, zawsze te same.** Drugi HAR sprawy 2 z p5 (operator B na jednym hoście zasobów), dwie strony sprawy 61 (zrzut reklamy i nazwa reklamodawcy), sprawa 48 ze sprawą 61 i p11 z p8 (ta sama treść albo ten sam silnik na innym zapleczu). To dokładnie pary, które laboratorium dowodów i przegląd krawędzi opisują jako kruche albo celowo tylko "podobne".
+- **Ruszają się 4 pary graniczne, zawsze te same.** Drugi HAR sprawy 2 z p5 (operator B na jednym hoście zasobów), sprawa 3 z p5, sprawa 48 ze sprawą 61 i p11 z p8 (ta sama treść albo ten sam silnik na innym zapleczu). To dokładnie pary, które laboratorium dowodów i przegląd krawędzi opisują jako kruche albo celowo tylko "podobne".
 - **Słabsze wagi niczego nie sklejają, mocniejsze sklejają tylko pary graniczne.** Przy wagach ×1,5 albo progu 3 bitów kopie treści stałyby się kampaniami, dlatego zostawiamy próg 4 bity i obecne wagi.
 
 ### Kopia kreacji przestała być markerem rozstrzygającym (22.11.2026)

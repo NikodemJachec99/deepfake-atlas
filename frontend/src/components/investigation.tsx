@@ -75,8 +75,6 @@ export function Investigation() {
   }
   const captureOnly = overview && !allGroups;
   const campaigns = useApi("campaigns:" + captureOnly, () => loadGroups("campaigns", captureOnly ? "capture" : undefined));
-  const stats = useApi(all ? "graph-stats" : null, api.stats);
-  const totalEdges = stats.data ? Object.values(stats.data.edges).reduce((sum, n) => sum + n, 0) : null;
   const scopeOperator = operatorId;
   const query = campaignId !== null ? `?campaign=${campaignId}` : scopeOperator !== null ? `?operator=${scopeOperator}` : adId !== null ? `?ad=${adId}` : "";
   const graph = useApi<Graph>(overview ? null : `graph:${query}`, () => api.graph(query));
@@ -259,10 +257,13 @@ export function Investigation() {
         value={table}
         onChange={setTable}
         items={[
-          { id: "edges", label: `Krawędzie · pokazano ${visible.length} z ${totalEdges ?? edges.length}` },
+          { id: "edges", label: graph.data ? `Krawędzie · pokazano ${visible.length} z ${edges.length}` : "Krawędzie" },
           { id: "ads", label: `Reklamy ${nodes.length}` },
         ]}
       />
+      {table === "edges" && graph.data?.truncated && <p className="border-b border-line px-3 py-1 text-sm text-muted">
+        Pobrano {edges.length} z {graph.data.total} krawędzi w wybranym zakresie. Filtry działają na pobranej części.
+      </p>}
       <div className="min-h-0 flex-1 overflow-auto">
         {table === "edges" ? (
           <table className="dense min-w-max">

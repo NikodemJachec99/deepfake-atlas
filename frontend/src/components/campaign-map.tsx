@@ -37,7 +37,7 @@ function CampaignNode({ group, x, y, angle, color, expanded, toggle }: {
       <title>{group.label || group.key} · {group.size} reklam</title>
       <circle r="20" fill={expanded ? color : "var(--raised)"} stroke={color} strokeWidth="2" />
       <text textAnchor="middle" dy="5" fill={expanded ? "white" : "var(--accent)"} fontSize="14" fontWeight="600">{group.size}</text>
-      <text textAnchor="middle" y={expanded ? -88 : 38} fill="var(--fg)" fontSize="13">{group.key}{!expert && ` · ${group.size} ${plural(group.size, "reklama", "reklamy", "reklam")}`}</text>
+      {!expanded && <text textAnchor="middle" y={38} fill="var(--fg)" fontSize="13">{group.key}{!expert && ` · ${group.size} ${plural(group.size, "reklama", "reklamy", "reklam")}`}</text>}
     </g>
     {expanded && <>
       {layout.nodes.map(n => <Link key={n.id} href={`/ads/${n.id}`} prefetch={false} aria-label={`Reklama #${n.id}`}>
@@ -64,8 +64,9 @@ function CampaignNode({ group, x, y, angle, color, expanded, toggle }: {
       })}
       </g>
     </>}
-    {expanded && <foreignObject transform={`rotate(${-angle})`} x="-92" y="84" width="184" height="65">
-      <div className="text-center text-xs">{result.loading ? "Pobieranie reklam…" : result.error ? <button onClick={result.reload}>Ponów pobranie</button> :
+    {expanded && <foreignObject transform={`rotate(${-angle})`} x="-92" y="86" width="184" height="80">
+      <div className="text-center text-xs"><p className="text-[13px] font-medium text-fg">{group.key}{!expert && ` · ${group.size} ${plural(group.size, "reklama", "reklamy", "reklam")}`}</p>
+        {result.loading ? "Pobieranie reklam…" : result.error ? <button onClick={result.reload}>Ponów pobranie</button> :
         <button aria-pressed={all} onClick={() => setAll(!all)} className="text-accent underline">{expert ? (all ? "Najsilniejsze połączenia" : `Połączenia wewnętrzne (${layout.total})`) : (all ? "Pokaż tylko najsilniejsze" : `Pokaż wszystkie powiązania (${layout.total})`)}</button>}
         {result.data?.truncated && <p>Pobrano {result.data.edges.length} z {result.data.total} powiązań zakresu.</p>}
       </div>
@@ -107,7 +108,7 @@ export function CampaignMap({ groups, expanded, onToggle, loadOperators }: {
   const { expert } = useExpert();
   const locations = groups.map((group, index) => ({
     group, x: 125 + (index % Math.ceil(Math.sqrt(groups.length))) * 215,
-    y: 155 + Math.floor(index / Math.ceil(Math.sqrt(groups.length))) * 270,
+    y: 155 + Math.floor(index / Math.ceil(Math.sqrt(groups.length))) * 290,
     owners: operators.data?.filter(operator => operator.campaigns.includes(group.key)) ?? [],
   }));
   const width = Math.max(...locations.map(item => item.x)) + 125;

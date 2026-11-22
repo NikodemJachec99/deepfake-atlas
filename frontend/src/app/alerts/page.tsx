@@ -6,7 +6,7 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import { dateTime, errorText } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
-import { ErrorBox, Loading } from "@/components/ui";
+import { ErrorBox, Loading, Tag } from "@/components/ui";
 
 export default function Alerts() {
   const router = useRouter();
@@ -47,8 +47,11 @@ export default function Alerts() {
   }
 
   return <main className="atlas-page">
-    <h1 className="atlas-title">Alerty</h1>
-    <label><input type="checkbox" checked={unseen} disabled={saving !== null}
+    <header className="grid gap-2">
+      <h1 className="atlas-title">Alerty</h1>
+      <p className="max-w-3xl text-pretty text-muted">System zgłasza tu, gdy nowa reklama dołącza do znanej kampanii lub operatora, gdy znany operator zaczyna nową kampanię albo gdy łowca potwierdzi nową domenę.</p>
+    </header>
+    <label className="flex items-center gap-2"><input type="checkbox" checked={unseen} disabled={saving !== null}
       onChange={event => { navigate(event.target.checked, 1); setError(""); }} /> Tylko nieprzejrzane</label>
     {error && <p role="alert" className="text-rejected">{error}</p>}
     {list.loading ? <Loading /> : list.error ? <ErrorBox message={list.error} onRetry={list.reload}
@@ -57,10 +60,10 @@ export default function Alerts() {
         href: listUrl(unseen, 1),
         link: "Otwórz pierwszą stronę alertów",
       } : undefined}/> :
-      <><ul>{list.data?.results.map(item => <li key={item.id} className="grid gap-2 border-b border-line py-3">
-        <h2 className="text-lg font-semibold">{item.kind_label}</h2>
-        <p>{item.description}</p>
-        <p className="flex flex-wrap gap-3 text-accent underline">
+      <><ul className="grid gap-3">{list.data?.results.map(item => <li key={item.id} className={`grid gap-2 rounded-xl border p-4 ${item.seen ? "border-line" : "border-accent bg-accent-soft"}`}>
+        <h2 className="flex flex-wrap items-center gap-2 text-lg font-semibold">{item.kind_label}{!item.seen && <Tag tone="new">Nowy</Tag>}</h2>
+        <p className="text-pretty">{item.description}</p>
+        <p className="flex flex-wrap gap-x-4 gap-y-1 text-accent underline [overflow-wrap:anywhere]">
           {item.ad != null && <Link href={`/ads/${item.ad}`}>Reklama #{item.ad} {item.ad_title}</Link>}
           {item.hunt_candidate != null && <Link href={`/hunt#kandydat-${item.hunt_candidate}`}>{item.domain || "Kandydat domenowy"}</Link>}
           {item.campaign_id != null && <Link href={`/campaigns/${item.campaign_id}`}>Kampania {item.campaign ?? item.campaign_id}</Link>}
@@ -70,7 +73,9 @@ export default function Alerts() {
         {!item.seen && <button className="justify-self-start text-accent underline" disabled={saving !== null}
           onClick={() => void markSeen(item.id)}>Oznacz jako przejrzany</button>}
       </li>)}</ul>
-      {!list.data?.results.length && <div className="grid justify-items-start gap-2"><p>{unseen ? "Brak nieprzejrzanych alertów." : "Brak alertów w korpusie."}</p>
+      {!list.data?.results.length && <div className="grid justify-items-start gap-2 rounded-xl border border-dashed border-line-strong p-6">
+        <p className="text-lg font-medium">{unseen ? "Wszystko przejrzane." : "Na razie brak alertów."}</p>
+        <p className="text-muted">{unseen ? "Nie ma nowych alertów. Pojawią się, gdy kolejna reklama dołączy do znanej grupy." : "Alerty pojawią się po analizie nowych reklam albo po przebiegu łowcy domen."}</p>
         {unseen ? <button className="text-accent underline" onClick={() => navigate(false, 1)}>Pokaż wszystkie alerty</button> : <button className="text-accent underline" onClick={list.reload}>Odśwież alerty</button>}</div>}
       {(page > 1 || list.data?.next) && <nav aria-label="Strony alertów" className="flex gap-3">
         <button disabled={page <= 1 || saving !== null} onClick={() => navigate(unseen, page - 1)}>Poprzednia</button>

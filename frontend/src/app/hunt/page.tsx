@@ -4,13 +4,27 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api, ApiError, artifactDownloadUrl, artifactImageUrl, type HuntCandidate, type HuntRun } from "@/lib/api";
 import { bits, dateTime, errorText } from "@/lib/format";
+import { useExpert } from "@/lib/expert";
 import { useApi } from "@/lib/hooks";
-import { ErrorBox, Loading } from "@/components/ui";
+import { ErrorBox, Loading, Tag } from "@/components/ui";
+
+const STATUS_TONE: Record<string, "confirmed" | "unsure" | "rejected" | "neutral" | "new"> = {
+  confirmed: "confirmed", rejected: "rejected", unavailable: "neutral", candidate: "new",
+};
+
+/** Zgodność z operatorem słowami, bez bitów. */
+function match(probability: number | null) {
+  if (probability == null) return "jeszcze nie oceniono";
+  if (probability < 0.005) return "brak";
+  const percent = probability.toLocaleString("pl-PL", { style: "percent" });
+  return `${probability >= 0.9 ? "wysoka" : probability >= 0.5 ? "średnia" : "niska"} (${percent})`;
+}
 
 function Candidate({ item }: { item: HuntCandidate }) {
   const [pending, setPending] = useState(false);
   const [submitted, setSubmitted] = useState(Boolean(item.analysis));
   const [error, setError] = useState("");
+  const { expert } = useExpert();
   async function analyze() {
     setPending(true);
     setError("");
@@ -20,11 +34,12 @@ function Candidate({ item }: { item: HuntCandidate }) {
       else setError(errorText(reason));
     } finally { setPending(false); }
   }
-  return <article id={`kandydat-${item.id}`} className="grid min-w-0 gap-2 border-b border-line py-4">
-    <h2 className="break-all text-lg font-semibold">{item.domain}</h2>
-    <p>{item.status_label} · <Link className="text-accent" href={`/operators/${item.operator_id}`}>{item.operator}</Link> · {item.sources.map(source => source === "crtsh" ? "crt.sh" : "CERT Polska").join(", ")}</p>
-    <p>Ocena wstępna: {item.prelim_score.toLocaleString("pl-PL")} · Siła dowodu: {item.bits == null ? "brak oceny" : bits(item.bits) + " bita"} · Prawdopodobieństwo: {item.probability == null ? "brak oceny" : item.probability.toLocaleString("pl-PL", { style: "percent" })}</p>
-    <p>{item.note} · Sprawdzenie: {dateTime(item.checked_at) || "jeszcze nie sprawdzono"}</p>
+  return <article id={`kandydat-${item.id}`} className={expert ? "grid min-w-0 gap-2 border-b border-line py-4" : "grid min-w-0 content-start gap-2 rounded-xl border border-line p-4"}>
+    <h2 className="flex flex-wrap items-center gap-2 text-lg font-semibold"><span className="break-all">{item.domain}</span>{!expert && <Tag tone={STATUS_TONE[item.status] ?? "neutral"}>{item.status_label}</Tag>}</h2>
+    <p>{expert && <>{item.status_label} · </>}{!expert && "Operator "}<Link className="text-accent" href={`/operators/${item.operator_id}`}>{item.operator}</Link> · {item.sources.map(source => source === "crtsh" ? "crt.sh" : "CERT Polska").join(", ")}</p>
+    {expert ? <p>Ocena wstępna: {item.prelim_score.toLocaleString("pl-PL")} · Siła dowodu: {item.bits == null ? "brak oceny" : bits(item.bits) + " bita"} · Prawdopodobieństwo: {item.probability == null ? "brak oceny" : item.probability.toLocaleString("pl-PL", { style: "percent" })}</p>
+      : <p>Zgodność z operatorem: {match(item.probability)}</p>}
+    <p className={expert ? undefined : "text-sm text-muted"}>{item.note} · Sprawdzenie: {dateTime(item.checked_at) || "jeszcze nie sprawdzono"}</p>
     <details><summary>Szczegóły kandydata</summary>
       {item.cert && <p>Certyfikat · {item.cert.issuer} · {item.cert.serial} · {dateTime(item.cert.not_before)}</p>}
       <p>Składniki oceny · {[...item.score_parts.tokens.map(t => t.token + " (" + t.weight + ")"), item.score_parts.template, item.score_parts.issuer].filter(Boolean).join(", ") || "brak"}</p>
@@ -75,6 +90,7 @@ export default function HuntPage() {
   useEffect(() => {
     if (list.data && window.location.hash) document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
   }, [list.data]);
+  const { expert } = useExpert();
   return <main className="atlas-page"><h1 className="atlas-title">Łowca domen</h1>
     <p className="max-w-3xl text-muted">Szuka nowych domen operatorów w certyfikatach (crt.sh) i na Liście Ostrzeżeń CERT Polska. Kandydata można zgłosić do pełnej analizy.</p>
     <button className="justify-self-start rounded bg-accent px-3 py-2 text-on-accent" disabled={pending || running} onClick={start}>Uruchom przebieg</button>
@@ -82,7 +98,11 @@ export default function HuntPage() {
     {error && <ErrorBox message={error}/>}
     {list.loading ? <Loading/> : list.error ? <ErrorBox message={list.error} onRetry={reload}/> : list.data && <>
       <p>Kandydaci: {list.data.count} · Potwierdzone na tej stronie: {list.data.results.filter(c => c.status === "confirmed").length}</p>
-      {list.data.results.map(item => <Candidate key={item.id} item={item}/>)}
+      {list.data.results.length ? <div className={expert ? "grid" : "grid gap-3 lg:grid-cols-2"}>{list.data.results.map(item => <Candidate key={item.id} item={item}/>)}</div>
+        : <div className="grid justify-items-start gap-1 rounded-xl border border-dashed border-line-strong p-6">
+          <p className="text-lg font-medium">Brak kandydatów.</p>
+          <p className="text-muted">Uruchom przebieg, żeby poszukać nowych domen znanych operatorów.</p>
+        </div>}
     </>}
   </main>;
 }

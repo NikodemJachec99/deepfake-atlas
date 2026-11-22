@@ -12,7 +12,7 @@ function eventDate(event: TimelineEvent) {
   return dateTime(event.at) || "Data niedostępna";
 }
 
-export function ObservationTimeline({ id, operator }: { id: number; operator: boolean }) {
+export function ObservationTimeline({ id, operator, bare = false }: { id: number; operator: boolean; bare?: boolean }) {
   const timeline = useApi(`${operator}:${id}`, () => operator ? api.operatorTimeline(id) : api.campaignTimeline(id));
   const params = useSearchParams();
   if (timeline.loading) return <Loading label="Pobieranie osi obserwacji" />;
@@ -35,8 +35,9 @@ export function ObservationTimeline({ id, operator }: { id: number; operator: bo
     window.history.replaceState(null, "", url);
   }
 
-  return <section className="grid grid-cols-1 gap-2 border-y border-line py-3">
-    <h2 className="font-semibold">Oś obserwacji</h2>
+  const Wrapper = bare ? "div" : "section";
+  return <Wrapper className={bare ? "grid grid-cols-1 gap-2" : "grid grid-cols-1 gap-2 border-y border-line py-3"}>
+    {!bare && <h2 className="font-semibold">Oś obserwacji</h2>}
     <label className="grid gap-1 sm:block">Typ zdarzenia <select className="min-w-0 max-w-full" value={type} onChange={e => selectEvent(e.target.value, 0)}>
       <option value="">Wszystkie</option>
       {[...new Map(data.events.map(item => [item.type, item.label]))].map(([key,label]) => <option key={key} value={key}>{label}</option>)}
@@ -60,5 +61,5 @@ export function ObservationTimeline({ id, operator }: { id: number; operator: bo
       <p>Reklamy {data.undated.ads.length} · Ślady {data.undated.traces} · Powiązania {data.undated.links} · Certyfikaty {data.undated.certificates}</p>
       {data.undated.ads.map(ad => <Link key={ad} className="mr-2 text-accent underline" href={`/ads/${ad}`}>Reklama #{ad}</Link>)}
     </div>}
-  </section>;
+  </Wrapper>;
 }

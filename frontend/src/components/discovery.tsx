@@ -5,7 +5,7 @@
 
 import { FolderInput, ArrowUpRight } from "lucide-react";
 import { useApi } from "@/lib/hooks";
-import { bits, adTitle } from "@/lib/format";
+import { bits, adTitle, errorText, prob } from "@/lib/format";
 import { CrawlShot } from "./crawl-shot";
 import { GroupLink } from "./ui";
 import { LiveGraph } from "./live-graph";
@@ -141,7 +141,7 @@ export function Discovery() {
       );
     } catch (reason) {
       if (generation.current !== current) return;
-      setError(String(reason));
+      setError(errorText(reason));
       setBusy(false);
     }
   }
@@ -255,7 +255,7 @@ export function Discovery() {
           {(ad || cluster) && <p aria-label="Przypisanie do grup">
             Kampania <GroupLink group={ad ? ad.campaign : cluster?.campaign} /> · Operator <GroupLink group={ad ? ad.operator : cluster?.operator} />
           </p>}
-          {strongest.length > 0 && <section><h3>Najsilniejsze dowody</h3><ol>{strongest.map(({ best, edges }) => (
+          {strongest.length > 0 && <section><h3 className="font-semibold">Najsilniejsze dowody</h3><ol>{strongest.map(({ best, edges }) => (
             <li key={JSON.stringify([best.kind, best.value])}><FamilyDot family={best.family} /> {best.label} · {markerValue(best.value, ad?.genome?.find(band => band.family === best.family)?.markers.find(marker => marker.kind === best.kind && marker.value === best.value)?.display_value)} · {bits(best.bits)} bita · liczba powiązań: {edges.size}</li>
           ))}</ol></section>}
           {ad && (
@@ -284,7 +284,7 @@ export function Discovery() {
                     #{edge.ad_a} ↔ #{edge.ad_b} · {RELATION_LABELS[edge.relation]}
                     {edge.duplicate && " · duplikat"}
                   </span>
-                  <span className="font-mono">{edge.probability.toFixed(2)}</span>
+                  <span className="font-mono">{prob(edge.probability)}</span>
                 </button>
               </li>
             ))}
@@ -314,7 +314,7 @@ export function Discovery() {
           <ol className="flex flex-col gap-1 font-mono text-xs">
             {events.map((item) => (
               <li key={item.seq} className={item.status === "error" ? "text-rejected" : item.status === "info" ? "text-muted" : ""}>
-                <span className="text-muted">{String(item.seq).padStart(2, "0")}</span> {item.stage} · {item.message}
+                <span className="text-muted">{String(item.seq).padStart(2, "0")}</span> {stageLabels[item.stage as keyof typeof stageLabels] ?? item.stage} · {item.message}
               </li>
             ))}
           </ol>

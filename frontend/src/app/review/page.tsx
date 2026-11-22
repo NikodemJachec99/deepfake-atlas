@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { useApi } from "@/lib/hooks";
 import { EdgePanel, regroupMessage } from "@/components/edge-panel";
 import { ErrorBox, Loading } from "@/components/ui";
+import { VERDICT_LABELS } from "@/lib/format";
 
   function navigate(targetPage: number, edge: number | null, compare: boolean, replace = false) {
     const url = new URL(window.location.href);
@@ -62,7 +63,7 @@ export default function ReviewPage() {
       </>}
     </aside>
     <section className={`min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-line bg-panel lg:flex ${comparing ? "flex" : "hidden"}`}>
-      {message && <p role="status" className="border-b border-line p-3">{message}</p>}
+      {message && <p role="status" className="border-b border-line border-l-4 border-l-confirmed bg-accent-soft p-3">{message}</p>}
       {missing && <div role="status" className="grid justify-items-start gap-3 p-4">
         <h2 className="font-semibold">Wskazanej pary nie ma na tej stronie kolejki.</h2>
         {Number.isSafeInteger(selected) && selected > 0 && <Link className="text-accent underline" href={`/investigation?scope=all&edge=${selected}`}>Sprawdź krawędź #{selected} w śledztwie</Link>}
@@ -70,7 +71,7 @@ export default function ReviewPage() {
       </div>}
       {!current && comparing && !missing && (queue.loading ? <Loading/> : queue.error ? <ErrorBox message={queue.error} onRetry={queue.reload}/> : <button onClick={() => navigate(page, null, false)}>Wróć do kolejki</button>)}
       {current && <EdgePanel key={current.id} edgeId={current.id} review={current} onVerdict={saved => {
-        setMessage(regroupMessage(saved.regroup));
+        setMessage(regroupMessage(saved.regroup, `Zapisano ocenę pary #${saved.ad_a} ↔ #${saved.ad_b}${saved.verdict ? ": " + VERDICT_LABELS[saved.verdict].toLowerCase() : ""}.`));
         const index = rows.findIndex(row => row.id === saved.id);
         const next = (rows[index+1] ?? rows.find(row => row.id !== saved.id))?.id ?? null;
         if (rows.length === 1 && page > 1) navigate(page-1, null, true, true);

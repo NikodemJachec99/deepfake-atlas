@@ -124,7 +124,7 @@ function EvidenceCard({ item, max, refresh }: { item: Evidence; max: number; ref
                   ),
                 )}
               </div>
-      <PremiseChallenge item={item} refresh={refresh}/>
+      {!soft && <PremiseChallenge item={item} refresh={refresh}/>}
       <ContentSimilarity kind={item.kind} similarity={item.similarity} />
 
       <AnimatePresence initial={false}>
@@ -321,8 +321,11 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
           <h2 className="text-lg font-semibold">Hipoteza modelu</h2>
           {review && <span className="text-xs text-muted">Do oceny · {review.reason_label}</span>}
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[1.08rem] font-medium">
-              Relacja · <RelationTag relation={data.relation} duplicate={data.duplicate} />
+            <span className="flex items-center gap-2 text-[1.08rem] font-medium">
+              <span className="text-muted">Relacja</span>
+              <span className="rounded border border-line bg-bg px-2 py-0.5" title="Linia przy nazwie pokazuje, jak ta relacja jest rysowana w grafie">
+                <RelationTag relation={data.relation} duplicate={data.duplicate} />
+              </span>
             </span>
             <Mono className="text-muted">Powiązanie #{data.id}</Mono>
           </div>
@@ -398,8 +401,17 @@ export function EdgePanelEmpty() {
 }
 
 
-export function regroupMessage(regroup?: Regroup) {
-  const changes = [...(regroup?.campaign ?? []), ...(regroup?.operator ?? [])];
-  if (!changes.length) return "Zapisano ocenę. Skład grup pozostał ten sam.";
-  return "Zapisano ocenę. " + changes.map(c => c.group + " → " + (c.after.map(g => g.key).join(", ") || "grupa rozwiązana") + (c.released.length ? " · uwolnione reklamy: " + c.released.join(", ") : "")).join(" · ");
+export function regroupMessage(regroup?: Regroup, lead = "Zapisano ocenę.") {
+  const changes = [
+    ...(regroup?.campaign ?? []).map(c => ({ ...c, kind: "Kampania" })),
+    ...(regroup?.operator ?? []).map(c => ({ ...c, kind: "Operator" })),
+  ];
+  if (!changes.length) return `${lead} Skład kampanii i operatorów pozostał ten sam.`;
+  const parts = changes.map(c => {
+    const after = c.after.map(g => `${g.key} (${g.ads.length} ${plural(g.ads.length, "reklama", "reklamy", "reklam")})`);
+    const what = after.length === 0 ? "rozwiązana" : after.length === 1 ? `zmienia skład: ${after[0]}` : `rozdzielona na ${after.join(" i ")}`;
+    const released = c.released.length ? `; reklamy bez grupy: ${c.released.map(id => "#" + id).join(", ")}` : "";
+    return `${c.kind} ${c.group} ${what}${released}`;
+  });
+  return `${lead} Zmiana grup: ${parts.join(". ")}.`;
 }

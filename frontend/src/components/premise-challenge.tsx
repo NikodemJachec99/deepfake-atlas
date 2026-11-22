@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, type Evidence, type Regroup } from "@/lib/api";
 import { bits, dateTime, errorText } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
@@ -23,6 +23,22 @@ export function PremiseChallenge({ item, refresh }: { item: Evidence; refresh: (
   const [error, setError] = useState("");
   const [changes, setChanges] = useState<Regroup | null>(null);
   const preview = useApi(open && value && !changes ? JSON.stringify([item.kind, value]) : null, () => api.previewPremise(item.kind, value));
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (!preview.data || !heading.current) return;
+    heading.current.focus({ preventScroll: true });
+    heading.current.scrollIntoView({ block: "nearest" });
+  }, [preview.data]);
+
+  const memberships = new Map<number, string[]>();
+  for (const groups of Object.values(preview.data?.groups ?? {})) {
+    for (const group of [...groups.split, ...groups.stay]) {
+      for (const id of group.before) memberships.set(id, [...(memberships.get(id) ?? []), group.key]);
+    }
+  }
+  function adLabel(id: number) {
+    return [`#${id}`, ...(memberships.get(id) ?? [])].join(" · ");
+  }
   async function save() {
     if (!preview.data || !reason.trim() || busy) return;
     setBusy(true); setError("");
@@ -36,9 +52,9 @@ export function PremiseChallenge({ item, refresh }: { item: Evidence; refresh: (
       {!changes && values.length > 1 && <label>Wartość śladu <select disabled={busy} value={value} onChange={e => setValue(e.target.value)}>{values.map(v => <option key={v}>{v}</option>)}</select></label>}
       {!value && <p>Brak wartości śladu do zakwestionowania.</p>}
       {changes ? <><GroupChanges changes={changes}/><button className="text-accent" onClick={refresh}>Odśwież krawędź</button></> : preview.loading ? <Loading/> : preview.error ? <ErrorBox message={preview.error} onRetry={preview.reload}/> : preview.data && <>
-        <h3>Wpływ na cały korpus · {preview.data.display_value || value}</h3>
+        <h3 ref={heading} tabIndex={-1}>Wpływ na cały korpus · {preview.data.display_value || value}</h3>
         <p>Krawędzie korzystające ze śladu: {preview.data.edge_count}. Podziały grup: {preview.data.split_count}.</p>
-        <details><summary>Krawędzie przed i po zmianie</summary><ul>{preview.data.edges.map(e => <li key={e.id}>#{e.ad_a} ↔ #{e.ad_b} · {e.before.relation_label} ({bits(e.before.bits)} bita) → {e.removed ? "usunięcie powiązania" : e.after.relation_label + " (" + bits(e.after.bits) + " bita)"}</li>)}</ul></details>
+        <details><summary>Krawędzie przed i po zmianie</summary><ul>{preview.data.edges.map(e => <li key={e.id}>{adLabel(e.ad_a)} ↔ {adLabel(e.ad_b)} · {e.before.relation_label} ({bits(e.before.bits)} bita) → {e.removed ? "usunięcie powiązania" : e.after.relation_label + " (" + bits(e.after.bits) + " bita)"}</li>)}</ul></details>
         {Object.values(preview.data.groups).map((group, i) => <div key={i}>
           {group.split.map(g => <p key={g.key}>Podział {g.key} · {g.after.map(part => (part.key || "Nowa grupa") + ": " + part.ads.join(", ")).join(" · ")} · Uwolnione reklamy: {g.released.join(", ") || "brak"}</p>)}
           {group.stay.map(g => <p key={g.key}>{g.key} pozostaje razem · {g.supported_by.map(s => s.label + " (" + bits(s.bits) + " bita)").join(", ") || "brak dodatkowych śladów w odpowiedzi"}</p>)}

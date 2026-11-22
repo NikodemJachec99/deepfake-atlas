@@ -110,6 +110,20 @@ function EvidenceCard({ item, max, refresh }: { item: Evidence; max: number; ref
           <span className="text-xs text-muted">{soft ? "marker miękki" : `w ${item.df} z ${item.corpus_n} źródeł`}</span>
         </span>
       </button>
+              <div className="flex flex-wrap gap-2 px-2 pb-1 text-xs">
+                {([["A", item.artifact_a], ["B", item.artifact_b]] as const).map(([side, sha]) =>
+                  sha ? (
+                    <a key={side} href={artifactDownloadUrl(sha)} className="inline-flex items-center gap-1 text-accent hover:underline" title="Surowy dowód jako plik. Nigdy nie renderuje się w przeglądarce.">
+                      <Download size={12} />
+                      Sprawdź źródło {side} <Mono className="text-muted">{sha.slice(0, 12)}</Mono>
+                    </a>
+                  ) : (
+                    <span key={side} className="text-faint">
+                      {side} · brak pliku źródłowego
+                    </span>
+                  ),
+                )}
+              </div>
       <PremiseChallenge item={item} refresh={refresh}/>
       <ContentSimilarity kind={item.kind} similarity={item.similarity} />
 
@@ -151,20 +165,7 @@ function EvidenceCard({ item, max, refresh }: { item: Evidence; max: number; ref
                 . Typ markera: <Mono>{item.kind}</Mono>.
                 {" "}<Link className="text-accent underline" href={`/weights?kind=${encodeURIComponent(item.kind)}`}>Sprawdź wagi tego markera</Link>
               </p>
-              <div className="flex flex-wrap gap-2">
-                {([["A", item.artifact_a], ["B", item.artifact_b]] as const).map(([side, sha]) =>
-                  sha ? (
-                    <a key={side} href={artifactDownloadUrl(sha)} className="inline-flex items-center gap-1 text-accent hover:underline" title="Surowy dowód jako plik. Nigdy nie renderuje się w przeglądarce.">
-                      <Download size={12} />
-                      Artefakt {side} <Mono className="text-muted">{sha.slice(0, 12)}</Mono>
-                    </a>
-                  ) : (
-                    <span key={side} className="text-faint">
-                      Artefakt {side}: marker wyliczony z adresu lub treści, bez osobnego pliku
-                    </span>
-                  ),
-                )}
-              </div>
+
             </div>
           </motion.div>
         )}

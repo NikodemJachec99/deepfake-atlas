@@ -48,24 +48,20 @@ function CampaignBranch({ group }: { group: Group }) {
   </div>;
 }
 
-export function CampaignTree({ groups }: { groups: Group[] }) {
-  const [map, setMap] = useState(false);
-  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+export function CampaignTree({ groups, map, onMapChange, expanded, toggleCampaign }: {
+  groups: Group[];
+  map: boolean;
+  onMapChange: (map: boolean) => void;
+  expanded: ReadonlySet<number>;
+  toggleCampaign: (id: number) => void;
+}) {
   const [query, setQuery] = useState("");
-  function toggleCampaign(id: number) {
-    setExpanded(current => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
   const visible = groups.filter(g => (g.key + " " + g.label).toLocaleLowerCase("pl").includes(query.trim().toLocaleLowerCase("pl")));
   return <>
     <div className="flex flex-wrap items-center justify-between gap-3 border-y border-line py-3">
       <div className="flex rounded-lg bg-panel p-1">{["Drzewo kampanii", "Mapa węzłów"].map((name,i) =>
         <button key={name} aria-pressed={map === Boolean(i)} className="rounded-md px-3 py-2 font-medium aria-pressed:bg-raised aria-pressed:text-accent aria-pressed:shadow-sm"
-          onClick={() => setMap(Boolean(i))}>{name}</button>)}</div>
+          onClick={() => onMapChange(Boolean(i))}>{name}</button>)}</div>
       {!map && <input type="search" aria-label="Szukaj kampanii" placeholder="Szukaj kampanii…" value={query} onChange={e=>setQuery(e.target.value)} className="max-w-full rounded-md border border-line-strong px-3 py-2" />}
     </div>
     {map ? <CampaignMap groups={groups} expanded={expanded} onToggle={toggleCampaign} /> : <section aria-label="Drzewo kampanii">

@@ -4,8 +4,10 @@ import { useState } from "react";
 import { api, artifactDownloadUrl, type EdgeDetail } from "@/lib/api";
 import { utcEdgeVersion } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
+import { useExpert } from "@/lib/expert";
 
 export function WeakestLinkTest({ edge, apply, refresh }: { edge: EdgeDetail; apply: (ids: number[]) => void; refresh: () => void }) {
+  const { expert } = useExpert();
   const [run, setRun] = useState(0);
   const request = useApi(run ? JSON.stringify([edge.id, edge.updated_at, run]) : null,
     () => api.weakestLink(edge.id, { edge_version: utcEdgeVersion(edge.updated_at) }));
@@ -19,7 +21,7 @@ export function WeakestLinkTest({ edge, apply, refresh }: { edge: EdgeDetail; ap
         <p>Test niedostępny. Spróbuj ponownie.</p> :
         result?.searched && Array.isArray(result.solutions) ? <>
           <p>{result.message}</p>
-          <p>Sprawdzone scenariusze {result.searched.scenarios_checked} · do {result.searched.max_group_size} grup · limit {result.searched.scenario_limit} scenariuszy i {result.searched.time_limit_ms} ms</p>
+          {expert && <p>Sprawdzone scenariusze {result.searched.scenarios_checked} · do {result.searched.max_group_size} grup · limit {result.searched.scenario_limit} scenariuszy i {result.searched.time_limit_ms} ms</p>}
           <p>{result.searched.complete ? "Przeszukano cały zadany zakres." : `Przeszukiwanie niepełne: ${result.searched.stopped_reason}`}</p>
           {result.solutions.map((solution, index) => <details key={solution.groups.join("|")} className="border-t border-line py-1">
             <summary>Scenariusz {index + 1} · {solution.labels.join(", ")}</summary>

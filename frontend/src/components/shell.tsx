@@ -1,6 +1,6 @@
 "use client";
 
-import { ScanSearch, Scale, Bell, Archive, Compass, FolderOpen, Network, UsersRound } from "lucide-react";
+import { ClipboardCheck, ScanSearch, Scale, Bell, Archive, Compass, FolderOpen, Network, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -16,9 +16,11 @@ const sections: Record<string, string> = {
 const compactSections: Record<string, string> = { "/hunt": "Domeny", "/weights": "Wagi" };
 
 const navigation = [
-  { href: "/", Icon: Compass }, { href: "/investigation", Icon: Network },
-  { href: "/hunt", Icon: ScanSearch }, { href: "/archive", Icon: Archive }, { href: "/operators", Icon: UsersRound },
-  { href: "/campaigns", Icon: FolderOpen }, { href: "/alerts", Icon: Bell }, { href: "/weights", Icon: Scale },
+  { label: "", links: [{ href: "/review", Icon: ClipboardCheck }] },
+  { label: "Materiały", links: [{ href: "/", Icon: Compass }, { href: "/archive", Icon: Archive }] },
+  { label: "Powiązania", links: [{ href: "/investigation", Icon: Network }, { href: "/campaigns", Icon: FolderOpen }, { href: "/operators", Icon: UsersRound }] },
+  { label: "Monitoring", links: [{ href: "/alerts", Icon: Bell }, { href: "/hunt", Icon: ScanSearch }] },
+  { label: "Model i jakość", links: [{ href: "/weights", Icon: Scale }] },
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -58,12 +60,19 @@ export function Shell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-0 flex-1">
       <nav aria-label="Nawigacja główna" className="flex shrink-0 flex-col gap-1 overflow-auto border-r border-line atlas-sidebar bg-panel p-1.5 md:p-3">
         <strong className="hidden px-2 py-3 text-xl tracking-tight md:block">SCAM DNA</strong>
-        {navigation.map(({ href, Icon }) =>
+        {navigation.map(({ label, links }) => <div key={label} className="border-b border-line pb-1 last:border-0">
+          {label && <p className="hidden px-2 pt-2 text-xs text-muted md:block">{label}</p>}
+          {links.map(({ href, Icon }) =>
           <Link key={href} href={href} aria-current={root === href ? "page" : undefined}
-            aria-label={sections[href]} title={sections[href]} className="flex flex-col items-center gap-1 text-xs md:flex-row md:gap-3 md:text-base rounded-lg px-2 py-2.5 font-medium hover:bg-hover aria-[current=page]:bg-accent-soft aria-[current=page]:text-accent"><Icon size={16} aria-hidden /><span aria-hidden className="md:hidden">{compactSections[href] ?? sections[href]}</span><span className="hidden md:inline">{sections[href]}</span></Link>)}
+            aria-label={sections[href]} title={sections[href]} className="flex flex-col items-center gap-1 text-xs md:flex-row md:gap-3 md:text-base rounded-lg px-2 py-2.5 font-medium hover:bg-hover aria-[current=page]:bg-accent-soft aria-[current=page]:text-accent"><Icon size={16} aria-hidden /><span aria-hidden className="md:hidden">{compactSections[href] ?? sections[href]}</span><span className="hidden md:inline">{sections[href]}</span>
+            {href === "/review" && stats && !failed && <span className="rounded bg-accent-soft px-1 text-xs tabular-nums text-accent">{stats.review_pending}</span>}
+          </Link>)}</div>)}
       </nav>
       <div className="flex min-w-0 flex-1 flex-col">
-        {root !== "/investigation" && <header className="border-b border-line bg-panel/95 px-4 py-2.5 font-semibold backdrop-blur">{sections[root] ?? "SCAM DNA"}{id && " › #" + id}</header>}
+        <header className="flex items-center justify-between gap-2 border-b border-line bg-panel/95 px-4 py-2 font-semibold backdrop-blur">
+          <span>{sections[root] ?? "SCAM DNA"}{id && " › #" + id}</span>
+          <Link href="/#input-kind" className="rounded border border-line-strong px-3 py-1.5 text-sm text-accent">Dodaj materiał</Link>
+        </header>
         <div className="flex min-h-0 flex-1 flex-col overflow-auto">{children}</div>
       </div>
     </div>

@@ -1,11 +1,12 @@
 "use client";
 
-// Minimalny ekran Discovery. Dowodzi, że API działa od wejścia do dowodów.
-// Docelowy interfejs (trzy tryby, graf, panel dowodów) powstaje według docs/design-prompt.md.
+// Ekran startowy: co można zrobić teraz (liczby z /api/stats) i dodanie nowego materiału.
+// Wynik analizy najpierw prostym językiem, szczegóły techniczne w trybie eksperckim.
 
-import { FolderInput, ArrowUpRight } from "lucide-react";
+import { FolderInput, ArrowRight, ArrowUpRight, ClipboardCheck, Bell, Network, Check, Loader2 } from "lucide-react";
 import { useApi } from "@/lib/hooks";
-import { bits, adTitle, errorText, prob } from "@/lib/format";
+import { useExpert } from "@/lib/expert";
+import { bits, adTitle, errorText, prob, plural } from "@/lib/format";
 import { CrawlShot } from "./crawl-shot";
 import { GroupLink } from "./ui";
 import { LiveGraph } from "./live-graph";
@@ -24,12 +25,14 @@ import {
   type AdSummary,
   type AnalysisEvent,
   type Edge,
-
   type Family,
   type FuseEventPayload,
+  type Relation,
+  type Stats,
 } from "@/lib/api";
 
 const stageLabels = { ingest: "Przyjęcie", crawl: "Strona", extract: "Markery", enrich: "Infrastruktura", fuse: "Powiązania", cluster: "Grupowanie", end: "Zakończenie" };
+const stageSteps = { ingest: "Przyjęcie materiału", crawl: "Pobranie strony", extract: "Szukanie śladów", enrich: "Sprawdzanie zaplecza", fuse: "Szukanie powiązań", cluster: "Przypisanie do grup", end: "Zakończenie" };
 const stateLabels = { started: "w toku", info: "w toku", done: "zakończono", error: "błąd" };
 
 function FamilyDot({ family }: { family: Family }) {
@@ -45,7 +48,51 @@ async function latestCaseMaterials() {
   }
 }
 
+function TaskCard({ href, Icon, title, value, note, loading, tone = "accent" }: {
+  href: string; Icon: typeof Bell; title: string; value: number | null; note: string; loading: boolean; tone?: "accent" | "alert";
+}) {
+  const highlight = value !== null && value > 0;
+  const icon = <span className={`inline-flex size-8 shrink-0 items-center justify-center rounded-lg ${tone === "alert" && highlight ? "bg-rejected/10 text-rejected" : "bg-accent-soft text-accent"}`}><Icon size={17} aria-hidden /></span>;
+  const number = loading ? <span className="inline-block h-8 w-12 animate-pulse rounded bg-hover" aria-label="Pobieranie" />
+    : value !== null && <span className="text-3xl font-semibold tracking-tight tabular-nums sm:text-4xl">{value}</span>;
+  return <Link href={href} className="group min-w-0 rounded-xl border border-line bg-raised transition-colors duration-150 hover:border-accent hover:bg-panel">
+    <span className="flex items-center gap-3 p-4 sm:hidden">
+      {icon}
+      <span className="flex min-w-0 flex-1 flex-col"><span className="font-medium">{title}</span><span className="text-sm text-muted">{note}</span></span>
+      {number}
+    </span>
+    <span className="hidden flex-col gap-3 p-5 sm:flex">
+      <span className="flex items-center gap-2 font-medium">
+        {icon}{title}
+        <ArrowRight size={16} className="ml-auto text-muted transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-accent" aria-hidden />
+      </span>
+      <span className="flex items-baseline gap-2">{number}<span className="text-muted">{note}</span></span>
+    </span>
+  </Link>;
+}
+
+function Tasks() {
+  const stats = useApi<Stats>("home-stats", api.stats);
+  const data = stats.data;
+  const loading = stats.loading;
+  const missing = "liczba chwilowo niedostępna";
+  const review = data?.review_pending ?? null;
+  const alerts = data?.alerts_unseen ?? null;
+  return <section aria-labelledby="tasks-heading" className="grid gap-3 sm:gap-4">
+    <h1 id="tasks-heading" className="text-3xl font-semibold tracking-tight md:text-4xl">Co chcesz zrobić?</h1>
+    <div className="grid gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">
+      <TaskCard href="/review" Icon={ClipboardCheck} title="Oceń powiązania" loading={loading} value={review}
+        note={review === null ? missing : review === 0 ? "kolejka pusta" : plural(review, "para czeka na decyzję", "pary czekają na decyzję", "par czeka na decyzję")} />
+      <TaskCard href="/alerts" Icon={Bell} title="Sprawdź alerty" tone="alert" loading={loading} value={alerts}
+        note={alerts === null ? missing : alerts === 0 ? "brak nowych alertów" : plural(alerts, "nowy alert", "nowe alerty", "nowych alertów")} />
+      <TaskCard href="/investigation" Icon={Network} title="Przeglądaj powiązania" loading={loading} value={data?.campaigns ?? null}
+        note={data ? `${plural(data.campaigns, "kampania", "kampanie", "kampanii")} · ${data.operators} ${plural(data.operators, "operator", "operatorów", "operatorów")}` : missing} />
+    </div>
+  </section>;
+}
+
 export function Discovery() {
+  const { expert } = useExpert();
   const archive = useApi("discovery-case-materials", latestCaseMaterials);
   const [files, setFiles] = useState<File[]>([]);
   const [kind, setKind] = useState<"url" | "text" | "files">("url");
@@ -56,8 +103,10 @@ export function Discovery() {
   const [events, setEvents] = useState<AnalysisEvent[]>([]);
   const [ad, setAd] = useState<AdDetail | null>(null);
   const [edges, setEdges] = useState<Edge[]>([]);
+  const [allEdges, setAllEdges] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
   const evidenceHeading = useRef<HTMLHeadingElement>(null);
+  const resultRef = useRef<HTMLElement>(null);
   function focusEvidence() {
     evidenceHeading.current?.focus({ preventScroll: true });
     evidenceHeading.current?.scrollIntoView({ block: "start" });
@@ -76,6 +125,12 @@ export function Discovery() {
   const [activeId, setActiveId] = useState("");
   const [retry, setRetry] = useState<Analysis | null>(null);
   const stop = useRef<(() => void) | null>(null);
+
+  // Po zakończeniu analizy wynik ląduje na górze widoku: ocena i „dlaczego” bez przewijania.
+  const done = !busy && !!activeId;
+  useEffect(() => {
+    if (done) resultRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [done]);
 
   const generation = useRef(0);
   useEffect(() => () => {
@@ -98,6 +153,7 @@ export function Discovery() {
     setEvents([]);
     setAd(null);
     setEdges([]);
+    setAllEdges(false);
     setSelected(null);
     setAssessment("");
     try {
@@ -107,6 +163,7 @@ export function Discovery() {
       if (!analysis) throw new Error("W przesłanych plikach nie znaleziono materiału do analizy.");
       if (Array.isArray(result)) setBatch(result);
       setActiveId(analysis.id);
+      requestAnimationFrame(() => resultRef.current?.scrollIntoView({ block: "start", behavior: "smooth" }));
       stop.current = streamAnalysis(
         analysis,
         (item) => {
@@ -176,57 +233,78 @@ export function Discovery() {
   }
   const strongest = [...markers.values()].sort((a, b) => b.best.bits - a.best.bits).slice(0, 5);
   const cluster = [...events].reverse().find(item => item.stage === "cluster" && item.status === "done")?.payload as Partial<ClusterResult> | undefined;
+  const verdict = cluster?.assessment_label || assessment;
+
+  // Jedno zdanie „dlaczego”: nazwy najsilniejszych śladów z API, bez wartości i bitów.
+  const reasonNames = [...new Set(strongest.map(({ best }) => best.label))].slice(0, 3);
+  // Mała litera w środku zdania, chyba że to nazwa własna (kolejne słowo z wielkiej litery, np. „Meta Pixel”; skróty jak „URL” się nie liczą).
+  const lowerFirst = (name: string) => /\s\p{Lu}\p{Ll}/u.test(name) ? name : name.charAt(0).toLocaleLowerCase("pl") + name.slice(1);
+  const reasonList = reasonNames.map(lowerFirst);
+  const reasonText = reasonList.length
+    ? `Najmocniej łączy ją z innymi reklamami: ${reasonList.length > 1 ? `${reasonList.slice(0, -1).join(", ")} i ${reasonList.at(-1)}` : reasonList[0]}.`
+    : "";
+  const relationCounts = edges.reduce<Partial<Record<Relation, number>>>((counts, edge) => ({ ...counts, [edge.relation]: (counts[edge.relation] ?? 0) + 1 }), {});
+  const sortedEdges = [...edges].sort((a, b) => b.probability - a.probability);
+  const shownEdges = allEdges ? sortedEdges : sortedEdges.slice(0, 6);
+  const stageKeys = Object.keys(stageSteps) as (keyof typeof stageSteps)[];
+  const reached = stageKeys.filter(stage => events.some(event => event.stage === stage));
+  const currentStage = reached.at(-1);
+  const finished = !busy && !!activeId && !error;
+  const active = busy || activeId || events.length > 0;
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-7 font-sans md:px-9">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-4xl font-semibold tracking-tight">Analiza materiału</h1>
-        <p className="text-muted">Wrzuć adres reklamy albo jej tekst. System znajdzie ślady i pokaże, z czym się łączy.</p>
-      </header>
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-6 font-sans md:gap-10 md:px-10 md:py-10">
+      <Tasks />
 
-      <form onSubmit={submit} className="grid gap-4 rounded-xl border border-line bg-panel p-5 md:p-7">
-        <fieldset id="input-kind" disabled={busy}>
-          <legend className="mb-2 font-semibold">Rodzaj materiału</legend>
-          <div className="inline-flex rounded-lg border border-line p-1">
-            {([["url", "Adres"], ["text", "Tekst"], ["files", "Pliki"]] as const).map(([type, label]) =>
-              <button type="button" key={type} aria-pressed={kind === type} onClick={() => setKind(type)}
-                className="rounded-md px-4 py-2 aria-pressed:bg-accent-soft aria-pressed:text-accent">{label}</button>)}
-          </div>
-        </fieldset>
-        {kind === "url" && <label>Adres URL<input id="input-value" type="url" required value={address} onChange={e => setAddress(e.target.value)}
-          placeholder="https://…" className="block w-full rounded border border-line-strong bg-raised px-3 py-2" /></label>}
-        {kind === "text" && <label>Tekst lub nazwa produktu<textarea id="input-value" required rows={4} value={text} onChange={e => setText(e.target.value)}
-          placeholder="Np. treść ogłoszenia lub nazwa reklamowanego produktu" className="block w-full rounded border border-line-strong bg-raised px-3 py-2" /></label>}
-        {kind === "files" && <>
-        <label onDragOver={event => event.preventDefault()} onDrop={event => {
-          event.preventDefault();
-          const added = Array.from(event.dataTransfer.files);
-          if (!busy) setFiles(previous => [...previous, ...added]);
-        }} className="grid cursor-pointer justify-items-start gap-2 rounded-lg border border-dashed border-line-strong p-4 focus-within:outline">
-          <FolderInput size={24} className="text-accent" aria-hidden />
-          <span>Upuść pliki lub wybierz je z dysku</span>
-          <span className="text-sm text-muted">Zrzut reklamy, zapisana strona, HAR lub ZIP ze sprawą</span>
-          <input id="input-files" type="file" multiple disabled={busy} className="sr-only" onChange={event => {
-            const added = Array.from(event.target.files ?? []);
-            setFiles(previous => [...previous, ...added]);
-            event.target.value = "";
-          }} />
-        </label>
-        {files.length > 0 && <>
-          <ul>{files.map((file, index) => <li key={index} className="flex items-baseline justify-between gap-3">
-            <span className="min-w-0 break-all">{file.name}</span>
-            <button type="button" disabled={busy} aria-label={`Usuń ${file.name}`} onClick={() => setFiles(previous => previous.filter((_, i) => i !== index))}>Usuń</button>
-          </li>)}</ul>
-        </>}
-        </>}
-        <button id="analyze" type="submit" disabled={busy || (kind === "files" ? !files.length : !(kind === "url" ? address : text).trim())}
-          className="justify-self-start rounded bg-accent px-4 py-2 font-medium text-on-accent disabled:opacity-50">
-          {busy ? "Analiza trwa" : "Przeanalizuj materiał"}
-        </button>
-      </form>
+      <section aria-labelledby="add-heading" className="grid gap-4">
+        <div className="grid gap-1">
+          <h2 id="add-heading" className="text-xl font-semibold tracking-tight">Sprawdź nowy materiał</h2>
+          <p className="max-w-[65ch] text-muted">Wklej adres reklamy, jej tekst albo wrzuć pliki. System znajdzie ślady i pokaże, z czym materiał się łączy.</p>
+        </div>
+        <form onSubmit={submit} className="grid gap-5 rounded-xl border border-line bg-panel p-5 md:p-6">
+          <fieldset id="input-kind" disabled={busy} className="grid gap-2">
+            <legend className="mb-2 text-sm font-medium text-muted">Rodzaj materiału</legend>
+            <div className="inline-flex w-fit max-w-full rounded-lg border border-line bg-raised p-1">
+              {([["url", "Adres"], ["text", "Tekst"], ["files", "Pliki"]] as const).map(([type, label]) =>
+                <button type="button" key={type} aria-pressed={kind === type} onClick={() => setKind(type)}
+                  className="h-9 rounded-md px-4 font-medium text-muted transition-colors duration-150 hover:text-fg aria-pressed:bg-accent-soft aria-pressed:text-accent">{label}</button>)}
+            </div>
+          </fieldset>
+          {kind === "url" && <label className="grid gap-1.5 font-medium">Adres reklamy lub strony<input id="input-value" type="url" required value={address} onChange={e => setAddress(e.target.value)}
+            placeholder="https://…" className="block h-10 w-full rounded-lg border border-line-strong bg-raised px-3 font-normal" /></label>}
+          {kind === "text" && <label className="grid gap-1.5 font-medium">Tekst lub nazwa produktu<textarea id="input-value" required rows={4} value={text} onChange={e => setText(e.target.value)}
+            placeholder="Np. treść ogłoszenia lub nazwa reklamowanego produktu" className="block w-full rounded-lg border border-line-strong bg-raised px-3 py-2 font-normal" /></label>}
+          {kind === "files" && <>
+            <label onDragOver={event => event.preventDefault()} onDrop={event => {
+              event.preventDefault();
+              const added = Array.from(event.dataTransfer.files);
+              if (!busy) setFiles(previous => [...previous, ...added]);
+            }} className="grid cursor-pointer justify-items-center gap-2 rounded-lg border border-dashed border-line-strong bg-raised px-4 py-8 text-center transition-colors duration-150 hover:border-accent focus-within:outline">
+              <FolderInput size={28} className="text-accent" aria-hidden />
+              <span className="font-medium">Upuść pliki albo wybierz je z dysku</span>
+              <span className="text-sm text-muted">Zrzut reklamy, zapisana strona, HAR lub ZIP ze sprawą</span>
+              <input id="input-files" type="file" multiple disabled={busy} className="sr-only" onChange={event => {
+                const added = Array.from(event.target.files ?? []);
+                setFiles(previous => [...previous, ...added]);
+                event.target.value = "";
+              }} />
+            </label>
+            {files.length > 0 && <ul className="grid gap-1">{files.map((file, index) => <li key={index} className="flex items-center justify-between gap-3 rounded-lg bg-raised px-3 py-1">
+              <span className="min-w-0 break-all">{file.name}</span>
+              <button type="button" disabled={busy} aria-label={`Usuń ${file.name}`} onClick={() => setFiles(previous => previous.filter((_, i) => i !== index))}
+                className="shrink-0 rounded-md px-2 text-sm text-muted hover:bg-hover hover:text-fg">Usuń</button>
+            </li>)}</ul>}
+          </>}
+          <button id="analyze" type="submit" disabled={busy || (kind === "files" ? !files.length : !(kind === "url" ? address : text).trim())}
+            className="inline-flex h-10 items-center gap-2 justify-self-start rounded-lg bg-accent px-5 font-medium text-on-accent transition-[filter] duration-150 hover:brightness-110 disabled:opacity-50">
+            {busy && <Loader2 size={16} className="animate-spin" aria-hidden />}
+            {busy ? "Analiza trwa" : "Przeanalizuj materiał"}
+          </button>
+        </form>
+      </section>
 
-      {batch.length > 1 && <label className="flex items-center gap-2">Materiał z paczki
-        <select className="min-w-0 max-w-full rounded border border-line bg-panel p-2" value={activeId} onChange={event => {
+      {batch.length > 1 && <label className="flex flex-wrap items-center gap-2">Materiał z paczki
+        <select className="min-w-0 max-w-full rounded-lg border border-line bg-panel px-2" value={activeId} onChange={event => {
           const analysis = batch.find(item => item.id === event.target.value);
           if (analysis) void run(analysis);
         }}>
@@ -235,69 +313,79 @@ export function Discovery() {
           </option>)}
         </select>
       </label>}
-      {retry && <div role="status" className="flex flex-wrap items-center gap-3 rounded border border-line p-3">
+      {retry && <div role="status" className="flex flex-wrap items-center gap-3 rounded-xl border border-line p-4">
         <span>Przerwano odbiór danych analizy.</span>
-        <button className="text-accent underline" onClick={() => void run(retry)}>Wznów podgląd</button>
+        <button className="rounded-lg px-2 text-accent underline" onClick={() => void run(retry)}>Wznów podgląd</button>
       </div>}
-      {error && <p role="alert" className="rounded border border-rejected px-3 py-2 text-rejected">Analiza nie powiodła się: {error}</p>}
+      {error && <p role="alert" className="rounded-xl border border-rejected px-4 py-3 text-rejected">Analiza nie powiodła się: {error}</p>}
 
-      <div className="grid gap-6">
-        <section className="flex min-w-0 flex-col gap-2">
-          {!busy && !activeId && <section className="mb-4">
-            <div className="flex items-baseline justify-between border-b border-line pb-2"><h2 className="text-lg font-semibold">Ostatnie materiały ze spraw</h2><Link href="/archive" className="text-accent underline">Całe archiwum</Link></div>
-            {archive.loading ? <p>Pobieranie materiałów…</p> : archive.error ? <button onClick={archive.reload} className="text-accent underline">Ponów pobranie materiałów</button> :
-              archive.data?.length ? archive.data.map(item => <Link key={item.id} href={`/ads/${item.id}`} className="flex items-center gap-4 border-b border-line py-3 hover:bg-panel">
-                <span className="font-mono text-muted">#{item.id}</span><strong className="min-w-0 flex-1 truncate">{adTitle(item)}</strong><span className="text-muted">{item.case}</span><ArrowUpRight size={16} aria-hidden />
-              </Link>) : <p>Brak materiałów przypisanych do spraw.</p>}
-          </section>}
-          <h2 className="text-lg font-semibold">{cluster?.assessment_label || assessment || "Powiązania"}</h2>
-          {!ad && !cluster && !edges.length && <p className="text-muted">Po zakończeniu analizy zobaczysz tutaj powiązania materiału.</p>}
-          {(ad || cluster) && <p aria-label="Przypisanie do grup">
-            Kampania <GroupLink group={ad ? ad.campaign : cluster?.campaign} /> · Operator <GroupLink group={ad ? ad.operator : cluster?.operator} />
-          </p>}
-          {strongest.length > 0 && <section><h3 className="font-semibold">Najsilniejsze dowody</h3><ol>{strongest.map(({ best, edges }) => (
-            <li key={JSON.stringify([best.kind, best.value])}><FamilyDot family={best.family} /> {best.label} · {markerValue(best.value, ad?.genome?.find(band => band.family === best.family)?.markers.find(marker => marker.kind === best.kind && marker.value === best.value)?.display_value)} · {bits(best.bits)} bita · liczba powiązań: {edges.size}</li>
-          ))}</ol></section>}
-          {ad && (
-            <p>
-              {ad.labels.topics && ad.labels.topics.length > 0 && <span className="block text-muted">Tematyka: {ad.labels.topics.join(", ")}</span>}
-              {ad.labels.keywords && ad.labels.keywords.length > 0 && (
-                <span className="block text-muted">Słowa kluczowe: {ad.labels.keywords.slice(0, 8).join(", ")}</span>
-              )}
-              {"cert_pl" in ad.labels && <> Domena jest na Liście Ostrzeżeń CERT Polska.</>}
-            </p>
-          )}
-          {ad && <nav aria-label="Szczegóły wyniku" className="flex flex-wrap gap-4 text-accent">
-            <Link href={`/ads/${ad.id}`}>Karta reklamy #{ad.id}</Link>
-            <Link href={`/investigation?ad=${ad.id}`}>Otwórz w śledztwie</Link>
-            <Link href="/review">Przejdź do stanowiska oceny</Link>
-          </nav>}
-          {ad && edges.length === 0 && <p className="text-muted">Brak powiązań powyżej progu.</p>}
-          <ul className="flex flex-col gap-1">
-            {edges.map((edge) => (
-              <li key={edge.id}>
-                <button
-                  onClick={() => openEvidence(edge.id)}
-                  className="flex w-full items-center justify-between gap-3 rounded border border-line px-3 py-2 text-left hover:border-accent"
-                >
-                  <span>
-                    #{edge.ad_a} ↔ #{edge.ad_b} · {RELATION_LABELS[edge.relation]}
-                    {edge.duplicate && " · duplikat"}
+      {active && <section ref={resultRef} aria-labelledby="result-heading" className="grid scroll-mt-4 gap-5 rounded-xl border border-line bg-raised p-5 md:p-7">
+        <div className="grid gap-2">
+          <p className="flex items-center gap-2 text-sm font-medium text-muted">
+            {busy ? <><Loader2 size={15} className="animate-spin text-accent" aria-hidden />{currentStage ? `${stageSteps[currentStage]} (krok ${reached.length} z ${stageKeys.length})` : "Rozpoczynanie analizy"}</>
+              : finished ? <><Check size={15} className="text-confirmed" aria-hidden />Analiza zakończona</> : "Wynik analizy"}
+          </p>
+          {busy && <div className="h-1.5 overflow-hidden rounded-full bg-hover" role="progressbar" aria-label="Postęp analizy" aria-valuemin={0} aria-valuemax={stageKeys.length} aria-valuenow={reached.length}>
+            <div className="h-full rounded-full bg-accent transition-[width] duration-300" style={{ width: `${(reached.length / stageKeys.length) * 100}%` }} />
+          </div>}
+          <h2 id="result-heading" className="text-2xl font-semibold tracking-tight md:text-3xl">{verdict || (busy ? "Szukamy powiązań…" : "Powiązania")}</h2>
+          {reasonText && <p className="max-w-[70ch] text-base">{reasonText}</p>}
+          {!busy && ad && edges.length === 0 && <p className="text-base text-muted">Nie znaleźliśmy wspólnych śladów z reklamami w bazie.</p>}
+        </div>
+
+        {(ad || cluster) && <dl aria-label="Przypisanie do grup" className="flex flex-wrap gap-x-8 gap-y-2">
+          <div className="grid gap-0.5"><dt className="text-xs text-muted">Kampania</dt><dd><GroupLink group={ad ? ad.campaign : cluster?.campaign} /></dd></div>
+          <div className="grid gap-0.5"><dt className="text-xs text-muted">Operator</dt><dd><GroupLink group={ad ? ad.operator : cluster?.operator} /></dd></div>
+          {edges.length > 0 && <div className="grid gap-0.5"><dt className="text-xs text-muted">Powiązane reklamy</dt><dd>{edges.length}{" "}
+            <span className="text-muted">({Object.entries(relationCounts).map(([relation, count]) => `${RELATION_LABELS[relation as Relation].toLocaleLowerCase("pl")}: ${count}`).join(", ")})</span></dd></div>}
+        </dl>}
+
+        {ad && <nav aria-label="Szczegóły wyniku" className="flex flex-wrap gap-2">
+          <Link href={`/ads/${ad.id}`} className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-accent px-4 font-medium text-on-accent hover:brightness-110">Karta reklamy<ArrowRight size={16} aria-hidden /></Link>
+          <Link href={`/investigation?ad=${ad.id}`} className="inline-flex h-10 items-center rounded-lg border border-line-strong px-4 font-medium hover:bg-hover">Pokaż w śledztwie</Link>
+          <Link href="/review" className="inline-flex h-10 items-center rounded-lg border border-line-strong px-4 font-medium hover:bg-hover">Przejdź do oceny</Link>
+        </nav>}
+
+        {ad && ((ad.labels.topics?.length ?? 0) > 0 || (ad.labels.keywords?.length ?? 0) > 0 || "cert_pl" in ad.labels) && <div className="grid gap-1 text-muted">
+          {ad.labels.topics && ad.labels.topics.length > 0 && <p>Tematyka: <span className="text-fg">{ad.labels.topics.join(", ")}</span></p>}
+          {ad.labels.keywords && ad.labels.keywords.length > 0 && <p>Słowa kluczowe: <span className="text-fg">{ad.labels.keywords.slice(0, 8).join(", ")}</span></p>}
+          {"cert_pl" in ad.labels && <p className="text-fg">Domena jest na Liście Ostrzeżeń CERT Polska.</p>}
+        </div>}
+
+        {expert && strongest.length > 0 && <section className="grid gap-2"><h3 className="font-semibold">Najsilniejsze dowody</h3><ol className="grid gap-1">{strongest.map(({ best, edges }) => (
+          <li key={JSON.stringify([best.kind, best.value])} className="flex flex-wrap items-center gap-x-2 break-all"><FamilyDot family={best.family} /> {best.label} · {markerValue(best.value, ad?.genome?.find(band => band.family === best.family)?.markers.find(marker => marker.kind === best.kind && marker.value === best.value)?.display_value)} · {bits(best.bits)} bita · liczba powiązań: {edges.size}</li>
+        ))}</ol></section>}
+
+        {shownEdges.length > 0 && <section className="grid gap-2">
+          <h3 className="font-semibold">Z czym się łączy</h3>
+          <ul className="grid gap-1.5 sm:grid-cols-2">
+            {shownEdges.map((edge) => {
+              const other = ad && edge.ad_a === ad.id ? edge.ad_b : edge.ad_a;
+              return <li key={edge.id}>
+                <button onClick={() => openEvidence(edge.id)}
+                  className="flex w-full items-center justify-between gap-3 rounded-lg border border-line px-3 py-2 text-left transition-colors duration-150 hover:border-accent hover:bg-panel">
+                  <span className="min-w-0">
+                    <span className="font-medium">{expert ? `#${edge.ad_a} ↔ #${edge.ad_b}` : `Reklama #${other}`}</span>
+                    <span className="text-muted"> · {RELATION_LABELS[edge.relation]}{edge.duplicate && " · duplikat"}</span>
                   </span>
-                  <span className="font-mono">{prob(edge.probability)}</span>
+                  {expert ? <span className="font-mono">{prob(edge.probability)}</span> : <span className="shrink-0 text-sm text-accent">Dowody</span>}
                 </button>
-              </li>
-            ))}
+              </li>;
+            })}
           </ul>
-        </section>
-        {(busy || activeId || events.length > 0) && <details key={busy ? "running" : "finished"} open={busy} className="rounded-lg border border-line p-4">
-          <summary className="font-semibold">Przebieg analizy</summary>
-          <ol className="grid gap-1">
+          {sortedEdges.length > 6 && <button type="button" onClick={() => setAllEdges(value => !value)} className="justify-self-start rounded-lg px-2 text-accent hover:underline">
+            {allEdges ? "Pokaż mniej" : `Pokaż wszystkie (${sortedEdges.length})`}
+          </button>}
+        </section>}
+
+        <details key={busy && expert ? "running" : "finished"} open={busy && expert} className="rounded-lg border border-line px-4 py-3">
+          <summary className="font-medium text-muted">Przebieg analizy krok po kroku</summary>
+          <ol className="mt-2 grid gap-1">
             {Object.entries(stageLabels).map(([stage, label]) => {
               const latest = [...events].reverse().find(event => event.stage === stage);
               return <li key={stage} className="flex items-center gap-3 border-b border-line py-2">
                 <span aria-hidden className={latest ? "size-2 rounded-full bg-accent" : "size-2 rounded-full border border-line-strong"} />
-                <span>{label}</span><span className="ml-auto text-xs text-muted">{latest ? stateLabels[latest.status] : "oczekuje"}</span>
+                <span>{expert ? label : stageSteps[stage as keyof typeof stageSteps]}</span><span className="ml-auto text-xs text-muted">{latest ? stateLabels[latest.status] : "oczekuje"}</span>
               </li>;
             })}
           </ol>
@@ -306,26 +394,40 @@ export function Discovery() {
               <h3>{event.payload.profile === "bot" ? "Profil automatu" : event.payload.profile === "victim" ? "Profil odbiorcy" : "Przechwycenie"}</h3>
               <CrawlShot sha={event.payload.screenshot} />
               <ol aria-label="Łańcuch przekierowań" className="break-all font-mono">
-              {(event.payload.chain as {url: string; status?: number; via?: string}[]).map((hop, index) =>
-                <li key={index}>{hop.via === "js" ? "Skrypt / meta refresh" : hop.via === "http" ? "HTTP" : ""} {hop.status} {hop.url}</li>)}
-            </ol></section>)}
+                {(event.payload.chain as { url: string; status?: number; via?: string }[]).map((hop, index) =>
+                  <li key={index}>{hop.via === "js" ? "Skrypt / meta refresh" : hop.via === "http" ? "HTTP" : ""} {hop.status} {hop.url}</li>)}
+              </ol></section>)}
           {events.some(e => e.payload.cloaking === true) && <p>Cloaking: automat i odbiorca otrzymali różne wersje strony.</p>}
           {events.length === 0 && <p className="text-muted">Tu pojawią się kolejne etapy, na żywo.</p>}
-          <ol className="flex flex-col gap-1 font-mono text-xs">
+          {expert && <ol className="mt-2 flex flex-col gap-1 font-mono text-xs">
             {events.map((item) => (
               <li key={item.seq} className={item.status === "error" ? "text-rejected" : item.status === "info" ? "text-muted" : ""}>
                 <span className="text-muted">{String(item.seq).padStart(2, "0")}</span> {stageLabels[item.stage as keyof typeof stageLabels] ?? item.stage} · {item.message}
               </li>
             ))}
-          </ol>
-        </details>}
-
-      </div>
+          </ol>}
+        </details>
+      </section>}
 
       <LiveGraph events={events} onEdge={openEvidence} />
-      {selected !== null && <section aria-labelledby="discovery-evidence">
-        <h2 id="discovery-evidence" ref={evidenceHeading} tabIndex={-1} className="font-semibold">Dowody powiązania #{selected}</h2>
+      {selected !== null && <section aria-labelledby="discovery-evidence" className="grid gap-2">
+        <h2 id="discovery-evidence" ref={evidenceHeading} tabIndex={-1} className="text-lg font-semibold">Dowody powiązania{expert && ` #${selected}`}</h2>
         <EdgePanel key={selected} edgeId={selected} />
+      </section>}
+
+      {!active && <section aria-labelledby="recent-heading" className="grid gap-2">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="recent-heading" className="text-lg font-semibold">Ostatnie materiały ze spraw</h2>
+          <Link href="/archive" className="inline-flex items-center gap-1 text-accent hover:underline">Całe archiwum<ArrowRight size={15} aria-hidden /></Link>
+        </div>
+        {archive.loading ? <p className="text-muted">Pobieranie materiałów…</p> : archive.error ? <button onClick={archive.reload} className="justify-self-start text-accent underline">Ponów pobranie materiałów</button> :
+          archive.data?.length ? <ul className="flex flex-col overflow-hidden rounded-xl border border-line">{archive.data.map(item => <li key={item.id} className="min-w-0 border-b border-line last:border-0">
+            <Link href={`/ads/${item.id}`} className="flex items-center gap-4 px-4 py-3 transition-colors duration-150 hover:bg-panel">
+              <strong className="min-w-0 flex-1 truncate font-medium">{adTitle(item)}</strong>
+              <span className="shrink-0 text-sm text-muted">sprawa {item.case}</span>
+              <ArrowUpRight size={16} className="shrink-0 text-muted" aria-hidden />
+            </Link></li>)}</ul>
+            : <p className="text-muted">Brak materiałów przypisanych do spraw. Dodaj pierwszy materiał powyżej.</p>}
       </section>}
     </main>
   );

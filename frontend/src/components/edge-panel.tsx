@@ -12,6 +12,7 @@ import { EdgeSuggestions } from "./edge-suggestions";
 import { JevReview } from "./jev-review";
 import { DecisionHistory } from "./decision-history";
 import type { VerdictReason } from "@/lib/api";
+import { PremiseChallenge } from "./premise-challenge";
 import { EvidenceLab } from "./evidence-lab";
 import { useState } from "react";
 
@@ -70,7 +71,7 @@ function AdSide({ ad, detail, side, onOpenAd }: { ad: AdSummary; detail?: AdDeta
 }
 
 // Karta dowodu. Zwinięta: rodzina, marker, wartość, rzadkość, wkład. Rozwinięta: obie strony, wagi, artefakty.
-function EvidenceCard({ item, max }: { item: Evidence; max: number }) {
+function EvidenceCard({ item, max, refresh }: { item: Evidence; max: number; refresh: () => void }) {
   const [open, setOpen] = useState(false);
   const soft = item.df === 0;
   const same = item.value_a === item.value_b;
@@ -108,6 +109,7 @@ function EvidenceCard({ item, max }: { item: Evidence; max: number }) {
           <span className="text-[0.85rem] text-muted">{soft ? "marker miękki" : `w ${item.df} z ${item.corpus_n} źródeł`}</span>
         </span>
       </button>
+      <PremiseChallenge item={item} refresh={refresh}/>
       <ContentSimilarity kind={item.kind} similarity={item.similarity} />
 
       <AnimatePresence initial={false}>
@@ -310,7 +312,7 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict }: { edgeId: number; onO
         ) : (
           <ul>
             {evidence.map((item, index) => (
-              <EvidenceCard key={`${item.kind}:${item.value_a}:${index}`} item={item} max={max} />
+              <EvidenceCard key={`${item.kind}:${item.value_a}:${index}`} item={item} max={max} refresh={edge.reload} />
             ))}
           </ul>
         )}

@@ -291,9 +291,22 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
   const [a, b] = [data.ads.find((ad) => ad.id === data.ad_a) ?? data.ads[0], data.ads.find((ad) => ad.id === data.ad_b) ?? data.ads[1]];
   const crossDomain = a && b && hostOf(a.landing_url) && hostOf(b.landing_url) && hostOf(a.landing_url) !== hostOf(b.landing_url);
 
+  const decision = (
+    <Decision
+        key={`${data.id}:${data.updated_at}:${data.verdict_at}`}
+        refresh={edge.reload}
+        edge={data}
+        onSaved={(saved) => {
+          setResult(regroupMessage(saved.regroup));
+          edge.set(saved);
+          onVerdict?.(saved);
+        }}
+      />
+  );
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
-      <div className="min-h-0 flex-1 overflow-auto">
+      <div className={review ? "min-h-0 flex-1 overflow-auto lg:grid lg:grid-cols-2 lg:overflow-hidden" : "min-h-0 flex-1 overflow-auto"}>
+        <div className={review ? "lg:min-h-0 lg:overflow-auto lg:border-r lg:border-line" : undefined}>
         <div className="flex flex-col gap-2 border-b border-line p-2">
           <h2 className="text-lg font-semibold">Hipoteza modelu</h2>
           {review && <span className="text-xs text-muted">Do oceny · {review.reason_label}</span>}
@@ -329,6 +342,8 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
           {b && <AdSide ad={b} detail={adB.data} side="B" onOpenAd={onOpenAd} />}
         </div>
 
+        </div>
+        <div className={review ? "lg:min-h-0 lg:overflow-auto" : undefined}>
         <div className="flex gap-2 border-b border-line px-2" aria-label="Widok pary">{["Dowody", "Źródła", "Kontekst"].map(t =>
           <button key={t} aria-pressed={tab === t} className="min-h-10 px-2 aria-pressed:border-b-2 aria-pressed:border-accent" onClick={() => setTab(t)}>{t}</button>)}</div>
         {tab === "Kontekst" && <>        <JevReview open={section === "jev"} onToggle={() => toggle("jev")} key={`jev-${data.id}`} edge={data} />
@@ -352,18 +367,11 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
         )}
         {evidence.length > 3 && <button className="min-h-9 px-2 text-accent" onClick={() => setShowAll(!showAll)}>{showAll ? "Zwiń listę" : `Wszystkie przesłanki (${evidence.length})`}</button>}
         {!!review?.limitations.length && <aside className="m-2 rounded border border-amber-400 p-3"><h3>Ograniczenia hipotezy</h3>{review.limitations.map(text => <p key={text}>{text}</p>)}</aside>}
-      <Decision
-        key={`${data.id}:${data.updated_at}:${data.verdict_at}`}
-        refresh={edge.reload}
-        edge={data}
-        onSaved={(saved) => {
-          setResult(regroupMessage(saved.regroup));
-          edge.set(saved);
-          onVerdict?.(saved);
-        }}
-      />
-      {result && <p role="status" className="p-2">{result}</p>}</>}
+        {!review && decision}
+        {!review && result && <p role="status" className="p-2">{result}</p>}</>}
+        </div>
       </div>
+      {review && decision}
     </div>
   );
 }

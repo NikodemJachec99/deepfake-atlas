@@ -364,9 +364,9 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
   const adA = useApi(data ? `ad:${data.ad_a}` : null, () => api.ad(data!.ad_a));
   const adB = useApi(data ? `ad:${data.ad_b}` : null, () => api.ad(data!.ad_b));
 
-  if (edge.loading) return <Loading label="Pobieranie dowodów krawędzi" />;
+  if (edge.loading) return <Loading label={expert ? "Pobieranie dowodów krawędzi" : "Wczytywanie pary i jej przesłanek"} />;
   if (edge.error) return <ErrorBox message={edge.error} onRetry={edge.reload} missing={edge.status === 404 ? {
-    description: `Nie znaleziono krawędzi #${edgeId}.`,
+    description: expert ? `Nie znaleziono krawędzi #${edgeId}.` : "Nie znaleziono tej pary. Mogła zniknąć po ponownym przeliczeniu powiązań.",
     href: "/review",
     link: "Przejdź do kolejki ocen",
   } : undefined} />;

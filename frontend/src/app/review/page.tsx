@@ -66,7 +66,7 @@ export default function ReviewPage() {
     </nav>
     <aside ref={queuePanel} className={`min-h-0 min-w-0 overflow-auto rounded-lg border border-line bg-panel p-3 lg:block ${comparing ? "hidden" : "block"}`}>
       <h1 className="mb-3 flex items-baseline gap-2 px-1 text-xl font-semibold">Do oceny {queue.data && <span className="rounded-full bg-accent-soft px-2 py-0.5 text-sm font-medium text-accent">{queue.data.count} {plural(queue.data.count, "para", "pary", "par")}</span>}</h1>
-      {hint === "1" && !hintClosed && <div className="mb-3 flex items-start gap-2 rounded-lg border border-line bg-bg p-3">
+      {hint === "1" && !hintClosed && !(queue.data && rows.length === 0) && <div className="mb-3 flex items-start gap-2 rounded-lg border border-line bg-bg p-3">
         <Lightbulb size={16} aria-hidden className="mt-0.5 shrink-0 text-accent" />
         <p className="min-w-0 flex-1">Wybierz parę z listy, sprawdź przesłanki i materiały, a potem zdecyduj: potwierdź, oznacz do wyjaśnienia albo odrzuć.</p>
         <button type="button" aria-label="Zamknij wskazówkę" onClick={() => { setHintClosed(true); setHint("0"); }} className="shrink-0 text-muted hover:text-fg"><X size={16} aria-hidden /></button>
@@ -101,7 +101,12 @@ export default function ReviewPage() {
         {Number.isSafeInteger(selected) && selected > 0 && <Link className="text-accent underline" href={`/investigation?scope=all&edge=${selected}`}>{expert ? `Sprawdź krawędź #${selected} w śledztwie` : "Zobacz tę parę w śledztwie"}</Link>}
         <button className="text-accent underline" onClick={() => navigate(page, null, false)}>Wybierz parę z kolejki</button>
       </div>}
-      {!current && comparing && !missing && (queue.loading ? <Loading/> : queue.error ? <ErrorBox message={queue.error} onRetry={queue.reload}/> : <button onClick={() => navigate(page, null, false)}>Wróć do kolejki</button>)}
+      {!current && !missing && (queue.loading ? (comparing ? <Loading/> : null) : queue.error ? (comparing ? <ErrorBox message={queue.error} onRetry={queue.reload}/> : null) : rows.length === 0 && queue.data ? <div className="grid flex-1 content-center justify-items-center gap-2 p-6 text-center">
+        <CircleCheck size={28} aria-hidden className="text-confirmed" />
+        <h2 className="text-lg font-semibold">Kolejka jest pusta</h2>
+        <p className="max-w-md text-muted">Każda para w kolejce ma już decyzję. Nowe pary pojawią się po dodaniu materiałów albo po zmianie dowodów.</p>
+        <Link href="/campaigns" className="text-accent underline">Przejdź do kampanii</Link>
+      </div> : comparing && <button className="p-4 text-accent underline" onClick={() => navigate(page, null, false)}>Wróć do kolejki</button>)}
       {current && <EdgePanel key={current.id} edgeId={current.id} review={current} onVerdict={saved => {
         const index = rows.findIndex(row => row.id === saved.id);
         const next = (rows[index+1] ?? rows.find(row => row.id !== saved.id))?.id ?? null;

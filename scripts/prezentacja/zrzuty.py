@@ -103,6 +103,23 @@ def main() -> None:
         shot("do-oceny", f"/review?edge={review_edge}", left=content, wait_text="Co uzasadnia tę hipotezę")
         shot("przeslanka", f"/review?edge={review_edge}", left=content + CROP // 3, clicks=["Zakwestionuj przesłankę"], wait_text="Wpływ na cały korpus")
         shot("karta-operatora", f"/operators/{operator_a}", left=content, wait_text="Dlaczego razem")
+        # Ekran startowy, łowca domen i wagi w trybie prostym, całe okno z nawigacją.
+        shot("start", "/", left=0, wait_text="Co chcesz zrobić?")
+        shot("lowca", "/hunt", left=content, wait_text="Łowca domen")
+        shot("wagi", "/weights", left=content)
+        # Telefon: porównanie pary na 390 px.
+        page.set_viewport_size({"width": 390, "height": 844})
+        page.goto(f"{args.base}/", wait_until="domcontentloaded")
+        page.evaluate("() => localStorage.setItem('scamdna.expert', '0')")
+        page.goto(f"{args.base}/review?edge={review_edge}&view=compare", wait_until="networkidle")
+        page.wait_for_timeout(1500)
+        page.screenshot(path=str(out / "telefon.jpg"), type="jpeg", quality=85)
+        print("telefon", f"/review?edge={review_edge}&view=compare")
+        for name, url in (("telefon-start", "/"), ("telefon-operator", f"/operators/{operator_a}"), ("telefon-kolejka", "/review")):
+            page.goto(f"{args.base}{url}", wait_until="networkidle")
+            page.wait_for_timeout(1500)
+            page.screenshot(path=str(out / f"{name}.jpg"), type="jpeg", quality=85)
+            print(name, url)
         browser.close()
 
 

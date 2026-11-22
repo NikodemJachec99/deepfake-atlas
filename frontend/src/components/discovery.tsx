@@ -48,8 +48,9 @@ async function latestCaseMaterials() {
 export function Discovery() {
   const archive = useApi("discovery-case-materials", latestCaseMaterials);
   const [files, setFiles] = useState<File[]>([]);
-  const [kind, setKind] = useState<"url" | "text">("url");
-  const [value, setValue] = useState("");
+  const [kind, setKind] = useState<"url" | "text" | "files">("url");
+  const [address, setAddress] = useState("");
+  const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [events, setEvents] = useState<AnalysisEvent[]>([]);
@@ -143,7 +144,8 @@ export function Discovery() {
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
-    const material = value.trim();
+    if (kind === "files") { upload(files); return; }
+    const material = (kind === "url" ? address : text).trim();
     if (!material || busy) return;
     void run(() => api.createAnalysis(kind, material));
   }
@@ -178,38 +180,20 @@ export function Discovery() {
         <p className="text-muted">Wrzuć adres reklamy albo jej tekst. System znajdzie ślady i pokaże, z czym się łączy.</p>
       </header>
 
-      <div className="grid overflow-hidden rounded-xl border border-line lg:grid-cols-[3fr_2fr]">
-      <section className="grid content-center gap-4 bg-panel p-5 md:p-7">
-      <h2 className="text-xl font-semibold">Adres lub treść reklamy</h2>
-      <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row">
-        <select
-          id="input-kind"
-          aria-label="Rodzaj materiału"
-          value={kind}
-          onChange={(e) => setKind(e.target.value as "url" | "text")}
-          className="rounded border border-line-strong bg-raised px-2 py-2"
-        >
-          <option value="url">Adres URL</option>
-          <option value="text">Tekst lub nazwa produktu</option>
-        </select>
-        <input
-          id="input-value"
-          aria-label={kind === "url" ? "Adres URL" : "Tekst lub nazwa produktu"}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder={kind === "url" ? "https://..." : "Treść reklamy"}
-          required
-          className="min-w-0 flex-1 rounded border border-line-strong bg-raised px-3 py-2 font-mono"
-        />
-        <button id="analyze" disabled={busy || !value.trim()} className="rounded bg-accent px-4 py-2 font-medium text-on-accent disabled:opacity-50">
-          {busy ? "Analiza trwa" : "Analizuj"}
-        </button>
-      </form>
-      {!value.trim() && <p className="text-sm text-muted">{kind === "url" ? "Wpisz adres URL, aby rozpocząć analizę." : "Wpisz treść reklamy lub nazwę produktu, aby rozpocząć analizę."}</p>}
-      </section>
-
-      <section className="grid min-w-0 content-center gap-3 bg-raised p-5 md:p-7">
-        <h2 className="text-lg font-semibold">Import plików</h2>
+      <form onSubmit={submit} className="grid gap-4 rounded-xl border border-line bg-panel p-5 md:p-7">
+        <fieldset id="input-kind" disabled={busy}>
+          <legend className="mb-2 font-semibold">Rodzaj materiału</legend>
+          <div className="inline-flex rounded-lg border border-line p-1">
+            {([["url", "Adres"], ["text", "Tekst"], ["files", "Pliki"]] as const).map(([type, label]) =>
+              <button type="button" key={type} aria-pressed={kind === type} onClick={() => setKind(type)}
+                className="rounded-md px-4 py-2 aria-pressed:bg-accent-soft aria-pressed:text-accent">{label}</button>)}
+          </div>
+        </fieldset>
+        {kind === "url" && <label>Adres URL<input id="input-value" type="url" required value={address} onChange={e => setAddress(e.target.value)}
+          placeholder="https://…" className="block w-full rounded border border-line-strong bg-raised px-3 py-2" /></label>}
+        {kind === "text" && <label>Tekst lub nazwa produktu<textarea id="input-value" required rows={4} value={text} onChange={e => setText(e.target.value)}
+          placeholder="Np. treść ogłoszenia lub nazwa reklamowanego produktu" className="block w-full rounded border border-line-strong bg-raised px-3 py-2" /></label>}
+        {kind === "files" && <>
         <label onDragOver={event => event.preventDefault()} onDrop={event => {
           event.preventDefault();
           const added = Array.from(event.dataTransfer.files);
@@ -227,12 +211,15 @@ export function Discovery() {
         {files.length > 0 && <>
           <ul>{files.map((file, index) => <li key={index} className="flex items-baseline justify-between gap-3">
             <span className="min-w-0 break-all">{file.name}</span>
-            <button disabled={busy} aria-label={`Usuń ${file.name}`} onClick={() => setFiles(previous => previous.filter((_, i) => i !== index))}>Usuń</button>
+            <button type="button" disabled={busy} aria-label={`Usuń ${file.name}`} onClick={() => setFiles(previous => previous.filter((_, i) => i !== index))}>Usuń</button>
           </li>)}</ul>
-          <button disabled={busy} className="justify-self-start rounded bg-accent px-4 py-2 text-on-accent" onClick={() => upload(files)}>Analizuj pliki</button>
         </>}
-      </section>
-      </div>
+        </>}
+        <button id="analyze" type="submit" disabled={busy || (kind === "files" ? !files.length : !(kind === "url" ? address : text).trim())}
+          className="justify-self-start rounded bg-accent px-4 py-2 font-medium text-on-accent disabled:opacity-50">
+          {busy ? "Analiza trwa" : "Przeanalizuj materiał"}
+        </button>
+      </form>
 
       {batch.length > 1 && <label className="flex items-center gap-2">Materiał z paczki
         <select className="min-w-0 max-w-full rounded border border-line bg-panel p-2" value={activeId} onChange={event => {
@@ -250,37 +237,7 @@ export function Discovery() {
       </div>}
       {error && <p className="rounded border border-rejected px-3 py-2 text-rejected">Analiza nie powiodła się: {error}</p>}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(15rem,1fr)_minmax(0,2fr)]">
-        <section className="flex min-w-0 flex-col gap-2">
-          <h2 className="border-b border-line pb-2 text-lg font-semibold">Przebieg analizy</h2>
-          <ol className="grid gap-1">
-            {Object.entries(stageLabels).map(([stage, label]) => {
-              const latest = [...events].reverse().find(event => event.stage === stage);
-              return <li key={stage} className="flex items-center gap-3 border-b border-line py-2">
-                <span aria-hidden className={latest ? "size-2 rounded-full bg-accent" : "size-2 rounded-full border border-line-strong"} />
-                <span>{label}</span><span className="ml-auto text-xs text-muted">{latest ? stateLabels[latest.status] : "oczekuje"}</span>
-              </li>;
-            })}
-          </ol>
-          {events.filter(event => event.stage === "crawl" && Array.isArray(event.payload.chain)).map(event =>
-            <section key={event.seq}>
-              <h3>{event.payload.profile === "bot" ? "Profil automatu" : event.payload.profile === "victim" ? "Profil odbiorcy" : "Przechwycenie"}</h3>
-              <CrawlShot sha={event.payload.screenshot} />
-              <ol aria-label="Łańcuch przekierowań" className="break-all font-mono">
-              {(event.payload.chain as {url: string; status?: number; via?: string}[]).map((hop, index) =>
-                <li key={index}>{hop.via === "js" ? "Skrypt / meta refresh" : hop.via === "http" ? "HTTP" : ""} {hop.status} {hop.url}</li>)}
-            </ol></section>)}
-          {events.some(e => e.payload.cloaking === true) && <p>Cloaking: automat i odbiorca otrzymali różne wersje strony.</p>}
-          {events.length === 0 && <p className="text-muted">Tu pojawią się kolejne etapy, na żywo.</p>}
-          <ol className="flex flex-col gap-1 font-mono text-xs">
-            {events.map((item) => (
-              <li key={item.seq} className={item.status === "error" ? "text-rejected" : item.status === "info" ? "text-muted" : ""}>
-                <span className="text-muted">{String(item.seq).padStart(2, "0")}</span> {item.stage} · {item.message}
-              </li>
-            ))}
-          </ol>
-        </section>
-
+      <div className="grid gap-6">
         <section className="flex min-w-0 flex-col gap-2">
           {!activeId && <section className="mb-4">
             <div className="flex items-baseline justify-between border-b border-line pb-2"><h2 className="text-lg font-semibold">Ostatnie materiały ze spraw</h2><Link href="/archive" className="text-accent underline">Całe archiwum</Link></div>
@@ -309,6 +266,7 @@ export function Discovery() {
           {ad && <nav aria-label="Szczegóły wyniku" className="flex flex-wrap gap-4 text-accent">
             <Link href={`/ads/${ad.id}`}>Karta reklamy #{ad.id}</Link>
             <Link href={`/investigation?ad=${ad.id}`}>Otwórz w śledztwie</Link>
+            <Link href="/review">Przejdź do stanowiska oceny</Link>
           </nav>}
           {ad && edges.length === 0 && <p className="text-muted">Brak powiązań powyżej progu.</p>}
           <ul className="flex flex-col gap-1">
@@ -328,6 +286,36 @@ export function Discovery() {
             ))}
           </ul>
         </section>
+        {(busy || activeId || events.length > 0) && <details key={busy ? "running" : "finished"} open={busy} className="rounded-lg border border-line p-4">
+          <summary className="font-semibold">Przebieg analizy</summary>
+          <ol className="grid gap-1">
+            {Object.entries(stageLabels).map(([stage, label]) => {
+              const latest = [...events].reverse().find(event => event.stage === stage);
+              return <li key={stage} className="flex items-center gap-3 border-b border-line py-2">
+                <span aria-hidden className={latest ? "size-2 rounded-full bg-accent" : "size-2 rounded-full border border-line-strong"} />
+                <span>{label}</span><span className="ml-auto text-xs text-muted">{latest ? stateLabels[latest.status] : "oczekuje"}</span>
+              </li>;
+            })}
+          </ol>
+          {events.filter(event => event.stage === "crawl" && Array.isArray(event.payload.chain)).map(event =>
+            <section key={event.seq}>
+              <h3>{event.payload.profile === "bot" ? "Profil automatu" : event.payload.profile === "victim" ? "Profil odbiorcy" : "Przechwycenie"}</h3>
+              <CrawlShot sha={event.payload.screenshot} />
+              <ol aria-label="Łańcuch przekierowań" className="break-all font-mono">
+              {(event.payload.chain as {url: string; status?: number; via?: string}[]).map((hop, index) =>
+                <li key={index}>{hop.via === "js" ? "Skrypt / meta refresh" : hop.via === "http" ? "HTTP" : ""} {hop.status} {hop.url}</li>)}
+            </ol></section>)}
+          {events.some(e => e.payload.cloaking === true) && <p>Cloaking: automat i odbiorca otrzymali różne wersje strony.</p>}
+          {events.length === 0 && <p className="text-muted">Tu pojawią się kolejne etapy, na żywo.</p>}
+          <ol className="flex flex-col gap-1 font-mono text-xs">
+            {events.map((item) => (
+              <li key={item.seq} className={item.status === "error" ? "text-rejected" : item.status === "info" ? "text-muted" : ""}>
+                <span className="text-muted">{String(item.seq).padStart(2, "0")}</span> {item.stage} · {item.message}
+              </li>
+            ))}
+          </ol>
+        </details>}
+
       </div>
 
       <LiveGraph events={events} onEdge={openEvidence} />

@@ -25,7 +25,7 @@ export function JevReview({ edge, open, onToggle }: { edge: EdgeDetail; open: bo
         {data.visible && suggestion?.label && <p>{suggestion.label}</p>}
         {suggestion?.stale && <p className="font-semibold">Wynik nieaktualny względem bieżących przesłanek.</p>}
         {suggestion?.uncertain && <p>Model oznaczył odpowiedź jako niepewną.</p>}
-        <p>Model · {suggestion?.served_model || suggestion?.model || data.model || "brak informacji"} · wersja pytania {suggestion?.question_version ?? data.question_version}</p>
+        {data.status !== "disabled" && <p>Model · {suggestion?.served_model || suggestion?.model || data.model || "brak informacji"} · wersja pytania {suggestion?.question_version ?? data.question_version}</p>}
         {suggestion && <p>Zapis sugestii · {dateTime(suggestion.created_at)}</p>}
         <p>{data.notice}</p>
         <details><summary>Bieżące przesłanki przeglądu</summary>

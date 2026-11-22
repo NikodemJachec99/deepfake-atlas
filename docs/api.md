@@ -523,7 +523,10 @@ Powody, w kolejności priorytetu:
 | `unbacked` | Relacja bez śladu zaplecza albo oparta na jednym decydującym śladzie | `same_operator` albo `same_campaign`, w której żadna niezależna rodzina śladów nie dotyczy zaplecza (poza `narr`, `crea`, `pers`), albo jest dokładnie jeden ślad decydujący i mniej niż dwie niezależne rodziny |
 | `borderline` | Wynik modelu na granicy (0,5 do 0,9) | `0.5 <= probability < 0.9` |
 | `new_in_group` | Nowa reklama w znanej grupie, bez decyzji na jej krawędziach | jedna z reklam ma alert `joined_campaign`, `new_campaign_known_operator` albo `joined_operator`, a żadna z krawędzi tych reklam nie ma decyzji |
-| `other` | Bez decyzji | reszta |
+| `operator_to_confirm` | Wspólne zaplecze do potwierdzenia | reszta relacji `same_operator` |
+| `campaign_to_confirm` | Ta sama kampania do potwierdzenia | reszta relacji `same_campaign` |
+| `content_only` | Podobna treść bez wspólnego zaplecza | reszta relacji `similar` |
+| `other` | Bez decyzji | rezerwa, dziś nie występuje |
 
 | Pole | Znaczenie |
 |---|---|

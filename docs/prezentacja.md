@@ -1,11 +1,11 @@
 # Prezentacja na 5 minut i demo na 2 minuty
 
 Etap II: 5 minut prezentacji, 5 minut pytań. Zgłoszenie: prezentacja i demo do 2 minut.
-Liczby poniżej pochodzą z `GET /api/stats` po imporcie samych paczek organizatora, bez reklam z bibliotek (model `fs-5`, z podobieństwem znaczenia treści):
+Liczby poniżej pochodzą z `GET /api/stats` po imporcie samych paczek organizatora, bez reklam z bibliotek (model `fs-5.1`, pomiar 22.11, z podobieństwem znaczenia treści):
 
 ```json
 {"ads": 28, "campaigns": 4, "operators": 3,
- "edges": {"same_campaign": 20, "same_operator": 13, "similar": 34},
+ "edges": {"same_campaign": 19, "same_operator": 13, "similar": 35},
  "cert_pl_listed": 6}
 ```
 
@@ -49,7 +49,7 @@ Przed prezentacją sprawdź je jeszcze raz: `curl localhost:8000/api/stats`. Je�
 - Ten sam artykuł na innym zapleczu to tylko podobieństwo: treść da się skopiować.
 - Ten sam silnik lejka bez śladu konta operatora to też tylko podobieństwo: silnik da się kupić. Tak potraktowaliśmy sprawy 48, 61 i p11. Wcześniej wisiały przy operatorze A, przegląd każdej krawędzi to wyłapał i reguła została poprawiona z testem.
 - 14 stron zostało bez operatora.
-- Sprawdziliśmy to liczbowo. Bez plików HAR zostaje 19 z 33 połączeń, bez zapisu strony 30, bez zrzutów 32, a w żadnym wariancie nie powstaje fałszywe połączenie. Zmiana wag o ±50% rusza tylko 4 pary graniczne, rdzeń operatora A się nie zmienia.
+- Sprawdziliśmy to liczbowo. Bez plików HAR zostaje 18 z 32 połączeń, bez zapisu strony 30, bez zrzutów 32, a w żadnym wariancie nie powstaje fałszywe połączenie. Zmiana wag o ±50% rusza tylko 4 pary graniczne, rdzeń operatora A się nie zmienia.
 
 ### 6. Demo (2 min, scenariusz niżej)
 

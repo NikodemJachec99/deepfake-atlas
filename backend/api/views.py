@@ -29,7 +29,20 @@ from evidence.models import AdMarker, Artifact, AuditLog
 from extractors import video
 from extractors.url import redact_url
 from people.display import display_value, person_names
-from similarity import assist_view, decisions, observations, package, precedents, premises, review, simulation, stix, suggestions, timeline, weakest
+from similarity import (
+    assist_view,
+    decisions,
+    observations,
+    package,
+    precedents,
+    premises,
+    review,
+    simulation,
+    stix,
+    suggestions,
+    timeline,
+    weakest,
+)
 from similarity.models import Alert, Campaign, CampaignMembership, Edge, EdgeDecision, Operator, OperatorMembership, Premise
 from similarity.service import assign_campaign, assign_operator, recluster
 from workflows import runner

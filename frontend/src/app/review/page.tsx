@@ -2,20 +2,11 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useApi } from "@/lib/hooks";
 import { EdgePanel, regroupMessage } from "@/components/edge-panel";
 import { ErrorBox, Loading } from "@/components/ui";
-
-export default function ReviewPage() {
-  const params = useSearchParams();
-  const requested = Number(params.get("page"));
-  const page = Number.isSafeInteger(requested) && requested > 0 ? requested : 1;
-  const requestedEdge = params.get("edge");
-  const selected = requestedEdge === null ? null : Number(requestedEdge);
-  const comparing = params.get("view") === "compare";
-  const queue = useApi("review:" + page, () => api.review({ page }));
 
   function navigate(targetPage: number, edge: number | null, compare: boolean, replace = false) {
     const url = new URL(window.location.href);
@@ -29,6 +20,23 @@ export default function ReviewPage() {
     if (replace) window.history.replaceState(null, "", url);
     else window.history.pushState(null, "", url);
   }
+
+export default function ReviewPage() {
+  const params = useSearchParams();
+  const requested = Number(params.get("page"));
+  const page = Number.isSafeInteger(requested) && requested > 0 ? requested : 1;
+  const requestedEdge = params.get("edge");
+  const selected = requestedEdge === null ? null : Number(requestedEdge);
+  const comparing = params.get("view") === "compare";
+  const queue = useApi("review:" + page, () => api.review({ page }));
+
+  const outOfRange = page > 1 && queue.status === 404;
+  const first = useApi(outOfRange ? "review-bounds:" + page : null, () => api.review({ page: 1 }));
+  useEffect(() => {
+    if (!outOfRange || !first.data) return;
+    const last = Math.max(1, Math.ceil(first.data.count / Math.max(1, first.data.results.length)));
+    if (last < page) navigate(last, selected, comparing, true);
+  }, [outOfRange, first.data, page, selected, comparing]);
   const [message, setMessage] = useState("");
   const rows = queue.data?.results ?? [];
   const current = selected === null ? rows[0] : rows.find(row => row.id === selected);
@@ -40,11 +48,16 @@ export default function ReviewPage() {
     </nav>
     <aside className={`min-h-0 min-w-0 overflow-auto rounded-lg border border-line bg-panel p-3 lg:block ${comparing ? "hidden" : "block"}`}>
       <h1 className="mb-3 text-xl font-semibold">Do oceny {queue.data && <span className="text-muted">({queue.data.count})</span>}</h1>
-      {queue.loading ? <Loading/> : queue.error ? <ErrorBox message={queue.error} onRetry={queue.reload}/> : <>
+      {queue.loading || first.loading ? <Loading/> : first.error ? <ErrorBox message={first.error} onRetry={first.reload}/> : queue.error ? <ErrorBox message={queue.error} onRetry={queue.reload}/> : <>
         {rows.length === 0 && <p>Brak par do oceny.</p>}
         {rows.map(row => <button key={row.id} aria-pressed={row.id === current?.id} onClick={() => navigate(page, row.id, true)}
           className="grid w-full gap-1 border-b border-line px-2 py-3 text-left aria-pressed:bg-accent-soft">
-          <strong className="line-clamp-2">{row.ad_a.domain || row.ad_a.title} ↔ {row.ad_b.domain || row.ad_b.title}</strong><span className="text-xs text-muted">{row.reason_label}</span></button>)}
+          <strong className="truncate">#{row.ad_a.id} ↔ #{row.ad_b.id}</strong>
+          <span className="truncate">{row.ad_a.domain && row.ad_a.domain === row.ad_b.domain
+            ? `${row.ad_a.domain} · ta sama domena`
+            : `${row.ad_a.domain || "Brak domeny"} ↔ ${row.ad_b.domain || "Brak domeny"}`}</span>
+          {(!row.ad_a.domain || !row.ad_b.domain) && <span className="line-clamp-2">{[!row.ad_a.domain && row.ad_a.title, !row.ad_b.domain && row.ad_b.title].filter(Boolean).join(" ↔ ")}</span>}
+          <span className="text-xs text-muted">{row.reason_label}</span></button>)}
         <nav className="mt-3 flex justify-between"><button disabled={page === 1} onClick={() => navigate(page-1, null, false)}>Poprzednia</button><span>{page}</span><button disabled={!queue.data?.next} onClick={() => navigate(page+1, null, false)}>Następna</button></nav>
       </>}
     </aside>

@@ -82,10 +82,11 @@ export default function ReviewPage() {
             <span className="min-w-0 font-medium break-words">{row.ad_a.domain && row.ad_a.domain === row.ad_b.domain
               ? `${row.ad_a.domain} · ta sama domena`
               : `${row.ad_a.domain || "Brak domeny"} ↔ ${row.ad_b.domain || "Brak domeny"}`}</span>
+            {expert && <span className="shrink-0 font-mono text-xs text-muted">#{row.ad_a.id} ↔ #{row.ad_b.id}</span>}
           </span>
           {(!row.ad_a.domain || !row.ad_b.domain) && <span className="line-clamp-2 text-muted">{[!row.ad_a.domain && row.ad_a.title, !row.ad_b.domain && row.ad_b.title].filter(Boolean).join(" ↔ ")}</span>}
           <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1"><span className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-xs ${URGENT.has(row.reason) ? "border-unsure text-unsure" : "border-line-strong text-muted"}`}>{reviewReasonLabel(row.reason, row.reason_label, expert)}</span>
-            {(expert || repeated.has(pairLabel(row))) && <span className={`shrink-0 text-xs text-muted ${expert ? "font-mono" : ""}`} title="Numery reklam w archiwum">#{row.ad_a.id} ↔ #{row.ad_b.id}</span>}</span></button></li>)}</ul>
+            {!expert && repeated.has(pairLabel(row)) && <span className="shrink-0 text-xs text-muted" title="Numery reklam w archiwum">#{row.ad_a.id} ↔ #{row.ad_b.id}</span>}</span></button></li>)}</ul>
         {pages > 1 && <nav aria-label="Strony kolejki" className="mt-3 flex items-center justify-between gap-2 px-1">
           <button className="min-h-9 rounded-md border border-line-strong px-3 hover:bg-hover disabled:opacity-40" disabled={page === 1} onClick={() => navigate(page-1, null, false)}>Poprzednia</button>
           <span className="text-muted">Strona {page} z {pages}</span>

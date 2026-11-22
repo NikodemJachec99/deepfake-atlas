@@ -64,7 +64,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           {label && <p className="hidden px-2 pt-2 text-xs text-muted md:block">{label}</p>}
           {links.map(({ href, Icon }) =>
           <Link key={href} href={href} aria-current={root === href ? "page" : undefined}
-            aria-label={sections[href]} title={sections[href]} className="flex flex-col items-center gap-1 text-xs md:flex-row md:gap-3 md:text-base rounded-lg px-2 py-2.5 font-medium hover:bg-hover aria-[current=page]:bg-accent-soft aria-[current=page]:text-accent"><Icon size={16} aria-hidden /><span aria-hidden className="md:hidden">{compactSections[href] ?? sections[href]}</span><span className="hidden md:inline">{sections[href]}</span>
+            aria-label={sections[href]} title={sections[href]} className="flex flex-col items-center gap-1 text-xs md:flex-row md:gap-3 md:text-base rounded-lg px-2 py-2.5 font-medium hover:bg-hover aria-[current=page]:bg-accent-soft aria-[current=page]:text-accent"><Icon size={16} className="shrink-0" aria-hidden /><span aria-hidden className="md:hidden">{compactSections[href] ?? sections[href]}</span><span className="hidden md:inline">{href === "/premises" ? "Zakwestionowania" : sections[href]}</span>
             {href === "/review" && stats && !failed && <span className="rounded bg-accent-soft px-1 text-xs tabular-nums text-accent">{stats.review_pending}</span>}
           </Link>)}</div>)}
       </nav>

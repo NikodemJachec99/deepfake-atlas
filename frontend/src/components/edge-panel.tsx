@@ -5,7 +5,7 @@ import { ContentSimilarity } from "./content-similarity";
 // Panel dowodów krawędzi: z czego wynika połączenie dwóch reklam. Najważniejszy ekran aplikacji.
 // Wszystko pochodzi z GET /api/edges/{id}; zrzuty reklam z GET /api/ads/{id}.
 
-import { Check, ChevronDown, ChevronRight, Download, HelpCircle, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Download, HelpCircle, TriangleAlert, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { EdgeSuggestions } from "./edge-suggestions";
@@ -313,14 +313,14 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
           {review && <span className="text-xs text-muted">Do oceny · {review.reason_label}</span>}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-[1.08rem] font-medium">
-              <RelationTag relation={data.relation} duplicate={data.duplicate} />
+              Relacja · <RelationTag relation={data.relation} duplicate={data.duplicate} />
             </span>
-            <Mono className="text-muted">krawędź #{data.id}</Mono>
+            <Mono className="text-muted">Powiązanie #{data.id}</Mono>
           </div>
           <p className="text-muted">
             {RELATION_HINT[data.relation]}
             {data.duplicate && ". Duplikat: ta sama strona przechwycona ponownie"}
-            {crossDomain && !data.duplicate && data.relation !== "similar" && ". Różne domeny, to samo zaplecze"}.
+            {crossDomain && !data.duplicate && data.relation !== "similar" && ". Reklamy prowadzą do różnych domen"}.
           </p>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
             <span className="flex items-center gap-2">
@@ -367,7 +367,10 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
           </ul>
         )}
         {evidence.length > 3 && <button className="min-h-9 px-2 text-accent" onClick={() => setShowAll(!showAll)}>{showAll ? "Zwiń listę" : `Wszystkie przesłanki (${evidence.length})`}</button>}
-        {!!review?.limitations.length && <aside className="m-2 rounded border border-amber-400 p-3"><h3>Ograniczenia hipotezy</h3>{review.limitations.map(text => <p key={text}>{text}</p>)}</aside>}
+        {!!review?.limitations.length && <aside className="m-2 rounded border border-amber-400 bg-amber-50 p-3">
+          <h3 className="mb-1 flex items-center gap-2 font-semibold"><TriangleAlert size={16} aria-hidden/>Ograniczenia hipotezy</h3>
+          <ul className="list-disc space-y-1 pl-5">{review.limitations.map(text => <li key={text}>{text.replace(/^ślad (.+) współdzielony przez (\d+) reklam$/, "Ślad $1 występuje w $2 reklamach")}</li>)}</ul>
+        </aside>}
         {!review && decision}
         {!review && result && <p role="status" className="p-2">{result}</p>}</>}
         </div>

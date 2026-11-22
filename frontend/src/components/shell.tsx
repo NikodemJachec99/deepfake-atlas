@@ -1,12 +1,13 @@
 "use client";
 
-import { History, ClipboardCheck, ScanSearch, Scale, Bell, Archive, Compass, FolderOpen, Network, UsersRound, Plus, Menu, X, type LucideIcon } from "lucide-react";
+import { History, ClipboardCheck, ScanSearch, Scale, Bell, Archive, Compass, FolderOpen, Network, UsersRound, Plus, Menu, X, ChevronRight, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, RELATION_LABELS, type Stats } from "@/lib/api";
 
 import { dateTime } from "@/lib/format";
+import { useApi } from "@/lib/hooks";
 import { Expert, ExpertProvider, ExpertToggle } from "@/lib/expert";
 
 const sections: Record<string, string> = {
@@ -54,6 +55,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [, section, id] = pathname.split("/");
   const root = "/" + section;
   const active = root === "/ads" ? "/archive" : root;
+  // Nagłówek nie powtarza tytułu strony: okruszki tylko na kartach szczegółów (lista › element).
+  const parents: Record<string, { href: string; label: string }> = { ads: { href: "/archive", label: "Archiwum" }, campaigns: { href: "/campaigns", label: "Kampanie" }, operators: { href: "/operators", label: "Operatorzy" } };
+  const parent = id ? parents[section] : undefined;
+  const groupKey = parent && section !== "ads" && /^\d+$/.test(id) ? `shell-${section}-${id}` : null;
+  const group = useApi(groupKey, () => section === "operators" ? api.operator(Number(id)) : api.campaign(Number(id)));
+  const current = section === "ads" ? `Reklama #${id}` : group.data?.key ?? `#${id}`;
   useEffect(() => {
     const singular: Record<string, string> = { ads: "Reklama", operators: "Operator", campaigns: "Kampania" };
     const title = id && singular[section] ? `${singular[section]} #${id}` : sections[root];
@@ -122,10 +129,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </nav>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-13 shrink-0 items-center justify-between gap-3 border-b border-line bg-bg px-4 md:px-6">
-          <span className="min-w-0 truncate font-semibold">
-            <Link href="/" className="mr-2 font-semibold tracking-tight md:hidden">SCAM DNA</Link>
-            <span className="text-muted md:text-fg"><span className="md:hidden">· </span>{sections[root] ?? "SCAM DNA"}</span>{id && <span className="text-muted"> · #{id}</span>}
-          </span>
+          <nav aria-label="Ścieżka" className="flex min-w-0 items-center gap-2 font-medium">
+            {!parent && <Link href="/" className="shrink-0 font-semibold tracking-tight md:hidden">SCAM DNA</Link>}
+            {parent && <>
+              <Link href={parent.href} className="shrink-0 rounded text-muted hover:text-accent hover:underline">{parent.label}</Link>
+              <ChevronRight size={15} aria-hidden className="shrink-0 text-faint" />
+              <span aria-current="page" className="min-w-0 truncate font-semibold">{current}</span>
+            </>}
+          </nav>
           <div className="flex shrink-0 items-center gap-4">
             <span className="hidden md:block"><ExpertToggle /></span>
             {root !== "/" && <Link href="/#input-kind" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-line-strong px-3 text-sm font-medium text-accent hover:bg-hover">
@@ -165,14 +176,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
         const { Icon } = navigation.flatMap(group => group.links).find(link => link.href === href)!;
         const count = !stats || failed ? 0 : href === "/review" ? stats.review_pending : href === "/alerts" ? stats.alerts_unseen : 0;
         return <Link key={href} href={href} aria-current={active === href ? "page" : undefined}
-          className="relative flex flex-col items-center justify-center gap-1 text-xs font-medium text-muted aria-[current=page]:text-accent">
+          className="relative flex flex-col items-center justify-center gap-1 text-xs font-medium text-muted focus-visible:-outline-offset-2 before:absolute before:inset-x-4 before:top-0 before:h-0.5 before:rounded-full aria-[current=page]:font-semibold aria-[current=page]:text-accent aria-[current=page]:before:bg-accent">
           <Icon size={20} aria-hidden />
           <span>{mobileLabels[href] ?? sections[href]}</span>
           {count > 0 && <span className={`absolute top-1.5 left-1/2 ml-2 min-w-4 rounded-full px-1 text-center text-[11px] font-semibold leading-4 tabular-nums text-on-accent ${href === "/alerts" ? "bg-rejected" : "bg-accent"}`}>{count}</span>}
         </Link>;
       })}
       <button type="button" onClick={() => setMenu(value => !value)} aria-expanded={menu} aria-controls="mobile-menu"
-        className="flex flex-col items-center justify-center gap-1 text-xs font-medium text-muted aria-expanded:text-accent">
+        className="flex flex-col items-center justify-center gap-1 text-xs font-medium text-muted focus-visible:-outline-offset-2 aria-expanded:font-semibold aria-expanded:text-accent">
         <Menu size={20} aria-hidden /><span>Więcej</span>
       </button>
     </nav>

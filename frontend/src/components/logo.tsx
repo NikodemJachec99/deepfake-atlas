@@ -10,9 +10,9 @@ export function LogoMark({ size = 28 }: { size?: number }) {
   </svg>;
 }
 
-export function Logo({ compact = false }: { compact?: boolean }) {
+export function Logo({ compact = false, onDark = false }: { compact?: boolean; onDark?: boolean }) {
   return <span className="inline-flex items-center gap-2.5">
     <LogoMark size={compact ? 24 : 30} />
-    <span className={`${compact ? "text-base" : "text-lg"} font-bold tracking-tight`}>SCAM <span className="font-semibold text-muted">DNA</span></span>
+    <span className={`${compact ? "text-base" : "text-lg"} font-bold tracking-tight ${onDark ? "text-white" : ""}`}>SCAM <span className={`font-semibold ${onDark ? "text-[#c3cee0]" : "text-muted"}`}>DNA</span></span>
   </span>;
 }

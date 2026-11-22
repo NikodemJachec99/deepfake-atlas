@@ -4,6 +4,18 @@
 
 :root {
   color-scheme: light;
+  /* Marka SCAM DNA: granat z logo, kobalt jako akcent interfejsu i pięć kolorów pasm genomu (jak w logo i favicon).
+     Pasma genomu to jasne odpowiedniki rodzin --fam-*: niebieski infra, bursztyn track, zieleń tmpl, pomarańcz crea, róż pers.
+     Do tekstu służą ciemniejsze --fam-*, jasne tokeny marki tylko do pasków i znaków. */
+  --brand-navy: #10203a;
+  --brand-navy-hover: #1b3254;
+  --brand-cobalt: #2952cc;
+  --brand-blue: #3d9be0;
+  --brand-amber: #e0a12b;
+  --brand-green: #25b48a;
+  --brand-orange: #ef7a3c;
+  --brand-pink: #d26fa9;
+  --brand-stripe: linear-gradient(90deg, var(--brand-blue) 0 20%, var(--brand-amber) 20% 40%, var(--brand-green) 40% 60%, var(--brand-orange) 60% 80%, var(--brand-pink) 80% 100%);
   --bg: #fff;
   --panel: #f6f7f9;
   --raised: #ffffff;
@@ -13,8 +25,8 @@
   --fg: #19212d;
   --muted: #535e6e;
   --faint: #606c7b;
-  --accent: #145bad;
-  --accent-soft: #145bad14;
+  --accent: var(--brand-cobalt);
+  --accent-soft: #2952cc14;
   --on-accent: #ffffff;
 
   --fam-infra: #0b6fae;
@@ -170,7 +182,14 @@ select {
   outline-offset: 2px;
 }
 
-.atlas-sidebar { background: #f1f4f8; }
+/* Pasek nawigacji w granacie marki. Kontrast tekstu na granacie: biały 16:1, jasny szary #c3cee0 9:1. */
+.atlas-sidebar { background: var(--brand-navy); color: #fff; border-color: var(--brand-navy); }
+.atlas-sidebar :focus-visible { outline-color: #fff; }
+.side-link { color: #e8edf5; }
+.side-link:hover { background: var(--brand-navy-hover); }
+.side-link[aria-current="page"] { background: #ffffff1f; color: #fff; box-shadow: inset 3px 0 0 var(--brand-blue); }
+.side-quiet { color: #c3cee0; }
+.brand-stripe { height: 4px; flex-shrink: 0; background: var(--brand-stripe); }
 .atlas-page { width: min(100%, 100rem); margin-inline: auto; padding: clamp(16px, 3vw, 32px); display: grid; align-content: start; gap: 24px; }
 .atlas-title { font-size: clamp(1.8rem, 3vw, 2.7rem); line-height: 1.15; font-weight: 650; letter-spacing: -.035em; }
 .atlas-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; padding: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: .8rem; }

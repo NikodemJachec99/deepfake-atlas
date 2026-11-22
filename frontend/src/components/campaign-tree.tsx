@@ -7,7 +7,7 @@ import { api, RELATION_LABELS, type Group } from "@/lib/api";
 import { bits } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 import { Loading, ErrorBox } from "./ui";
-import { CampaignMap } from "./campaign-map";
+import { CampaignMap, createMapOperatorLoader } from "./campaign-map";
 
 function CampaignBranch({ group }: { group: Group }) {
   const result = useApi(String(group.id), () => api.graph(`?campaign=${group.id}`));
@@ -55,6 +55,7 @@ export function CampaignTree({ groups, map, onMapChange, expanded, toggleCampaig
   expanded: ReadonlySet<number>;
   toggleCampaign: (id: number) => void;
 }) {
+  const [loadOperators] = useState(createMapOperatorLoader);
   const [query, setQuery] = useState("");
   const visible = groups.filter(g => (g.key + " " + g.label).toLocaleLowerCase("pl").includes(query.trim().toLocaleLowerCase("pl")));
   return <>
@@ -64,7 +65,7 @@ export function CampaignTree({ groups, map, onMapChange, expanded, toggleCampaig
           onClick={() => onMapChange(Boolean(i))}>{name}</button>)}</div>
       {!map && <input type="search" aria-label="Szukaj kampanii" placeholder="Szukaj kampanii…" value={query} onChange={e=>setQuery(e.target.value)} className="max-w-full rounded-md border border-line-strong px-3 py-2" />}
     </div>
-    {map ? <CampaignMap groups={groups} expanded={expanded} onToggle={toggleCampaign} /> : <section aria-label="Drzewo kampanii">
+    {map ? <CampaignMap loadOperators={loadOperators} groups={groups} expanded={expanded} onToggle={toggleCampaign} /> : <section aria-label="Drzewo kampanii">
       {!visible.length && <p>Brak kampanii odpowiadających wyszukiwaniu.</p>}
       {visible.map(group => {
         const open = expanded.has(group.id);

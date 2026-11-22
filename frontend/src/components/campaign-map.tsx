@@ -56,7 +56,27 @@ function CampaignNode({ group, x, y, color, expanded, toggle }: {
   </g>;
 }
 
-export function CampaignMap({ groups, expanded, onToggle }: {
+async function loadMapOperators() {
+  const list = await loadGroups("operators");
+  return Promise.all(list.results.map(async ({ id, key }) => {
+    const { campaigns } = await api.operator(id);
+    return { id, key, campaigns };
+  }));
+}
+
+export function createMapOperatorLoader() {
+  let pending: ReturnType<typeof loadMapOperators> | undefined;
+  return () => {
+    pending ??= loadMapOperators().catch(error => {
+      pending = undefined;
+      throw error;
+    });
+    return pending;
+  };
+}
+
+export function CampaignMap({ groups, expanded, onToggle, loadOperators }: {
+  loadOperators: typeof loadMapOperators;
   groups: Group[];
   expanded: ReadonlySet<number>;
   onToggle: (id: number) => void;
@@ -66,10 +86,7 @@ export function CampaignMap({ groups, expanded, onToggle }: {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const surface = useRef<SVGSVGElement>(null);
   const drag = useRef<{x:number; y:number} | null>(null);
-  const operators = useApi("map-operators", async () => {
-    const list = await loadGroups("operators");
-    return Promise.all(list.results.map(item => api.operator(item.id)));
-  });
+  const operators = useApi("map-operators", loadOperators);
   const locations = groups.map((group, index) => ({
     group, x: 125 + (index % Math.ceil(Math.sqrt(groups.length))) * 215,
     y: 155 + Math.floor(index / Math.ceil(Math.sqrt(groups.length))) * 270,

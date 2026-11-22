@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SCAM DNA: interfejs
 
-## Getting Started
+Interfejs analityka SCAM DNA w Next.js 16 (App Router), React 19, TypeScript i Tailwind 4. Nic nie liczy sam: każda wartość na ekranie pochodzi z API backendu (`../docs/api.md`). Ekran bez odpowiedzi API pokazuje stan niedostępny, nigdy wymyślone dane.
 
-First, run the development server:
+## Uruchomienie
+
+Najprościej całość, razem z backendem, z katalogu głównego repozytorium:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+python scripts/start.py
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Interfejs działa wtedy na http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Sam interfejs w trybie deweloperskim, przy działającym backendzie:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+cd frontend
+npm ci
+NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev
+```
 
-## Learn More
+Na Windowsie w PowerShellu zmienną ustaw przed poleceniem: `$env:NEXT_PUBLIC_API_URL="http://localhost:8000"; npm run dev`. Adres API można też wpisać do `frontend/.env.local`.
 
-To learn more about Next.js, take a look at the following resources:
+## Sprawdzenie przed oddaniem zmian
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run lint
+npm run build
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Oba polecenia uruchamia też `python scripts/praca.py oddaj` przed scaleniem zmian.
 
-## Deploy on Vercel
+## Ekrany
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Ekran | Ścieżka | Co robi |
+|---|---|---|
+| Do oceny | `/review` | kolejka par z powodem uwagi, stanowisko oceny, zakwestionowanie przesłanki, laboratorium dowodów |
+| Analiza | `/` | adres, tekst albo pliki (zrzut, HAR, nagranie, ZIP sprawy), przebieg etapów na żywo, wynik z dowodami |
+| Śledztwo | `/investigation` | graf reklam, kampanii i operatorów (sigma.js), lista powiązań, panel dowodów |
+| Kampanie, Operatorzy | `/campaigns`, `/operators` | grupy, „Dlaczego razem”, pakiet dowodowy ZIP |
+| Archiwum, karta reklamy | `/archive`, `/ads/{id}` | genom reklamy, zrzuty z powiększeniem, podsumowanie HAR, nagrania, obserwacje |
+| Alerty | `/alerts` | nowe materiały w znanych grupach |
+| Łowca domen | `/hunt` | kandydaci z logów CT i Listy CERT, potwierdzenia |
+| Wagi markerów | `/weights` | siła śladów, wagi eksperckie i uczone |
+| Zakwestionowania | `/premises` | historia zakwestionowanych przesłanek |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Struktura
+
+| Miejsce | Zawartość |
+|---|---|
+| `src/app/` | trasy ekranów, `layout.tsx`, `globals.css` (tokeny marki i kolory rodzin śladów), `icon.svg` (favicon) |
+| `src/components/` | ekrany i komponenty: graf, panel dowodów, genom, stanowisko oceny, podsumowanie HAR, powiększanie zdjęć |
+| `src/lib/api.ts` | typy i klient API, jedyne miejsce kontraktu z backendem |
+| `src/lib/expert.tsx` | tryb prosty i „Szczegóły techniczne” (wybór zapisany w przeglądarce) |
+
+Zasady pracy nad interfejsem: [AGENTS.md](AGENTS.md). Opis całego systemu: [README.md](../README.md).

@@ -1,10 +1,11 @@
 """Łączenie reklamy z resztą korpusu: kandydaci z indeksu markerów, ocena par, zapis krawędzi z dowodami."""
 
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 from django.db import transaction
-from django.db.models import BigIntegerField, Count, F, Q, Value
+from django.db.models import BigIntegerField, Case, Count, F, FloatField, Q, Sum, Value, When
 from django.db.models.functions import Coalesce
 from pgvector.django import CosineDistance
 
@@ -30,6 +31,9 @@ SOFT_SIMILARITY = {
     "page_text_minhash": minhash.text_similarity,
     "text_minhash": minhash.text_similarity,
 }
+
+
+SOFT_OF_BAND = {band: soft for soft, band in BAND_OF.items()}
 
 
 def hub_limit(corpus_n: int) -> int:
@@ -73,8 +77,22 @@ class PairInputs:
     artifacts: dict
 
 
-def pair_inputs(ad: Ad, corpus_n: int | None = None) -> list[PairInputs]:
+def _rank_weights(own: dict[int, AdMarker], search_ids: list[int], sources: dict[int, int], corpus_n: int) -> dict[int, float]:
+    """Waga rzadkości markera do kolejności kandydatów: marker rozstrzygający liczy się przed wszystkim."""
+    out = {}
+    for mid in search_ids:
+        kind = own[mid].marker.kind
+        bits = fusion.exact_bits(kind, sources.get(mid, 1) + 1, corpus_n)
+        out[mid] = bits + (1000.0 if KINDS[kind].decisive and bits >= fusion.DECISIVE_BITS else 0.0)
+    return out
+
+
+def pair_inputs(ad: Ad, corpus_n: int | None = None, only: Iterable[int] | None = None) -> list[PairInputs]:
     """Kandydaci reklamy z indeksu markerów, HNSW i pasm LSH, z wejściem modelu. Tylko odczyt.
+
+    Z `only` ocenia dokładnie wskazane reklamy (np. dotychczasowych sąsiadów), bez szukania kandydatów.
+    Kandydaci z indeksu markerów idą wg sumy wag rzadkości wspólnych markerów, potem od najnowszych,
+    więc limit odcina najsłabsze powiązania, a nie najstarsze.
 
     Tę samą listę liczy `link_ad` przy zapisie krawędzi i `similarity.learning` przy uczeniu wag,
     więc model uczy się na dokładnie tych parach, które potem ocenia.
@@ -84,13 +102,22 @@ def pair_inputs(ad: Ad, corpus_n: int | None = None) -> list[PairInputs]:
     sources = source_counts(own.keys())
     limit = hub_limit(corpus_n)
     search_ids = [mid for mid, am in own.items() if KINDS[am.marker.kind].candidate and sources.get(mid, 1) <= limit]
-    candidates = list(
-        AdMarker.objects.filter(marker_id__in=search_ids)
-        .exclude(ad=ad)
-        .values_list("ad_id", flat=True)
-        .distinct()
-        .order_by("-ad_id")[:MAX_CANDIDATES]
-    ) if search_ids else []
+    restrict = None if only is None else {pk for pk in only if pk != ad.pk}
+    if restrict is not None:
+        candidates = sorted(restrict)
+    elif search_ids:
+        weights = _rank_weights(own, search_ids, sources, corpus_n)
+        score = Sum(Case(*[When(marker_id=mid, then=Value(w)) for mid, w in weights.items()], default=Value(0.0), output_field=FloatField()))
+        candidates = list(
+            AdMarker.objects.filter(marker_id__in=search_ids)
+            .exclude(ad=ad)
+            .values("ad_id")
+            .annotate(score=score)
+            .order_by("-score", "-ad_id")
+            .values_list("ad_id", flat=True)[:MAX_CANDIDATES]
+        )
+    else:
+        candidates = []
     own_vector = ad.text_embedding
     semantic: dict[int, float] = {}
     if own_vector is not None:
@@ -100,10 +127,13 @@ def pair_inputs(ad: Ad, corpus_n: int | None = None) -> list[PairInputs]:
             .annotate(distance=CosineDistance("text_embedding", own_vector))
             .filter(distance__lt=SEMANTIC_MAX_DISTANCE)
             .order_by("distance")
-            .values_list("pk", "distance")[:SEMANTIC_NEIGHBOURS]
         )
+        if restrict is not None:
+            neighbours = neighbours.filter(pk__in=restrict)
+        neighbours = neighbours.values_list("pk", "distance")[:SEMANTIC_NEIGHBOURS]
         semantic = {pk: 1.0 - float(distance) for pk, distance in neighbours}
-        candidates = list(dict.fromkeys([*candidates, *semantic]))
+        if restrict is None:
+            candidates = list(dict.fromkeys([*candidates, *semantic]))
     visual: dict[int, float] = {}
     if ad.image_embedding is not None:
         look = (
@@ -112,10 +142,13 @@ def pair_inputs(ad: Ad, corpus_n: int | None = None) -> list[PairInputs]:
             .annotate(distance=CosineDistance("image_embedding", ad.image_embedding))
             .filter(distance__lt=IMAGE_MAX_DISTANCE)
             .order_by("distance")
-            .values_list("pk", "distance")[:IMAGE_NEIGHBOURS]
         )
+        if restrict is not None:
+            look = look.filter(pk__in=restrict)
+        look = look.values_list("pk", "distance")[:IMAGE_NEIGHBOURS]
         visual = {pk: 1.0 - float(distance) for pk, distance in look}
-        candidates = list(dict.fromkeys([*candidates, *visual]))
+        if restrict is None:
+            candidates = list(dict.fromkeys([*candidates, *visual]))
     if not candidates:
         return []
 
@@ -151,7 +184,17 @@ def pair_inputs(ad: Ad, corpus_n: int | None = None) -> list[PairInputs]:
             soft.append(fusion.Soft("text_embedding", semantic[other_id]))
         if other_id in visual:
             soft.append(fusion.Soft("image_embedding", visual[other_id]))
-        artifacts = {am.marker.kind: (own[am.marker_id].artifact_id, am.artifact_id) for am in theirs}
+        artifacts = {}
+        for am in theirs:
+            pair = (own[am.marker_id].artifact_id, am.artifact_id)
+            kind = am.marker.kind
+            if kind in BAND_KINDS:
+                # Dowód miękki (podobieństwo sygnatur) wskazuje plik, z którego policzono pasma.
+                key = (SOFT_OF_BAND[kind], "")
+                if key not in artifacts or not all(artifacts[key]):
+                    artifacts[key] = pair
+            else:
+                artifacts[(kind, am.marker.value)] = pair
         out.append(PairInputs(other_id, shared, soft, artifacts))
     return out
 
@@ -161,7 +204,16 @@ def link_ad(ad: Ad) -> list[Edge]:
     """Liczy krawędzie reklamy do wszystkich kandydatów. Bezpieczne do ponownego uruchomienia."""
     corpus_n = corpus_size()
     edges = []
-    for pair in pair_inputs(ad, corpus_n):
+    pairs = pair_inputs(ad, corpus_n)
+    seen = {pair.other_id for pair in pairs}
+    # Dotychczasowi sąsiedzi, którzy nie są już kandydatami (znikły wspólne ślady albo wypadli z limitu),
+    # też są oceniani od nowa, żeby nie zostawała po nich nieaktualna krawędź.
+    neighbours = set(Edge.objects.filter(ad_a=ad).values_list("ad_b_id", flat=True)) | set(
+        Edge.objects.filter(ad_b=ad).values_list("ad_a_id", flat=True)
+    )
+    if neighbours - seen:
+        pairs += pair_inputs(ad, corpus_n, only=neighbours - seen)
+    for pair in pairs:
         result = fusion.score_pair(pair.shared, pair.soft, corpus_n)
         edge = _store_edge(ad.pk, pair.other_id, result, pair.artifacts)
         if edge:
@@ -177,10 +229,14 @@ def _store_edge(ad_id: int, other_id: int, result: fusion.PairResult, artifacts:
         # Decyzji analityka nie kasujemy, nawet gdy model zmienił zdanie.
         if existing and not existing.verdict:
             existing.delete()
-        return None
+            return None
+        if not (existing and result.evidence):
+            return None
+        # Z werdyktem: dowody i liczby się odświeżają, relacja i werdykt zostają.
 
     edge = existing or Edge(ad_a_id=a, ad_b_id=b)
-    edge.relation = result.relation
+    if result.relation is not None:
+        edge.relation = result.relation
     edge.bits = result.bits
     edge.probability = result.probability
     edge.decisive = result.decisive
@@ -192,7 +248,7 @@ def _store_edge(ad_id: int, other_id: int, result: fusion.PairResult, artifacts:
     edge.evidence.all().delete()
     rows = []
     for item in result.evidence:
-        art_own, art_other = artifacts.get(item.kind, (None, None))
+        art_own, art_other = artifacts.get((item.kind, item.value_a)) or artifacts.get((item.kind, "")) or (None, None)
         art_a, art_b = (art_other, art_own) if flipped else (art_own, art_other)
         value_a, value_b = (item.value_b, item.value_a) if flipped else (item.value_a, item.value_b)
         rows.append(

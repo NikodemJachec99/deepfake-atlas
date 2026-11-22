@@ -79,7 +79,7 @@ def main() -> None:
         page.get_by_text("Nowa kampania znanego operatora").first.wait_for(timeout=180_000)
         page.wait_for_timeout(1500)
         page.get_by_text("Nowa kampania znanego operatora").first.scroll_into_view_if_needed()
-        caption(page, "Wynik: nowa kampania znanego operatora. Łączą ją identyfikator strony w panelu lejka i piksel Meta, po 18 bitów.", 6)
+        caption(page, "Wynik: nowa kampania znanego operatora. Łączą ją identyfikator strony w panelu lejka i piksel Meta: rzadkie ślady zaplecza.", 6)
 
         # 2. Stanowisko oceny: hipoteza, materiały A i B, przesłanki, ograniczenia
         page.goto(args.ui + "/review")
@@ -92,7 +92,7 @@ def main() -> None:
                 page.wait_for_timeout(1200)
                 break
         caption(page, "Do oceny: kolejka par z powodem uwagi. Hipoteza modelu osobno od oceny człowieka, materiały A i B obok siebie.", 6)
-        caption(page, "Najważniejsze przesłanki z wkładem w bitach i ograniczenia: co może osłabić ten wniosek.", 5)
+        caption(page, "Hipoteza jednym zdaniem, najważniejsze przesłanki słowami i ograniczenia: co może osłabić ten wniosek.", 5)
 
         # 3. Zakwestionowanie przesłanki: podgląd, bez zapisu
         challenge = page.get_by_role("button", name="Zakwestionuj przesłankę").first
@@ -106,7 +106,7 @@ def main() -> None:
         operator = next(g for g in api(args.api, "/api/operators")["results"] if g["key"] == "O-0001")
         page.goto(f"{args.ui}/operators/{operator['id']}")
         page.wait_for_load_state("networkidle")
-        caption(page, "Karta operatora: dlaczego te reklamy są razem, w bitach, i miniatury materiałów.", 5)
+        caption(page, "Karta operatora: krótka odpowiedź, dlaczego te reklamy są razem, i miniatury materiałów. Szczegóły techniczne po jednym kliknięciu.", 5)
         package = page.get_by_text("Pobierz pakiet").first
         if package.count():
             package.hover()

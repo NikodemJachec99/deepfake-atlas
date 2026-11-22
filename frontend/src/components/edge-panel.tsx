@@ -56,11 +56,13 @@ function AdSide({ ad, detail, side, onOpenAd, large }: { ad: AdSummary; detail?:
         {adTitle(ad)}
       </p>
       <p className="text-xs text-muted">{SOURCE_LABELS[ad.source] ?? ad.source} · {dateTime(ad.first_seen) || "Brak daty obserwacji"}</p>
-      <div className="flex items-center gap-2 text-xs">
-        {!expert && <span className="text-muted">Grupy</span>}
+      {expert ? <div className="flex items-center gap-2 text-xs">
         <GroupLink group={ad.campaign} />
         <GroupLink group={ad.operator} />
-      </div>
+      </div> : <p className="flex flex-wrap items-center gap-x-3 text-xs text-muted">
+        <span className="whitespace-nowrap">Kampania <GroupLink group={ad.campaign} /></span>
+        <span className="whitespace-nowrap">Operator <GroupLink group={ad.operator} /></span>
+      </p>}
       {creative ? <Creative sha={creative} label={`Zrzut reklamy ${side}`} height={imageHeight} /> : <div className={`flex ${imageHeight} items-center justify-center rounded border border-dashed border-line text-faint`}>{detail ? "brak zrzutu reklamy" : "…"}</div>}
       {onOpenAd ? (
         <Btn variant="ghost" className="self-start px-0! text-accent!" onClick={() => onOpenAd(ad.id)}>
@@ -277,6 +279,13 @@ function Decision({ edge, onSaved, refresh }: { edge: EdgeDetail; refresh: () =>
 
   useHotkey((event) => {
     if (event.repeat || isTyping(event) || event.ctrlKey || event.metaKey || event.altKey || busy || stale) return;
+    // Enter zapisuje wybraną ocenę, gdy fokus nie stoi na innym przycisku ani linku.
+    const target = event.target as HTMLElement | null;
+    if (event.key === "Enter" && (!target || target === document.body || target.dataset.decision) && dirty && selected && footer.current?.getClientRects().length) {
+      event.preventDefault();
+      decide(selected);
+      return;
+    }
     const decision = DECISIONS.find((d) => d.key.toLowerCase() === event.key.toLowerCase());
     if (decision && footer.current?.getClientRects().length) edit({ selected: decision.verdict });
   });
@@ -300,7 +309,7 @@ function Decision({ edge, onSaved, refresh }: { edge: EdgeDetail; refresh: () =>
       </div>
       <div className="grid grid-cols-3 gap-2">
         {DECISIONS.map(({ verdict, label, key, icon: Icon }) => (
-          <button key={verdict} type="button" disabled={busy || stale} aria-pressed={selected === verdict} onClick={() => edit({ selected: verdict })}
+          <button key={verdict} type="button" data-decision={verdict} disabled={busy || stale} aria-pressed={selected === verdict} onClick={() => edit({ selected: verdict })}
             className={`flex min-h-11 items-center justify-center gap-1.5 rounded-md border-2 border-line-strong bg-raised px-1.5 text-sm leading-tight font-medium transition-colors hover:bg-hover disabled:opacity-40 sm:gap-2 sm:text-base ${tones[verdict]}`}>
             <Icon size={18} aria-hidden className="shrink-0" />
             {label}
@@ -332,7 +341,7 @@ function Decision({ edge, onSaved, refresh }: { edge: EdgeDetail; refresh: () =>
         {expert && <span className="text-xs text-muted" title={edge.updated_at}>Wersja dowodów · {dateTime(edge.updated_at)}</span>}
         <span className="ml-auto flex items-center gap-3">
           {dirty && <button type="button" disabled={busy} onClick={discardDraft} className="text-muted underline hover:text-fg">Cofnij</button>}
-          <button type="button" disabled={!dirty || !selected || busy || stale} onClick={() => selected && decide(selected)}
+          <button type="button" title="Skrót: Enter" disabled={!dirty || !selected || busy || stale} onClick={() => selected && decide(selected)}
             className="min-h-10 rounded-md border border-accent bg-accent px-4 font-medium text-on-accent transition hover:brightness-110 disabled:border-line-strong disabled:bg-raised disabled:text-muted">Zapisz ocenę</button>
         </span>
       </div>

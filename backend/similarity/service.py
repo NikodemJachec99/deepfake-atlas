@@ -15,7 +15,7 @@ from evidence.models import AdMarker, AdSignature, AuditLog
 from extractors import images, minhash
 
 from . import fusion
-from .models import Campaign, CampaignMembership, Edge, EdgeEvidence, Operator, OperatorMembership
+from .models import Campaign, CampaignMembership, Edge, EdgeEvidence, Operator, OperatorMembership, Premise
 
 MAX_CANDIDATES = 500
 # Sąsiedzi z indeksu HNSW po znaczeniu treści: najwyżej tylu, i tylko bliżsi niż ten dystans kosinusowy.
@@ -98,6 +98,9 @@ def pair_inputs(ad: Ad, corpus_n: int | None = None, only: Iterable[int] | None 
     więc model uczy się na dokładnie tych parach, które potem ocenia.
     """
     corpus_n = corpus_size() if corpus_n is None else corpus_n
+    # Zakwestionowane przesłanki nie budują dowodów. Szukanie kandydatów zostaje bez zmian, żeby `link_ad`
+    # oceniał od nowa także dotychczasowych sąsiadów i usuwał krawędzie, które trzymał tylko taki ślad.
+    challenged = set(Premise.objects.filter(status=Premise.Status.CHALLENGED).values_list("kind", "value"))
     own = {am.marker_id: am for am in AdMarker.objects.filter(ad=ad).select_related("marker")}
     sources = source_counts(own.keys())
     limit = hub_limit(corpus_n)
@@ -173,7 +176,7 @@ def pair_inputs(ad: Ad, corpus_n: int | None = None, only: Iterable[int] | None 
         shared = [
             fusion.Shared(am.marker.kind, am.marker.value, sources.get(am.marker_id, pair_units) - pair_units + 2)
             for am in theirs
-            if am.marker.kind not in BAND_KINDS
+            if am.marker.kind not in BAND_KINDS and (am.marker.kind, am.marker.value) not in challenged
         ]
         soft = [
             fusion.Soft(kind, SOFT_SIMILARITY.get(kind, minhash.similarity)(values, other_signatures[other_id][kind]))
@@ -188,6 +191,8 @@ def pair_inputs(ad: Ad, corpus_n: int | None = None, only: Iterable[int] | None 
         for am in theirs:
             pair = (own[am.marker_id].artifact_id, am.artifact_id)
             kind = am.marker.kind
+            if (kind, am.marker.value) in challenged:
+                continue
             if kind in BAND_KINDS:
                 # Dowód miękki (podobieństwo sygnatur) wskazuje plik, z którego policzono pasma.
                 key = (SOFT_OF_BAND[kind], "")
@@ -200,8 +205,12 @@ def pair_inputs(ad: Ad, corpus_n: int | None = None, only: Iterable[int] | None 
 
 
 @transaction.atomic
-def link_ad(ad: Ad) -> list[Edge]:
-    """Liczy krawędzie reklamy do wszystkich kandydatów. Bezpieczne do ponownego uruchomienia."""
+def link_ad_detailed(ad: Ad) -> tuple[list[Edge], list[int]]:
+    """Liczy krawędzie reklamy do wszystkich kandydatów. Bezpieczne do ponownego uruchomienia.
+
+    Drugi element wyniku to reklamy, z którymi krawędź istniała, a po przeliczeniu jej nie ma.
+    Ich grupy trzeba potem przeliczyć (`recluster`), bo samo usunięcie krawędzi nie zmienia członkostwa.
+    """
     corpus_n = corpus_size()
     edges = []
     pairs = pair_inputs(ad, corpus_n)
@@ -218,7 +227,16 @@ def link_ad(ad: Ad) -> list[Edge]:
         edge = _store_edge(ad.pk, pair.other_id, result, pair.artifacts)
         if edge:
             edges.append(edge)
-    return edges
+    removed = []
+    if neighbours:
+        pairs_now = Edge.objects.filter(Q(ad_a=ad, ad_b_id__in=neighbours) | Q(ad_b=ad, ad_a_id__in=neighbours))
+        still = {e.other(ad.pk) for e in pairs_now}
+        removed = sorted(neighbours - still)
+    return edges, removed
+
+
+def link_ad(ad: Ad) -> list[Edge]:
+    return link_ad_detailed(ad)[0]
 
 
 def _store_edge(ad_id: int, other_id: int, result: fusion.PairResult, artifacts: dict) -> Edge | None:

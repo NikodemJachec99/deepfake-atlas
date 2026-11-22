@@ -29,8 +29,8 @@ from evidence.models import AdMarker, Artifact, AuditLog
 from extractors import video
 from extractors.url import redact_url
 from people.display import display_value, person_names
-from similarity import assist_view, decisions, observations, package, precedents, review, simulation, stix, suggestions, timeline, weakest
-from similarity.models import Alert, Campaign, CampaignMembership, Edge, EdgeDecision, Operator, OperatorMembership
+from similarity import assist_view, decisions, observations, package, precedents, premises, review, simulation, stix, suggestions, timeline, weakest
+from similarity.models import Alert, Campaign, CampaignMembership, Edge, EdgeDecision, Operator, OperatorMembership, Premise
 from similarity.service import assign_campaign, assign_operator, recluster
 from workflows import runner
 
@@ -273,6 +273,61 @@ def edge_simulate(request, pk):
     except simulation.SimulationError as exc:
         return Response({"detail": str(exc), **exc.extra}, status=exc.status)
     return Response(result)
+
+
+def _premise_error(exc):
+    return Response({"detail": str(exc), **exc.extra}, status=exc.status)
+
+
+@extend_schema(request=s.PremiseSerializer, responses=dict)
+@api_view(["POST"])
+def premise_preview(request):
+    """Podgląd zakwestionowania śladu: krawędzie i grupy przed i po. Niczego nie zapisuje."""
+    payload = s.PremiseSerializer(data=request.data)
+    payload.is_valid(raise_exception=True)
+    try:
+        return Response(premises.preview(payload.validated_data["kind"], payload.validated_data["value"]))
+    except simulation.SimulationError as exc:
+        return _premise_error(exc)
+
+
+@extend_schema(request=s.PremiseChallengeSerializer, responses=dict)
+@api_view(["GET", "POST"])
+def premise_list(request):
+    """GET: historia zakwestionowanych przesłanek, najnowsze pierwsze. POST: zakwestionowanie śladu w całym korpusie."""
+    if request.method == "GET":
+        rows = Premise.objects.select_related("user")
+        if request.query_params.get("status") in Premise.Status.values:
+            rows = rows.filter(status=request.query_params["status"])
+        return Response({"count": rows.count(), "results": [premises.serialize(p, with_state=False) for p in rows[:200]]})
+    payload = s.PremiseChallengeSerializer(data=request.data)
+    payload.is_valid(raise_exception=True)
+    user = request.user if request.user.is_authenticated else None
+    data = payload.validated_data
+    try:
+        premise = premises.challenge(data["kind"], data["value"], data["reason"], user)
+    except simulation.SimulationError as exc:
+        return _premise_error(exc)
+    return Response({**premises.serialize(premise), "regroup": premise.regroup}, status=status.HTTP_201_CREATED)
+
+
+@extend_schema(responses=dict)
+@api_view(["GET"])
+def premise_detail(request, pk):
+    return Response(premises.serialize(get_object_or_404(Premise, pk=pk)))
+
+
+@extend_schema(request=None, responses=dict)
+@api_view(["POST"])
+def premise_restore(request, pk):
+    """Przywraca zakwestionowany ślad: reklamy z nim są łączone od nowa, grupy scalane i rozdzielane."""
+    premise = get_object_or_404(Premise, pk=pk)
+    user = request.user if request.user.is_authenticated else None
+    try:
+        premise = premises.restore(premise.pk, user)
+    except simulation.SimulationError as exc:
+        return _premise_error(exc)
+    return Response({**premises.serialize(premise), "regroup": premise.regroup})
 
 
 @extend_schema(responses=dict)

@@ -26,6 +26,11 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | POST | `/api/edges/{id}/simulate` | `{"exclude":[<id dowodu>],"edge_version":"<Edge.updated_at>"}` | `Simulation`: krawędź przed i po wyłączeniu dowodów, nic nie zapisuje |
 | GET | `/api/edges/{id}/suggestions` | | `Suggestions`: co sprawdzić dalej, z brakujących dowodów tej pary |
 | POST | `/api/edges/{id}/weakest-link` | `{"max_group_size":2,"max_scenarios":500,"time_limit_ms":3000,"edge_version":"..."}` | `WeakestLink`: najmniejsze zestawy grup śladów, których utrata zmienia relację |
+| POST | `/api/premises/preview` | `{"kind":"funnel_id","value":"..."}` | `PremisePreview`: krawędzie i grupy przed i po bez tego śladu, nic nie zapisuje (opis niżej) |
+| GET | `/api/premises` | `?status=challenged\|restored` | historia zakwestionowanych przesłanek, najnowsze pierwsze |
+| POST | `/api/premises` | `{"kind":"...","value":"...","reason":"..."}` | `Premise` plus `regroup` (201): ślad wyłączony w całym korpusie, krawędzie i grupy przeliczone |
+| GET | `/api/premises/{id}` | | `Premise` ze stanem przed, po i po przywróceniu |
+| POST | `/api/premises/{id}/restore` | | `Premise` plus `regroup`: ślad wraca, krawędzie i grupy przeliczone |
 | GET | `/api/campaigns` | `?page=`, `?source=capture` (po przecinku kilka) | strona `GroupListItem`: grupy z `size`, `sources`, `cases`, `cert_pl` |
 | GET | `/api/campaigns/{id}` | | reklamy, krawędzie, markery rdzeniowe |
 | GET | `/api/operators` | `?page=`, `?source=capture` | strona `GroupListItem`, jak kampanie |
@@ -330,6 +335,19 @@ Porównanie dwóch przechwyconych stron, np. tego samego adresu widzianego dwa r
 - HAR i HTML są tylko do pobrania (`/api/artifacts/{sha256}`), nigdy do renderowania. Odpowiedź nie zawiera HTML ani skryptów, adresy mają zredagowane sekrety.
 - Błędy: brak albo zły parametr `400`, ta sama reklama dwa razy `400`, nieistniejąca reklama `404`.
 
+## Zakwestionowanie przesłanki (`Premise`)
+
+Analityk uznaje, że jeden ślad (rodzaj i wartość, np. identyfikator panelu albo piksel) nie identyfikuje operatora: pochodzi od wspólnego usługodawcy albo ze skopiowanego materiału. W odróżnieniu od laboratorium, które działa na jednej krawędzi, przesłanka obejmuje cały korpus.
+
+- `POST /api/premises/preview {kind, value}`: niczego nie zapisuje. Odpowiedź:
+  - `edges[]`: każda nieodrzucona krawędź z tym śladem, `before` i `after` (relacja, bity, wynik modelu), `removed` (krawędź znika), `relation_changed`, `after.kept_by_verdict` (krawędź z werdyktem analityka zostaje z dotychczasową relacją);
+  - `groups.campaign` i `groups.operator`: `split[]` (klucz, skład przed, części po: pierwsza zachowuje klucz, `released` to reklamy, które tracą członkostwo) i `stay[]` (grupy, które się trzymają, z `supported_by`: najmocniejsze pozostałe ślady w bitach);
+  - `edge_count`, `split_count`, `model_version`, `warnings`.
+- `POST /api/premises {kind, value, reason}` (201): zapisuje przesłankę. Od tej chwili `pair_inputs` pomija ten ślad przy budowie dowodów; reklamy z nim są łączone od nowa (`link_ad`), a grupy rozdzielane (`recluster`). Odpowiedź: `Premise` z `before`, `after` i `regroup` (jak przy decyzji o krawędzi).
+- `POST /api/premises/{id}/restore`: ślad wraca do dowodów, reklamy są łączone od nowa, grupy scalane i rozdzielane. `restored_state` i `regroup` w odpowiedzi.
+- `GET /api/premises`, `GET /api/premises/{id}`: historia. Wiersz zostaje po przywróceniu.
+- Błędy: 400 dla śladu miękkiego (podobieństwo nie ma jednej wartości; do tego służy laboratorium krawędzi) albo nieznanego rodzaju, 404 gdy żadna reklama nie ma śladu, 409 gdy przesłanka jest już zakwestionowana albo już przywrócona. Zapis chroni klucz `API_WRITE_KEY` jak każdy POST.
+
 ## Test najsłabszego ogniwa (`WeakestLink`)
 
 `POST /api/edges/{id}/weakest-link` szuka najmniejszych zestawów grup śladów, których wyłączenie zmienia relację krawędzi albo ją usuwa. Liczy tym samym silnikiem co `simulate`, niczego nie zapisuje, nie łączy się z siecią. To symulacja utraty obserwowalności jednej pary, nie przewidywanie działań oszusta i nie wniosek o grupie w grafie.
@@ -488,13 +506,12 @@ Powody, w kolejności priorytetu:
 
 | `reason` | `reason_label` | Kiedy |
 |---|---|---|
+| `challenged` | Krawędź używa śladu z zakwestionowanej przesłanki | któryś dowód krawędzi ma rodzaj i wartość aktywnej przesłanki (`Premise` ze statusem `challenged`) |
 | `changed_after_decision` | Krawędź zmieniona po decyzji w jej grupie | w kampanii albo u operatora jednej z reklam była decyzja (`EdgeDecision`), a krawędź przeliczono później (`updated_at`) |
 | `unbacked` | Relacja bez śladu zaplecza albo oparta na jednym decydującym śladzie | `same_operator` albo `same_campaign`, w której żadna niezależna rodzina śladów nie dotyczy zaplecza (poza `narr`, `crea`, `pers`), albo jest dokładnie jeden ślad decydujący i mniej niż dwie niezależne rodziny |
 | `borderline` | Wynik modelu na granicy (0,5 do 0,9) | `0.5 <= probability < 0.9` |
 | `new_in_group` | Nowa reklama w znanej grupie, bez decyzji na jej krawędziach | jedna z reklam ma alert `joined_campaign`, `new_campaign_known_operator` albo `joined_operator`, a żadna z krawędzi tych reklam nie ma decyzji |
 | `other` | Bez decyzji | reszta |
-
-Powód `challenged` (ślad z zakwestionowanej przesłanki) dojdzie razem z przesłankami (#266).
 
 | Pole | Znaczenie |
 |---|---|
@@ -504,7 +521,7 @@ Powód `challenged` (ślad z zakwestionowanej przesłanki) dojdzie razem z przes
 | `evidence` | najwyżej 3 najmocniejsze ślady krawędzi, malejąco po `weight_bits`: `{kind, label, family, family_label, weight_bits, value, artifact_a, artifact_b}`; `value` to wartość strony A po redakcji (adresy po `redact_url`, osoby jako nazwisko), do 200 znaków |
 | `limitations` | zdania po polsku o tym, czego krawędź nie dowodzi, np. `brak śladu zaplecza`, `kopia treści bez wspólnej infrastruktury`, `jeden decydujący ślad, bez niezależnego potwierdzenia`, `ślad „Domena” współdzielony przez N reklam` (od 5 reklam), `tylko wspólny motyw (osoba, marka, tematyka)`, `ta sama strona przechwycona ponownie`, `wynik modelu na granicy progu`; może być puste |
 
-Krawędź ocenia się dalej przez `POST /api/edges/{id}/verdict`. Indeks `Edge(verdict, -probability)` jest w migracji `similarity/0009`.
+Krawędź ocenia się dalej przez `POST /api/edges/{id}/verdict`. Indeks `Edge(verdict, -probability)` jest w migracji `similarity/0010`.
 
 ## Czego API jeszcze nie ma
 

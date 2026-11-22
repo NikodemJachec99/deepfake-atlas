@@ -7,7 +7,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from ads.models import Ad
-from similarity.models import Alert, Campaign, CampaignMembership, Edge, EdgeDecision, EdgeEvidence
+from similarity.models import Alert, Campaign, CampaignMembership, Edge, EdgeDecision, EdgeEvidence, Premise
 
 pytestmark = pytest.mark.django_db
 
@@ -38,6 +38,21 @@ def get(query: str = ""):
 
 def reasons() -> dict[int, str]:
     return {r["id"]: r["reason"] for r in get().json()["results"]}
+
+
+def test_challenged_premise_trace_takes_priority():
+    hit = pair(evidence=[*BACKED, ("ip", "infra", 3, False, 2)], probability=0.6)
+    EdgeEvidence.objects.filter(edge=hit, kind="ip").update(value_a="203.0.113.5")
+    other = pair(evidence=[*BACKED, ("ip", "infra", 3, False, 2)])
+    EdgeEvidence.objects.filter(edge=other, kind="ip").update(value_a="203.0.113.6", value_b="203.0.113.6")
+    Premise.objects.create(kind="ip", value="203.0.113.5", reason="wspólny hosting")
+    restored = Premise.objects.create(kind="ip", value="203.0.113.6", reason="x", status="restored")
+    assert restored.status == "restored"
+    got = reasons()
+    assert got[hit.pk] == "challenged" and got[other.pk] == "other"
+    first = get().json()["results"][0]
+    assert first["id"] == hit.pk and first["reason_label"].startswith("Krawędź używa śladu")
+    assert [r["id"] for r in get("?reason=challenged").json()["results"]] == [hit.pk]
 
 
 def test_unbacked_without_infrastructure_and_single_decisive():

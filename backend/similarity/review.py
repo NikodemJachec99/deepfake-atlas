@@ -11,11 +11,11 @@ from evidence.kinds import CONCEPT_FAMILIES, FAMILIES, KINDS
 from extractors.url import redact_url
 from people.display import PERSON_KINDS, display_value, person_names
 from similarity.fusion import FAMILY_MIN_BITS
-from similarity.models import Alert, CampaignMembership, Edge, EdgeDecision, EdgeEvidence, OperatorMembership
+from similarity.models import Alert, CampaignMembership, Edge, EdgeDecision, EdgeEvidence, OperatorMembership, Premise
 
-# (kod, opis dla człowieka). Kolejność to priorytet. `challenged` (ślad z zakwestionowanej przesłanki)
-# dojdzie razem z przesłankami (#266).
+# (kod, opis dla człowieka). Kolejność to priorytet.
 REASONS: list[tuple[str, str]] = [
+    ("challenged", "Krawędź używa śladu z zakwestionowanej przesłanki"),
     ("changed_after_decision", "Krawędź zmieniona po decyzji w jej grupie"),
     ("unbacked", "Relacja bez śladu zaplecza albo oparta na jednym decydującym śladzie"),
     ("borderline", "Wynik modelu na granicy (0,5 do 0,9)"),
@@ -97,11 +97,17 @@ def queue(source: str = "capture", relation: str = "", reason: str = "") -> list
     last_decision, decided_ads = _decision_times()
     joined = set(Alert.objects.filter(kind__in=JOINED_ALERTS, ad_id__in=ad_ids).values_list("ad_id", flat=True))
 
+    challenged = defaultdict(set)
+    for kind, value in Premise.objects.filter(status=Premise.Status.CHALLENGED).values_list("kind", "value"):
+        challenged[kind].add(value)
+
     out = []
     for edge in edges:
         rows = evidence[edge.pk]
         groups = [(k, m[a]) for a in (edge.ad_a_id, edge.ad_b_id) for k, m in (("campaign", campaigns), ("operator", operators)) if a in m]
-        if any((g in last_decision and edge.updated_at > last_decision[g]) for g in groups):
+        if any(r.value_a in challenged[r.kind] or r.value_b in challenged[r.kind] for r in rows if r.kind in challenged):
+            code = "challenged"
+        elif any((g in last_decision and edge.updated_at > last_decision[g]) for g in groups):
             code = "changed_after_decision"
         elif is_unbacked(edge, rows):
             code = "unbacked"

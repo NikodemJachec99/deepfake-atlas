@@ -352,13 +352,14 @@ def edge_payload(edge: Edge, ad_id: int) -> dict:
 
 def stage_fuse(analysis: Analysis) -> dict:
     ad = analysis.ad
-    edges = linking.link_ad(ad)
+    edges, removed = linking.link_ad_detailed(ad)
     for edge in sorted(edges, key=lambda e: e.probability, reverse=True):
         emit(
             analysis, "fuse", "info", f"Powiązanie z reklamą #{edge.other(ad.pk)}: {edge.get_relation_display()}", edge_payload(edge, ad.pk)
         )
     return {
         "edges": len(edges),
+        "removed": removed,
         "duplicates": sum(1 for e in edges if e.duplicate),
         "same_campaign": sum(1 for e in edges if e.relation == Edge.Relation.SAME_CAMPAIGN),
         "same_operator": sum(1 for e in edges if e.relation == Edge.Relation.SAME_OPERATOR),
@@ -381,6 +382,10 @@ def stage_cluster(analysis: Analysis) -> dict:
     was_in_operator = OperatorMembership.objects.filter(ad=ad).exists()
     campaign, operator = linking.assign_campaign(ad), linking.assign_operator(ad)
     result = {**campaign, **operator}
+    removed = analysis.result.get("fuse", {}).get("removed")
+    if removed:
+        # Krawędź zniknęła, a samo usunięcie nie zmienia członkostwa: rozdzielamy grupy tej reklamy i jej byłych sąsiadów.
+        linking.recluster([ad.pk, *removed])
     alerts = alerting.record(ad, was_in_campaign=was_in_campaign, was_in_operator=was_in_operator, campaign=campaign, operator=operator)
     result["alerts"] = [a.kind for a in alerts]
     fused = analysis.result.get("fuse", {})

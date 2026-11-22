@@ -216,3 +216,33 @@ class Alert(models.Model):
             models.UniqueConstraint(fields=["hunt_candidate", "kind"], name="alert_hunt_kind"),
         ]
         indexes = [models.Index(fields=["seen", "-created_at"])]
+
+
+class Premise(models.Model):
+    """Zakwestionowana przesłanka: ślad (rodzaj i wartość), który analityk uznał za nieprzydatny jako dowód.
+
+    Ślad bywa wspólny z innego powodu niż wspólny operator: ten sam usługodawca (hosting, panel lejka),
+    skopiowany materiał albo błąd ekstrakcji. Aktywna przesłanka wyłącza ten ślad z budowy dowodów
+    krawędzi w całym korpusie. Wiersz zostaje po przywróceniu, więc historia jest pełna.
+    `before` i `after` to stan dotkniętych reklam (grupy i krawędzie) przed i po zakwestionowaniu,
+    `restored_state` po przywróceniu.
+    """
+
+    class Status(models.TextChoices):
+        CHALLENGED = "challenged", "Zakwestionowana"
+        RESTORED = "restored", "Przywrócona"
+
+    kind = models.CharField(max_length=32)
+    value = models.TextField()
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.CHALLENGED)
+    reason = models.TextField()
+    before = models.JSONField(default=dict, blank=True)
+    after = models.JSONField(default=dict, blank=True)
+    restored_state = models.JSONField(default=dict, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    created_at = models.DateTimeField(auto_now_add=True)
+    restored_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [models.Index(fields=["status", "kind"])]

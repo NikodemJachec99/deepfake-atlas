@@ -180,6 +180,73 @@ export interface Regroup {
   operator: GroupChange[];
 }
 
+// Zakwestionowanie przesłanki (/api/premises): globalne podważenie jednego śladu (rodzaj + wartość).
+export interface PremiseKind {
+  kind: string;
+  label: string;
+  family: string;
+  family_label: string;
+}
+export interface PremiseEdgeState {
+  relation: Relation | null;
+  relation_label: string;
+  bits: number;
+  probability: number; // wynik modelu (niekalibrowany)
+}
+export interface PremiseEdge {
+  id: number;
+  ad_a: number;
+  ad_b: number;
+  verdict: Verdict;
+  before: PremiseEdgeState;
+  after: PremiseEdgeState & { independent: string[]; kept_by_verdict: boolean };
+  removed: boolean; // krawędź znika bez tego śladu
+  relation_changed: boolean;
+}
+export interface PremiseGroupSplit {
+  key: string;
+  before: number[];
+  after: { key: string | null; ads: number[] }[]; // pierwsza część zachowuje klucz, reszta dostaje nowe grupy
+  released: number[]; // reklamy, które tracą członkostwo
+}
+export interface PremiseGroupStay {
+  key: string;
+  before: number[];
+  supported_by: (PremiseKind & { bits: number })[]; // najmocniejsze ślady, które trzymają grupę bez zakwestionowanego
+}
+export interface PremisePreview extends PremiseKind {
+  value: string;
+  display_value: string;
+  ads: number[];
+  edge_count: number;
+  edges: PremiseEdge[];
+  groups: Record<"campaign" | "operator", { split: PremiseGroupSplit[]; stay: PremiseGroupStay[] }>;
+  split_count: number;
+  model_version: string;
+  warnings: string[];
+}
+export interface PremiseState {
+  groups: Record<"campaign" | "operator", { key: string; ads: number[] }[]>;
+  edges: { id: number; ad_a: number; ad_b: number; relation: Relation; bits: number; probability: number }[];
+  regroup?: Regroup;
+}
+export interface Premise {
+  id: number;
+  kind: string;
+  label: string;
+  value: string;
+  display_value: string;
+  status: "challenged" | "restored";
+  status_label: string;
+  reason: string;
+  user: string | null;
+  created_at: string;
+  restored_at: string | null;
+  before?: PremiseState;
+  after?: PremiseState;
+  restored_state?: PremiseState | null;
+}
+
 export interface EdgeDetail extends Edge {
   verdict_note: string;
   verdict_reason: VerdictReason | "";
@@ -478,7 +545,7 @@ export interface Stats {
   last_analysis: string | null;
 }
 
-export type ReviewReason = "changed_after_decision" | "unbacked" | "borderline" | "new_in_group" | "other";
+export type ReviewReason = "challenged" | "changed_after_decision" | "unbacked" | "borderline" | "new_in_group" | "other";
 
 export interface ReviewAd {
   id: number;
@@ -944,6 +1011,16 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ exclude, ...(edgeVersion ? { edge_version: edgeVersion } : {}) }),
     }),
+  // Zakwestionowanie przesłanki. Podgląd niczego nie zapisuje; zapis i przywrócenie przeliczają krawędzie i grupy.
+  // 400: ślad miękki albo nieznany rodzaj, 404: żadna reklama nie ma śladu, 409: już zakwestionowany / już przywrócony.
+  previewPremise: (kind: string, value: string) =>
+    request<PremisePreview>(`/api/premises/preview`, { method: "POST", body: JSON.stringify({ kind, value }) }),
+  challengePremise: (kind: string, value: string, reason: string) =>
+    request<Premise & { regroup: Regroup }>(`/api/premises`, { method: "POST", body: JSON.stringify({ kind, value, reason }) }),
+  restorePremise: (id: number) => request<Premise & { regroup: Regroup }>(`/api/premises/${id}/restore`, { method: "POST" }),
+  premises: (status?: "challenged" | "restored") =>
+    request<{ count: number; results: Premise[] }>(`/api/premises${status ? `?status=${status}` : ""}`),
+  premise: (id: number) => request<Premise>(`/api/premises/${id}`),
   // Dwie twarze jednego linku: obserwacja strony reklamy i strony do porównania; porównanie tylko do odczytu.
   adObservations: (id: number) => request<AdObservations>(`/api/ads/${id}/observations`),
   compareObservations: (a: number, b: number) => request<ObservationComparison>(`/api/observations/compare?a=${a}&b=${b}`),

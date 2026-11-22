@@ -140,6 +140,20 @@ Sprawa 61: ten sam pełny adres dał w 161 s dwie różne strony. Kroki i wyniki
 
 Odrzucenie krawędzi 1 ↔ 48 z powodem "wspólne narzędzie" wraca jako precedens przy `p11.zip` z Planu B. Panel Jev pokazuje "Model wyłączony". Kroki i wyniki w [pamiec-sprzeciwu.md](pamiec-sprzeciwu.md). Po pozostałych dodatkach, jeśli jest czas.
 
+### Czwarty dodatek: "Spróbuj zgubić kampanię" (90 s)
+
+Jury samo próbuje oszukać system. Wyniki i metoda: [dane-organizatora.md](dane-organizatora.md#próba-jury-spróbuj-zgubić-kampanię-22112026). Pliki wariantów powstają przed demo poza repozytorium (`scripts/proba_jury.py` zapisuje je jako ZIP-y w katalogu `--robocze`: `pulapka_*.zip`, `przebranie_*_bez_har.zip`). Korpus jak w głównym demo, z operatorem A w całości.
+
+| Czas | Krok | Co robimy | Co ma być widać |
+|---|---|---|---|
+| 0:00 | 1. Przebranie (35 s) | Discovery, wrzucamy `przebranie_nask_1_bez_har.zip`: zrzut przycięty i w JPEG, 3 zdania podmienione, domena `.example`, bez HAR | kampania K-0001 i operator O-0001, jak oryginał. Powiedz: "bez HAR zniknął identyfikator panelu lejka i piksel (z 51 markerów zostało 11), ale 97% tekstu, szablon i twarz zostały, więc kampania się trzyma" |
+| 0:35 | 2. Pułapka (25 s) | wrzucamy `pulapka_nask_1_obca_infrastruktura.zip`: ten sam zrzut i tekst, obca domena, bez śladów zaplecza | "Podobna koncepcja", bez kampanii i operatora. Powiedz: "kopia kreacji i tekstu to pokrewieństwo treści, nie dowód wspólnego operatora" |
+| 1:00 | 3. Zakwestionowanie mostu (30 s) | krawędź backup/p5 do nask/2, "Zakwestionuj przesłankę" na hoście zasobów, potem "Przywróć przesłankę" w historii zakwestionowań | po zapisaniu O-0002 traci backup/p5 (3 reklamy na 2), po przywróceniu wraca. Powiedz: "to jedyny most: 1 ślad z 104 wspólnych rozdziela grupę" |
+
+Plan B: te same trzy kroki z `curl -X POST localhost:8000/api/analyses/upload -F "files=@<plik>.zip"`, `POST /api/premises/preview`, `POST /api/premises` i `POST /api/premises/{id}/restore`. Kroki 1 i 3 w interfejsie nie były przećwiczone (wynik sprawdzony przez API). Całość jednym poleceniem na osobnym stosie: `scripts/proba_jury.py` (zmienia korpus, więc nie na stosie demo).
+
+Uczciwie, gdy padnie pytanie "a mocniejsze przebranie?": zmieniliśmy 3 zdania i domenę, szablon i reszta tekstu zostały, wszystkie 7 wariantów wróciło do swojej grupy. Przepisanego całego artykułu na innym szablonie nie sprawdzaliśmy. Pułapka pokazuje, że z samej kopii treści system nie zrobi operatora.
+
 ## Pytania, których się spodziewamy
 
 | Pytanie | Odpowiedź |

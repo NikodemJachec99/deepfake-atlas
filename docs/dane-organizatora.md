@@ -176,6 +176,47 @@ Relacje w materiałach spraw przed: 20 `same_campaign`, 13 `same_operator`, 34 `
 
 Jedyna zmieniona krawędź to para wewnątrz sprawy nask/61 (reklamy 11 i 13, oferta i neutralna strona "portal analiz"). Łączyły je wyłącznie zrzut reklamy dołączony do każdej strony sprawy (`creative_phash`, 12 bitów), nazwa reklamodawcy z tego samego zrzutu (`page_name`, 8 bitów) i embedding obrazu, bez żadnego śladu zaplecza. Po zmianie to `similar`. To trafiona pułapka: kopia zrzutu i nazwa z jego OCR to ta sama treść, nie wspólne zaplecze. Skład grup się nie zmienia, bo reklamy zostają w jednej kampanii przez krawędzie z reklamą 12 (strona sprawy 61 z kontem Google Ads). Wersja modelu: `fs-5.1`.
 
+### Próba jury: "Spróbuj zgubić kampanię" (22.11.2026)
+
+Eksperyment na osobnym stosie (świeży import obu paczek: 28 reklam, 4 kampanie, 3 operatorów, model `fs-5.1`), przez prawdziwy `POST /api/analyses/upload` (ZIP jednej sprawy) i `GET /api/analyses/{id}`. Skrypt `scripts/proba_jury.py` zapisuje wynik do pliku, dopiero potem czyta plik etykiet (które sprawy analityk uznał za jedną grupę). Sprawy i etykiety to argumenty, w skrypcie nie ma danych organizatora. Polecenie (venv backendu, bo potrzebny Pillow):
+
+```bash
+python scripts/proba_jury.py --api http://localhost:8300 --paczki data/raw \
+  --sprawy nask/1 nask-backup/p7 nask-backup/p15 nask/3 --pulapka nask/1 \
+  --etykiety <etykiety.json> --wynik <wynik.json> --robocze <katalog poza repo>
+```
+
+Ocena samego zapisanego wyniku bez wysyłania: dodaj `--tylko-ocena`. Etykiety: `{"grupy": {"A": ["nask/1", ...], "B": ["nask/3", "nask-backup/p5"]}}`. Przebieg: ok. 3 do 4 s na analizę wariantu (pierwsza ok. 30 s, rozgrzanie modeli).
+
+**Próba 1: przebranie.** Trzy sprawy operatora A (nask/1, backup/p7, backup/p15) i nask/3 z operatora B (sprawa bez HAR). Zrzut reklamy przycięty o 10% (po 5% z każdego boku) i zapisany jako JPEG q=60, w zapisanej stronie podmienione 3 zdania na zmyślone, adres i domena zamienione na zmyśloną domenę `.example` (zestaw parametrów adresu zostaje), katalog `_files` bez zmian. Dwa warianty sprawy z HAR: bez HAR oraz z HAR, w którym podmieniono tylko domenę (jak przy przeniesieniu tego samego lejka na nową domenę).
+
+| Wariant | Grupa wariantu | Do oryginału | Markery wspólne z oryginałem | Co przetrwało (rodzaje) |
+|---|---|---|---|---|
+| nask/1, bez HAR | K-0001, O-0001 jak oryginał | `same_campaign`, 52 bity | 11 z 51 | treść, szablon, osoby, twarz, tytuł |
+| nask/1, HAR z nową domeną | K-0001, O-0001 | `same_campaign`, 87 bitów, marker rozstrzygający | 41 z 51 | wszystko oprócz domeny i rejestracji |
+| backup/p7, bez HAR | K-0001, O-0001 | `same_campaign`, 52 bity | 11 z 46 | jak wyżej |
+| backup/p7, HAR z nową domeną | K-0001, O-0001 | `same_campaign`, 84 bity, rozstrzygający | 42 z 46 | wszystko oprócz domeny |
+| backup/p15, bez HAR | K-0001, O-0001 | `same_campaign`, 58 bitów | 12 z 49 | jak wyżej |
+| backup/p15, HAR z nową domeną | K-0001, O-0001 | `same_campaign`, 93 bity, rozstrzygający | 42 z 49 | wszystko oprócz domeny |
+| nask/3, brak HAR w sprawie | K-0002, O-0002 jak oryginał | `same_campaign`, 60 bitów | 12 z 20 | treść, szablon, tytuł, osoby |
+
+Wynik: 7 z 7 wariantów wróciło do kampanii i operatora swojego oryginału, żaden nie trafił do obcej grupy. Co zniknęło zawsze: domena, rejestracja i serwery nazw, `page_name` i `creative_phash` (przycięcie i JPEG zmieniają skrót kreacji, a OCR przyciętego zrzutu czyta nazwę inaczej). Co zniknęło po usunięciu HAR: identyfikator panelu lejka, ścieżki zaplecza, piksel Meta, host zasobów, serwer, certyfikat. Bez HAR połączenie z kampanią stoi na tym, czego nie ruszyliśmy: 97% tekstu artykułu (narracja 13 bitów), struktura DOM (`dom_hash`), osoby i twarz (`face_match` przeżył przycięcie i JPEG q=60), tytuł i zestaw parametrów adresu. Nie ma wtedy markera rozstrzygającego (do 58 bitów, `same_campaign` z dwóch niezależnych potwierdzeń i zgodnej narracji), a przy HAR z podmienioną domeną jest (87 do 93 bitów), bo identyfikatory panelu lejka przenoszą się razem z lejkiem. Wariant nask/3 dołączył do kampanii przez nask/3 i nask/2 (60 i 46 bitów), a do backup/p5 ma tylko `similar` (15 bitów): p5 jest przy operatorze B wyłącznie przez host zasobów z HAR, którego wariant nie ma, choć wariant jest w O-0002, w którym p5 już jest.
+
+To słaby przeciwnik: zmieniliśmy 3 zdania i domenę, a szablon i resztę tekstu zostawiliśmy. Nie sprawdzaliśmy przepisania całego artykułu ani innego szablonu strony. Pułapka niżej pokazuje, co zostaje, gdy z oryginału zostaje tylko treść.
+
+**Próba 2: pułapka.** Oryginalny zrzut (bajt w bajt) i cały widoczny tekst nask/1, ale strona bez skryptów, zasobów i identyfikatorów, bez HAR, pod domeną `.example`. Wynik: bez kampanii i bez operatora. Relacja `similar` z nask/1 (39 bitów: kreacja 14,5, narracja 13,7, osoby 10,6) i z pozostałymi pięcioma sprawami operatora A (18 do 25 bitów), ani jednej krawędzi `same_campaign` lub `same_operator`. 13 markerów, 9 wspólnych z oryginałem (kreacja, tytuł, nazwa strony, osoby, twarz, marka, temat). Ślady zaplecza (funnel_id, kit_path, piksel, host, domena) nie istnieją. To zachowanie z #267: `creative_phash` nie rozstrzyga, więc kopia zrzutu i tekstu daje pokrewieństwo treści, a nie wspólne źródło. Tej samej pary nie puszczaliśmy na modelu sprzed #267.
+
+**Próba 3: zakwestionowanie mostu.** Skrypt sprawdził podgląd (`POST /api/premises/preview`) dla wszystkich 104 śladów występujących na co najmniej dwóch reklamach. Grupę rozdzielają dwa:
+
+| Ślad | Krawędzi | Co się rozdziela |
+|---|---|---|
+| `asset_host` (`crimsonbase.pro`) | 1 (backup/p5 do nask/2, `same_operator` 33 bity, po wyłączeniu `similar` 24 bity, pewność 0,999) | operator O-0002 (nask/2, nask/3, backup/p5): backup/p5 wychodzi z grupy, kampania K-0002 zostaje (domena 18 bitów, parametr lejka 12, nazwa strony 8) |
+| `google_ads` | 1 | kampania K-0003 i operator O-0003 (trzy strony sprawy 61): jedna strona wychodzi z obu grup |
+
+Cykl dla `asset_host`: `POST /api/premises` odłączył backup/p5 od O-0002 (operator `null`, 2 reklamy zostały), `POST /api/premises/{id}/restore` przywrócił 3 reklamy w O-0002, stan grup identyczny jak przed zakwestionowaniem (sprawdzone odczytem operatora każdej z 3 reklam w trzech chwilach). Odpowiedź przywrócenia ma puste `regroup`, bo ten opis listuje tylko rozdzielenia, więc scalenie widać dopiero po odczycie reklam. Pozostałe 102 ślady nie są jedynym mostem żadnej grupy: grupy trzymają się na kilku niezależnych śladach. To zgadza się z laboratorium dowodów (nask/2 do backup/p5 spada do `similar` bez hosta `crimsonbase.pro`).
+
+Czego nie sprawdziliśmy: ekranów interfejsu (tylko API), strumienia SSE (skrypt odpytuje `GET /api/analyses/{id}`), mocniejszych przebrań (przepisany cały tekst, inny szablon, inne zrzuty obrazów w `_files`), spraw spoza czterech wybranych, powtórzenia przebiegu. Warianty zostają w korpusie stosu, więc późniejsze widzą wcześniejsze (wyniki liczone względem oryginałów z paczek), a pułapka szła pierwsza, na korpusie bez wariantów.
+
 ### Wagi uczone (EM) zamiast eksperckich
 
 Zadanie #207, 2026-11-21, `python manage.py estimate_weights` (tylko odczyt bazy, wynik w `data/models/wagi.json`, poza gitem). EM Fellegi-Sunter bez etykiet na parach kandydatów, tych samych, które ocenia `link_ad`. Start z wag eksperckich. Powtórzenie pomiaru: ta sama komenda, `--source capture --bootstrap 30 --seed 7`.

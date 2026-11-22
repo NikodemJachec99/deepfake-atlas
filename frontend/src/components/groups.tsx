@@ -49,7 +49,7 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
     const members = new Set(result.data!.ads.map(ad => ad.id));
     const rows = [];
     for (let page = 1; ; page++) {
-      const queue = await api.review({ page, source: "all" });
+      const queue = await api.review({ page });
       rows.push(...queue.results.filter(row => members.has(row.ad_a.id) || members.has(row.ad_b.id)));
       if (!queue.next) return rows;
     }
@@ -80,7 +80,7 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
       {top && <p className="mt-3">Wspólny ślad: {top.label} · {markerValue(top.value, top.display_value)} ({top.in_group} z {group.size} reklam{top.bits != null && `, ${bits(top.bits)} bita`}).</p>}
     </section>
     <ObservationTimeline key={kind + id} id={Number(id)} operator={operator} />
-    <section><h2>Pary wymagające oceny</h2>{pending.loading ? <Loading/> : pending.error ? <ErrorBox message={pending.error} onRetry={pending.reload}/> : !pending.data?.length ? <p>Brak par do oceny dla tej grupy.</p> : <details><summary>Pokaż pary ({pending.data.length})</summary><ul>{pending.data.map(row => <li key={row.id}><Link className="text-accent" href={`/investigation?${operator ? "operator" : "campaign"}=${id}&edge=${row.id}`}>#{row.ad_a.id} ↔ #{row.ad_b.id} · {row.reason_label}</Link></li>)}</ul></details>}</section>
+    <section><h2>Pary ze spraw wymagające oceny</h2>{pending.loading ? <Loading/> : pending.error ? <ErrorBox message={pending.error} onRetry={pending.reload}/> : !pending.data?.length ? <p>Brak par do oceny dla tej grupy.</p> : <details><summary>Pokaż pary ({pending.data.length})</summary><ul>{pending.data.map(row => <li key={row.id}><Link className="text-accent" href={`/investigation?${operator ? "operator" : "campaign"}=${id}&edge=${row.id}`}>#{row.ad_a.id} ↔ #{row.ad_b.id} · {row.reason_label}</Link></li>)}</ul></details>}</section>
     <section><h2>Markery rdzeniowe</h2>
       {markers.length ? <table className="dense"><thead><tr><th>Marker</th><th>Wartość</th><th>Reklamy w grupie</th><th>W korpusie</th></tr></thead>
         <tbody>{markers.map(marker => <tr key={JSON.stringify([marker.kind, marker.value])}>

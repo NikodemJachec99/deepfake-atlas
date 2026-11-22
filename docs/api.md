@@ -335,6 +335,18 @@ Porównanie dwóch przechwyconych stron, np. tego samego adresu widzianego dwa r
 - HAR i HTML są tylko do pobrania (`/api/artifacts/{sha256}`), nigdy do renderowania. Odpowiedź nie zawiera HTML ani skryptów, adresy mają zredagowane sekrety.
 - Błędy: brak albo zły parametr `400`, ta sama reklama dwa razy `400`, nieistniejąca reklama `404`.
 
+### Streszczenie pliku HAR: `GET /api/artifacts/{sha256}/har`
+
+Tylko do odczytu. Zamienia surowy HAR (artefakt `har`) w opis czytelny dla analityka, bez treści odpowiedzi i bez treści żądań. Adresy przechodzą przez redakcję (`redact_url`): tokeny w adresach są skrótami `sha256-...`.
+
+- `total`, `with_traces` (ile żądań niesie ślady użyte w porównaniach), `truncated` (lista `entries` ma najwyżej 400 pozycji), `started_at`, `page_url`.
+- `chain`: droga do dokumentu głównego, `{url, status}`.
+- `hosts`: do 30 hostów z liczbą żądań, malejąco.
+- `entries[]`: `n`, `method`, `host`, `path` (z query po redakcji), `url`, `status` (0 bez odpowiedzi), `type` (dokument, skrypt, styl, obraz, czcionka, dane, wideo, dźwięk, inne), `size`, `ms`, `ip`, `redirect_to`, `main` (dokument główny) i `traces` (kody typów markerów, np. `meta_pixel`, `funnel_id`, `kit_path`, `asset_host`, `redirect_domain`).
+- `trace_labels`: etykiety kodów z `traces`, po polsku.
+- `download`: surowy plik, tylko do pobrania.
+- Błędy: artefakt nie istnieje albo nie jest HAR `404`, uszkodzony JSON albo nieznany format `422`. Odpowiedź nie zawiera HTML ani skryptów, adresy mają zredagowane sekrety.
+
 ## Zakwestionowanie przesłanki (`Premise`)
 
 Analityk uznaje, że jeden ślad (rodzaj i wartość, np. identyfikator panelu albo piksel) nie identyfikuje operatora: pochodzi od wspólnego usługodawcy albo ze skopiowanego materiału. W odróżnieniu od laboratorium, które działa na jednej krawędzi, przesłanka obejmuje cały korpus.

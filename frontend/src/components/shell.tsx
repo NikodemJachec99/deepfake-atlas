@@ -9,6 +9,7 @@ import { api, RELATION_LABELS, type Stats } from "@/lib/api";
 import { dateTime } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 import { Expert, ExpertProvider, ExpertToggle } from "@/lib/expert";
+import { Logo } from "@/components/logo";
 
 const sections: Record<string, string> = {
   "/review": "Do oceny", "/premises": "Zakwestionowania", "/hunt": "Łowca domen", "/": "Analiza", "/investigation": "Śledztwo", "/archive": "Archiwum",
@@ -115,7 +116,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   return <ExpertProvider><div className="flex h-dvh flex-col bg-bg text-fg">
     <div className="flex min-h-0 flex-1">
       <nav aria-label="Nawigacja główna" className="atlas-sidebar hidden shrink-0 flex-col gap-4 overflow-auto border-r border-line px-3 pt-4 pb-3 md:flex">
-        <Link href="/" className="px-3 pb-1 text-lg font-semibold tracking-tight">SCAM DNA</Link>
+        <Link href="/" aria-label="SCAM DNA, ekran startowy" className="px-3 pb-1"><Logo /></Link>
         {navigation.map(({ label, quiet, links }) => <div key={label || "main"} className={quiet ? "mt-auto flex flex-col gap-0.5 border-t border-line pt-3" : "flex flex-col gap-0.5"}>
           {label && <p className="px-3 pb-1 text-xs font-medium text-muted">{label}</p>}
           {links.map(({ href, Icon, hint }) =>
@@ -130,7 +131,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-13 shrink-0 items-center justify-between gap-3 border-b border-line bg-bg px-4 md:px-6">
           <nav aria-label="Ścieżka" className="flex min-w-0 items-center gap-2 font-medium">
-            {!parent && <Link href="/" className="shrink-0 font-semibold tracking-tight md:hidden">SCAM DNA</Link>}
+            {!parent && <Link href="/" aria-label="SCAM DNA, ekran startowy" className="shrink-0 md:hidden"><Logo compact /></Link>}
             {parent && <>
               <Link href={parent.href} className="shrink-0 rounded text-muted hover:text-accent hover:underline">{parent.label}</Link>
               <ChevronRight size={15} aria-hidden className="shrink-0 text-faint" />

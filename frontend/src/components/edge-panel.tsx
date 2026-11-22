@@ -25,6 +25,7 @@ import { hypothesisSentence, isHardTrace, overallStrength, plainLimitation, rari
 import { Btn, Empty, ErrorBox, FamilyBar, FamilyDot, GroupLink, Kbd, Loading, Meter, Mono, RelationTag, Tag, VerdictTag } from "./ui";
 
 const VISUAL_KINDS = new Set(["creative_phash", "creative_sha256", "image_set"]);
+const CAUTION_REASONS = new Set<ReviewItem["reason"]>(["challenged", "unbacked", "borderline"]);
 const zrodel = (n: number) => plural(n, "źródle", "źródłach", "źródłach");
 
 function Creative({ sha, label, height = "h-28" }: { sha: string; label: string; height?: string }) {
@@ -375,7 +376,9 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict, review }: { edgeId: num
   const max = Math.max(1, ...evidence.map((e) => e.weight_bits));
   const [a, b] = [data.ads.find((ad) => ad.id === data.ad_a) ?? data.ads[0], data.ads.find((ad) => ad.id === data.ad_b) ?? data.ads[1]];
   const crossDomain = a && b && hostOf(a.landing_url) && hostOf(b.landing_url) && hostOf(a.landing_url) !== hostOf(b.landing_url);
-  const sentence = hypothesisSentence(data.relation, evidence, { duplicate: data.duplicate, crossDomain: !!crossDomain });
+  // Ostrożne brzmienie, gdy kolejka wskazuje słabe podstawy albo wynik modelu jest poniżej progu relacji.
+  const cautious = data.probability < 0.9 || (!!review && CAUTION_REASONS.has(review.reason));
+  const sentence = hypothesisSentence(data.relation, evidence, { duplicate: data.duplicate, crossDomain: !!crossDomain, cautious });
   const strength = overallStrength(data.probability, data.decisive);
 
   const decision = (

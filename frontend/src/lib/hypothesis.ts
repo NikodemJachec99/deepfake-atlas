@@ -2,36 +2,46 @@
 // Wszystko liczone z pól API (relacja, wynik modelu, wagi i rzadkość śladów), bez dopisywania faktów.
 import type { Relation } from "./api";
 
-type Trace = { label: string; weight_bits: number; decisive?: boolean };
+type Trace = { label: string; weight_bits: number; decisive?: boolean; df?: number; corpus_n?: number };
 
 const LEAD: Record<Relation, string> = {
   same_campaign: "Prawdopodobnie ta sama kampania",
   same_operator: "Prawdopodobnie ten sam operator",
   similar: "Podobne reklamy, ale bez dowodu wspólnego zaplecza",
 };
+const CAUTIOUS_LEAD: Record<Relation, string> = {
+  same_campaign: "Możliwe, że to ta sama kampania",
+  same_operator: "Możliwe, że to ten sam operator",
+  similar: LEAD.similar,
+};
 
-/** Dwie najmocniejsze różne nazwy śladów, malejąco po wadze. */
+// Ślad obecny w co najmniej co dziesiątym źródle korpusu słabo wyróżnia parę, więc nie trafia do zdania.
+const isCommon = (trace: Trace) => !!trace.df && !!trace.corpus_n && trace.df / trace.corpus_n >= 0.1;
+
+/** Dwie najmocniejsze różne nazwy śladów, malejąco po wadze, bez śladów częstych w korpusie. */
 export function topLabels(traces: Trace[], count = 2): string[] {
   const labels: string[] = [];
   for (const trace of [...traces].sort((a, b) => b.weight_bits - a.weight_bits)) {
-    if (trace.weight_bits <= 0 || labels.includes(trace.label)) continue;
+    if (trace.weight_bits <= 0 || isCommon(trace) || labels.includes(trace.label)) continue;
     labels.push(trace.label);
     if (labels.length === count) break;
   }
   return labels;
 }
 
-const quoted = (labels: string[]) => labels.map(label => `„${label}”`).join(" i ");
+const q = (label: string) => `„${label}”`;
 
-/** Hipoteza modelu po ludzku, np. "Prawdopodobnie ten sam operator. Obie reklamy mają wspólne ślady: „Meta Pixel” i …". */
-export function hypothesisSentence(relation: Relation, traces: Trace[], options: { duplicate?: boolean; crossDomain?: boolean } = {}): string {
+/** Hipoteza modelu po ludzku, np. "Prawdopodobnie ten sam operator. Obie reklamy mają wspólne rzadkie ślady: „Meta Pixel” i …". */
+export function hypothesisSentence(relation: Relation, traces: Trace[], options: { duplicate?: boolean; crossDomain?: boolean; cautious?: boolean } = {}): string {
   const labels = topLabels(traces);
-  const parts = [LEAD[relation] + "."];
+  const parts = [(options.cautious ? CAUTIOUS_LEAD : LEAD)[relation] + "."];
   if (options.duplicate) parts.push("To ta sama strona przechwycona ponownie.");
   else if (labels.length) {
-    const decisive = traces.some(trace => trace.decisive && labels.includes(trace.label));
-    const noun = labels.length === 1 ? (decisive ? "wspólny rzadki ślad" : "wspólny ślad") : (decisive ? "wspólne rzadkie ślady" : "wspólne ślady");
-    parts.push(`Obie reklamy mają ${noun}: ${quoted(labels)}.`);
+    const decisive = labels.map(label => traces.some(trace => trace.label === label && trace.decisive));
+    if (labels.length === 1) parts.push(`Obie reklamy mają ${decisive[0] ? "wspólny rzadki ślad" : "wspólny ślad"}: ${q(labels[0])}.`);
+    else if (decisive.every(Boolean)) parts.push(`Obie reklamy mają wspólne rzadkie ślady: ${q(labels[0])} i ${q(labels[1])}.`);
+    else if (decisive[0]) parts.push(`Obie reklamy mają wspólny rzadki ślad ${q(labels[0])} oraz ślad ${q(labels[1])}.`);
+    else parts.push(`Obie reklamy mają wspólne ślady: ${q(labels[0])} i ${q(labels[1])}.`);
   }
   if (options.crossDomain && !options.duplicate && relation !== "similar") parts.push("Prowadzą do różnych domen.");
   return parts.join(" ");

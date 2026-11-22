@@ -5,13 +5,28 @@ import { useEffect, useRef, useState } from "react";
 import { api, type Evidence, type Regroup } from "@/lib/api";
 import { bits, dateTime, errorText } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
-import { ErrorBox, Loading } from "./ui";
+import { ErrorBox, GroupLink, Loading } from "./ui";
 
 function GroupChanges({ changes }: { changes: Regroup }) {
   const rows = [...changes.campaign, ...changes.operator];
+  const merges = [...(changes.merged?.campaign ?? []), ...(changes.merged?.operator ?? [])];
   return <div role="status"><strong>Przeliczono grupy</strong>
-    {rows.length ? <ul>{rows.map(r => <li key={r.group}>{r.group} → {r.after.map(a => a.key + " (" + a.ads.length + ")").join(", ") || "brak grup"} · Reklamy poza grupą: {r.released.join(", ") || "brak"}</li>)}</ul> : <p>Skład grup pozostał ten sam.</p>}
+    {rows.length > 0 && <ul>{rows.map(r => <li key={r.group}>{r.group} → {r.after.map(a => a.key + " (" + a.ads.length + ")").join(", ") || "brak grup"} · Reklamy poza grupą: {r.released.join(", ") || "brak"}</li>)}</ul>}
+    {merges.length > 0 && <ul>{merges.map(m => <li key={m.group}>
+      {m.from.join(", ")} → <GroupLink group={m.group}/> · Reklamy po scaleniu: {m.ads.length}
+      {m.joined.length > 0 && <span> · Dołączone reklamy: {m.joined.map(id => <Link key={id} href={`/ads/${id}`} className="mr-1 text-accent underline">#{id}</Link>)}</span>}
+    </li>)}</ul>}
+    {!rows.length && !merges.length && <p>Skład grup pozostał ten sam.</p>}
   </div>;
+}
+
+function RestoreDetails({ id }: { id: number }) {
+  const [open, setOpen] = useState(false);
+  const result = useApi(open ? String(id) : null, () => api.premise(id));
+  return <details onToggle={e => setOpen(e.currentTarget.open)}><summary>Wynik przywrócenia</summary>
+    {open && (result.loading ? <Loading/> : result.error ? <ErrorBox message={result.error} onRetry={result.reload}/> :
+      result.data?.restored_state?.regroup ? <GroupChanges changes={result.data.restored_state.regroup}/> : <p>Brak zapisanego wyniku przeliczenia grup.</p>)}
+  </details>;
 }
 
 export function PremiseChallenge({ item, refresh }: { item: Evidence; refresh: () => void }) {
@@ -85,6 +100,7 @@ export function PremiseHistory() {
     {error && <ErrorBox message={error}/>}
     {history.loading ? <Loading/> : history.error ? <ErrorBox message={history.error} onRetry={history.reload}/> : !history.data?.results.length ? <p>Brak zapisanych zakwestionowań.</p> :
       <ul>{history.data.results.map(p => <li className="border-b border-line py-3" key={p.id}><strong>{p.label} · {p.display_value || p.value}</strong><p>{p.status_label} · {dateTime(p.created_at)} · {p.reason}</p>
+        {p.status === "restored" && <RestoreDetails id={p.id}/>}
         {p.status === "challenged" && <button disabled={busy} className="text-accent underline" onClick={() => restore(p.id)}>Przywróć przesłankę</button>}</li>)}</ul>}
   </main>;
 }

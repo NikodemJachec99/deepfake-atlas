@@ -94,6 +94,14 @@ export function Investigation() {
       })),
     [graph.data, relations, families, minP],
   );
+  const filtersChanged = relations.size !== RELATIONS.length || families.size !== FAMILIES.length || minP !== 0;
+  const resetFilters = filtersChanged && (
+    <button type="button" className="text-accent underline" onClick={() => {
+      setRelations(new Set(RELATIONS));
+      setFamilies(new Set(FAMILIES));
+      setMinP(0);
+    }}>Przywróć domyślne filtry</button>
+  );
   const visible = edges.filter((e) => !e.hidden);
   const scoped = campaignId !== null || operatorId !== null;
   const belongs = (n: (typeof nodes)[number]) => n.member ?? (campaignId !== null ? groupId(n.campaign) === campaignId : groupId(n.operator) === operatorId);
@@ -212,6 +220,7 @@ export function Investigation() {
           </div>
         </div>
 
+        {resetFilters && <div className="px-2">{resetFilters}</div>}
         <div className="flex flex-col gap-1 px-2">
           <p className="cap">Kolor węzła</p>
           <div className="flex gap-1">
@@ -279,6 +288,10 @@ export function Investigation() {
               </tr>
             </thead>
             <tbody>
+              {graph.data && !visible.length && <tr><td colSpan={7} className="text-muted">
+                {edges.length ? "Brak powiązań spełniających kryteria filtrów." : "Brak powiązań w wybranym zakresie."}
+                {edges.length > 0 && resetFilters && <> {resetFilters}</>}
+              </td></tr>}
               {visible.map((edge) => (
                 <tr key={edge.id} data-selected={edge.id === edgeId} onClick={() => { setMobileView("Porównanie"); set({ edge: edge.id }); }} className="cursor-pointer">
                   <td className="max-w-56">

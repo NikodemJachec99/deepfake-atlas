@@ -58,6 +58,23 @@ export function GenomeBands({ genome, other, caption }: { genome: Genome; other?
   );
 }
 
+// Widok prosty w inspektorze: ślady reklamy jednym akapitem zamiast pasm genomu.
+export function TraceSummary({ genome }: { genome: Genome }) {
+  const all = genome.flatMap((band) => band.markers);
+  const shared = all.filter((marker) => marker.ad_count > 1)
+    .sort((a, b) => Number(b.decisive) - Number(a.decisive) || a.ad_count - b.ad_count);
+  const names = [...new Set(shared.map((marker) => marker.label))].slice(0, 3);
+  return (
+    <section className="grid gap-1">
+      <h2 className="font-semibold">Ślady reklamy</h2>
+      <p className="text-pretty">
+        {all.length ? <>Znaleziono {all.length} {plural(all.length, "ślad", "ślady", "śladów")}, z tego {shared.length} {plural(shared.length, "wspólny", "wspólne", "wspólnych")} z innymi reklamami.</> : "Brak śladów w tej reklamie."}
+        {names.length > 0 && <> Najmocniej łączą: {names.join(", ")}.</>}
+      </p>
+    </section>
+  );
+}
+
 // Widok prosty: najmocniejsze ślady wspólne z innymi reklamami, słowami. Rozstrzygające pierwsze, potem rzadsze.
 export function KeyTraces({ genome, limit = 6 }: { genome: Genome; limit?: number }) {
   const shared = genome.flatMap((band) => band.markers.filter((marker) => marker.ad_count > 1).map((marker) => ({ marker, family: band.family })))

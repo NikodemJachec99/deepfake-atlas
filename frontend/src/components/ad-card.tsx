@@ -13,7 +13,7 @@ import { Expert, useExpert } from "@/lib/expert";
 import { useApi } from "@/lib/hooks";
 
 import { ObservationPanel } from "./observation-panel";
-import { GenomeBands, KeyTraces, MarkerList } from "./genome";
+import { GenomeBands, KeyTraces, MarkerList, TraceSummary } from "./genome";
 import { Fold, period } from "./simple";
 import { Empty, ErrorBox, Field, GroupLink, Loading, Meter, Mono, RelationTag, Tag, VerdictTag } from "./ui";
 
@@ -233,16 +233,16 @@ export function AdMeta({ ad }: { ad: AdDetail }) {
   );
 }
 
-export function EdgeRows({ edges, adId, onEdge, selected }: { edges: Edge[]; adId: number; onEdge: (edge: Edge) => void; selected?: number | null }) {
+export function EdgeRows({ edges, adId, onEdge, selected, compact = false }: { edges: Edge[]; adId: number; onEdge: (edge: Edge) => void; selected?: number | null; compact?: boolean }) {
   const { expert } = useExpert();
   if (edges.length > 0 && !expert) return (
     <div className="atlas-table" role="region" aria-label="Powiązania reklam" tabIndex={0}>
       <table className="dense">
-        <thead><tr><th>Z reklamą</th><th>Relacja</th><th className="max-md:hidden">Najwięcej wspólnego</th><th>Decyzja</th></tr></thead>
+        <thead><tr><th>Z reklamą</th><th>Relacja</th>{!compact && <th className="max-md:hidden">Najwięcej wspólnego</th>}<th>Decyzja</th></tr></thead>
         <tbody>{sortEdges(edges).map(edge => <tr key={edge.id} data-selected={selected === edge.id} onClick={() => onEdge(edge)} className="cursor-pointer">
           <td><button type="button" className="table-action" aria-label={`Dowody powiązania reklam #${edge.ad_a} i #${edge.ad_b}`}>#{edge.ad_a === adId ? edge.ad_b : edge.ad_a}</button></td>
           <td><RelationTag relation={edge.relation} duplicate={edge.duplicate} /></td>
-          <td className="text-muted max-md:hidden">{topFamilies(edge) || "—"}</td>
+          {!compact && <td className="text-muted max-md:hidden">{topFamilies(edge) || "—"}</td>}
           <td>{edge.verdict ? <VerdictTag verdict={edge.verdict} /> : <span className="text-faint">do oceny</span>}</td>
         </tr>)}</tbody>
       </table>
@@ -323,12 +323,15 @@ export function AdCard({ adId, onEdge, selectedEdge, full = false }: { adId: num
         <AdMeta ad={data} />
         {data.text && <div className="max-h-24 overflow-auto"><AdText ad={data} /></div>}
       </div>}
-      {(!full || tab === "Ślady") && <div className="border-b border-line p-2">
+      {full && tab === "Ślady" && <div className="border-b border-line p-2">
         <GenomeBands genome={data.genome} caption="Genom reklamy" />
       </div>}
+      {!full && <Expert fallback={<div className="border-b border-line p-2"><TraceSummary genome={data.genome} /></div>}>
+        <div className="border-b border-line p-2"><GenomeBands genome={data.genome} caption="Genom reklamy" /></div>
+      </Expert>}
       {full && tab === "Ślady" && <Expert fallback={<div className="border-b border-line p-3"><KeyTraces genome={data.genome} /></div>}>{null}</Expert>}
       {(!full || tab === "Powiązania") && <><p className="cap flex h-7 items-center border-b border-line px-2">Powiązania</p>
-      {edges.loading ? <Loading /> : edges.error ? <ErrorBox message={edges.error} onRetry={edges.reload} /> : <EdgeRows edges={edges.data ?? []} adId={adId} onEdge={onEdge} selected={selectedEdge} />}</>}
+      {edges.loading ? <Loading /> : edges.error ? <ErrorBox message={edges.error} onRetry={edges.reload} /> : <EdgeRows edges={edges.data ?? []} adId={adId} onEdge={onEdge} selected={selectedEdge} compact={!full} />}</>}
       {(!full || tab === "Ślady") && <Expert fallback={<div className="border-b border-line p-3">
         <Fold title={`Wszystkie ślady (${data.genome.reduce((sum, band) => sum + band.markers.length, 0)})`}><MarkerList videos={data.videos} genome={data.genome} initiallyOpen={full} /></Fold>
       </div>}><p className="cap flex h-7 items-center border-y border-line px-2">Markery</p>

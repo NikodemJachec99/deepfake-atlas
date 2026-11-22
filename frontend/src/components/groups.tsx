@@ -45,7 +45,7 @@ export function GroupList({ kind }: { kind: GroupKind }) {
     {groups.loading ? <Loading /> : groups.error ? <ErrorBox message={groups.error} onRetry={groups.reload} /> : matches.length ? <div className="atlas-table"><table className="dense"><thead><tr><th>Grupa</th><th>Nazwa</th><th>Reklamy</th><th>Źródła reklam</th><th>Sprawy</th><th>Reklamy z domeną na liście CERT</th></tr></thead>
       <tbody>{matches.map(group => <tr key={group.id}>
         <td><Link className="text-accent" href={`/${kind}/${group.id}`}>{group.key}</Link></td>
-        <td>{group.label}</td><td>{group.size}</td>
+        <td>{group.label || <span className="text-faint">bez nazwy</span>}</td><td>{group.size}</td>
         <td>{Object.entries(group.sources ?? {}).map(([key, count]) => `${SOURCE_LABELS[key] ?? key}: ${count}`).join(" · ") || "Brak danych"}</td><td>{group.cases ?? "—"}</td><td>{group.cert_pl ?? "—"}</td>
       </tr>)}</tbody></table></div> : <p>{term ? "Brak grup pasujących do wyszukiwania." : "Brak grup w wybranym zakresie."}</p>}
   </main>;
@@ -101,7 +101,7 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
   const latest = group.ads.filter(ad => ad.last_seen).sort((a,b) => Date.parse(b.last_seen!) - Date.parse(a.last_seen!))[0];
   const packageUrl = (operator ? operatorPackageUrl : campaignPackageUrl)(Number(id), { raw: includeRaw });
   return <main className="atlas-page atlas-group">
-    <header className="flex flex-wrap items-center justify-between gap-3"><div className="min-w-0 flex-1"><p className="text-sm text-muted">{group.key}{!group.label && representative && " · nazwa robocza według tytułu reklamy"}</p><h1 className="atlas-title text-pretty">{name}</h1></div>
+    <header className="flex flex-wrap items-center justify-between gap-3"><div className="min-w-0 grow basis-72"><p className="text-sm text-muted">{group.key}{!group.label && representative && " · nazwa robocza według tytułu reklamy"}</p><h1 className="atlas-title text-pretty">{name}</h1></div>
       {group.ads.length > 0 && <a className="rounded-md border border-line-strong px-3 py-2 text-accent" href={packageUrl} download>Pobierz pakiet (ZIP)</a>}
       <Link className="rounded-md bg-accent px-3 py-2 font-medium text-white" href={`/investigation?${operator ? "operator" : "campaign"}=${id}`}>Otwórz graf grupy</Link></header>
     <section><dl className="flex flex-wrap gap-x-8 gap-y-3">{metrics.map(([name,value]) => <div key={name}><dt className="text-muted">{name}</dt><dd className="text-2xl font-semibold">{value}</dd></div>)}</dl>
@@ -119,7 +119,7 @@ export function GroupCard({ kind }: { kind: GroupKind }) {
         {ad.thumbnail ? (
           // eslint-disable-next-line @next/next/no-img-element -- Obrazy pochodzą z serwera artefaktów demo.
           <img src={artifactImageUrl(ad.thumbnail.sha256)} alt={`Podgląd reklamy #${ad.id}`} loading="lazy" className="h-16 w-full rounded border border-line bg-panel object-contain" />
-        ) : <span className="grid h-16 place-items-center rounded border border-line text-sm text-muted">Brak miniatury</span>}
+        ) : <span className="grid h-16 place-items-center overflow-hidden rounded border border-line bg-panel px-1 text-xs leading-tight text-muted" title="Brak zrzutu w materiale, pokazujemy tytuł"><span className="line-clamp-3 break-words">{adTitle(ad)}</span></span>}
         #{ad.id}
       </Link>)}</div>
     </section>

@@ -70,7 +70,7 @@ export default function Archive() {
       {data.data.results.length ? <div className="atlas-table"><table className="dense"><thead><tr>
         <th>Reklama</th><th>Źródło</th><th>Sprawa</th><th>Kampania</th><th>Operator</th>
       </tr></thead><tbody>{data.data.results.map(ad => <tr key={ad.id}>
-        <td><Link className="text-accent" href={`/ads/${ad.id}`}>#{ad.id} · {adTitle(ad)}</Link></td>
+        <td className="min-w-64 whitespace-normal! [overflow-wrap:anywhere]"><Link className="text-accent" href={`/ads/${ad.id}`}>#{ad.id} · {adTitle(ad)}</Link></td>
         <td>{SOURCE_LABELS[ad.source] ?? ad.source}</td><td>{ad.case ?? "—"}</td>
         <td><GroupLink group={ad.campaign} /></td><td><GroupLink group={ad.operator} /></td>
       </tr>)}</tbody></table></div> : <div className="grid justify-items-start gap-2"><p>{query ? "Brak reklam odpowiadających filtrom." : "Archiwum jest puste."}</p>

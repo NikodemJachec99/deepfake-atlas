@@ -76,7 +76,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <div className="flex min-h-0 flex-1 flex-col overflow-auto">{children}</div>
       </div>
     </div>
-    <footer aria-label="Stan korpusu" className="flex shrink-0 gap-5 overflow-x-auto whitespace-nowrap text-xs text-muted border-t border-line bg-panel px-3 py-1 font-mono">
+    <footer aria-label="Stan korpusu" className="flex shrink-0 gap-x-5 overflow-x-auto whitespace-nowrap md:flex-wrap text-xs text-muted border-t border-line bg-panel px-3 py-1 font-mono">
       {failed ? "Statystyki korpusu niedostępne" : !stats ? "Pobieranie statystyk…" : <>
         <Link href="/alerts" className="text-accent">Nieprzejrzane alerty {stats.alerts_unseen ?? "—"}</Link><span>Reklamy {stats.ads}</span><span>Kampanie {stats.campaigns}</span><span>Operatorzy {stats.operators}</span>
         {Object.entries(RELATION_LABELS).map(([key, label]) => <span key={key}>Powiązania · {label.toLocaleLowerCase("pl")} {stats.edges[key as keyof Stats["edges"]] ?? 0}</span>)}
@@ -92,7 +92,7 @@ export interface Crumb {
 }
 
 export function TopBar({ crumbs }: { crumbs: Crumb[] }) {
-  return <nav aria-label="Ścieżka śledztwa" className="flex shrink-0 gap-2 border-b border-line bg-panel/95 px-3 py-2.5 font-medium backdrop-blur">
+  return <nav aria-label="Ścieżka śledztwa" className="flex shrink-0 flex-wrap gap-x-2 border-b border-line bg-panel/95 px-3 py-2.5 font-medium backdrop-blur">
     {crumbs.map((crumb, index) => <span key={index}>{index > 0 && " › "}
       {crumb.href ? <Link href={crumb.href}>{crumb.label}</Link> : crumb.label}
     </span>)}

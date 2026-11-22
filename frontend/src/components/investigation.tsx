@@ -233,9 +233,9 @@ export function Investigation() {
           </div>
         </div>
 
-        <p className="border-t border-line px-2 pt-2 text-xs text-faint">
-          Zakres dat, pivot po markerze i minimapa czekają na API osi czasu i wyszukiwania po markerach.
-        </p>
+        {scoped && <p className="border-t border-line px-2 pt-2 text-xs text-faint">
+          Oś obserwacji grupy jest na jej karcie.
+        </p>}
       </div>
     </Panel>
   );
@@ -245,7 +245,7 @@ export function Investigation() {
   ) : graph.error ? (
     <ErrorBox message={graph.error} onRetry={graph.reload} />
   ) : nodes.length === 0 ? (
-    <Empty title="Graf jest pusty">W tym zakresie nie ma reklam ani powiązań. Zmień zakres albo wrzuć materiał w trybie Discovery.</Empty>
+    <Empty title="Graf jest pusty">W tym zakresie nie ma reklam ani powiązań. Zmień zakres albo dodaj materiał w Analizie.</Empty>
   ) : (
     <GraphCanvas
       nodes={nodes}

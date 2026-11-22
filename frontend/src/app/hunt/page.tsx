@@ -23,13 +23,13 @@ function Candidate({ item }: { item: HuntCandidate }) {
   return <article id={`kandydat-${item.id}`} className="grid min-w-0 gap-2 border-b border-line py-4">
     <h2 className="break-all text-lg font-semibold">{item.domain}</h2>
     <p>{item.status_label} · <Link className="text-accent" href={`/operators/${item.operator_id}`}>{item.operator}</Link> · {item.sources.map(source => source === "crtsh" ? "crt.sh" : "CERT Polska").join(", ")}</p>
-    <p>Ocena wstępna {item.prelim_score.toLocaleString("pl-PL")} · Siła dowodu {item.bits == null ? "brak oceny" : bits(item.bits) + " bita"} · Prawdopodobieństwo {item.probability == null ? "brak oceny" : item.probability.toLocaleString("pl-PL", { style: "percent" })}</p>
+    <p>Ocena wstępna: {item.prelim_score.toLocaleString("pl-PL")} · Siła dowodu: {item.bits == null ? "brak oceny" : bits(item.bits) + " bita"} · Prawdopodobieństwo: {item.probability == null ? "brak oceny" : item.probability.toLocaleString("pl-PL", { style: "percent" })}</p>
     <p>{item.note} · Sprawdzenie: {dateTime(item.checked_at) || "jeszcze nie sprawdzono"}</p>
     <details><summary>Szczegóły kandydata</summary>
       {item.cert && <p>Certyfikat · {item.cert.issuer} · {item.cert.serial} · {dateTime(item.cert.not_before)}</p>}
       <p>Składniki oceny · {[...item.score_parts.tokens.map(t => t.token + " (" + t.weight + ")"), item.score_parts.template, item.score_parts.issuer].filter(Boolean).join(", ") || "brak"}</p>
       <ul>{item.evidence.map((e, i) => <li key={i}>{e.label} · {e.value} · {bits(e.bits)} bita {e.ad_ids.map(id => <Link key={id} className="mr-2 text-accent" href={`/ads/${id}`}>Reklama #{id}</Link>)}</li>)}</ul>
-      {item.screenshot_sha && <a href={artifactImageUrl(item.screenshot_sha)}>Zobacz zrzut strony</a>}
+      {item.screenshot_sha && <a className="text-accent underline" href={artifactImageUrl(item.screenshot_sha)} target="_blank" rel="noreferrer">Zobacz zrzut strony</a>}
       {item.html_sha && <a className="ml-2 text-accent" href={artifactDownloadUrl(item.html_sha)} download>Pobierz HTML</a>}
     </details>
     <button className="justify-self-start rounded border border-line px-3 py-1" disabled={pending || submitted} onClick={analyze}>{submitted ? "Zgłoszono do analizy" : pending ? "Zgłaszanie…" : "Zgłoś do analizy"}</button>
@@ -76,7 +76,8 @@ export default function HuntPage() {
     if (list.data && window.location.hash) document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
   }, [list.data]);
   return <main className="atlas-page"><h1 className="atlas-title">Łowca domen</h1>
-    <button className="self-start rounded bg-accent px-3 py-2 text-on-accent" disabled={pending || running} onClick={start}>Uruchom przebieg</button>
+    <p className="max-w-3xl text-muted">Szuka nowych domen operatorów w certyfikatach (crt.sh) i na Liście Ostrzeżeń CERT Polska. Kandydata można zgłosić do pełnej analizy.</p>
+    <button className="justify-self-start rounded bg-accent px-3 py-2 text-on-accent" disabled={pending || running} onClick={start}>Uruchom przebieg</button>
     {run && <p role="status">Przebieg · {({ queued: "w kolejce", running: "w toku", done: "zakończony", failed: "błąd" })[run.status]} {run.error}</p>}
     {error && <ErrorBox message={error}/>}
     {list.loading ? <Loading/> : list.error ? <ErrorBox message={list.error} onRetry={reload}/> : list.data && <>

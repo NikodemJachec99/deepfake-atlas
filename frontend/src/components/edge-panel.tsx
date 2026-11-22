@@ -222,6 +222,7 @@ const DECISIONS: { verdict: Exclude<Verdict, "">; label: string; key: string; ic
 
 function Decision({ edge, onSaved, refresh }: { edge: EdgeDetail; refresh: () => void; onSaved: (edge: EdgeDetail & { regroup?: Regroup }) => void }) {
   const footer = useRef<HTMLElement>(null);
+  const { expert } = useExpert();
   const reasons = useApi("verdict-reasons", api.kinds);
   const storageKey = `atlas:decision:${edge.id}:${edge.updated_at}`;
   const savedReason = edge.verdict_reason && edge.verdict_reason !== "unknown" ? edge.verdict_reason : "";
@@ -280,43 +281,61 @@ function Decision({ edge, onSaved, refresh }: { edge: EdgeDetail; refresh: () =>
     if (decision && footer.current?.getClientRects().length) edit({ selected: decision.verdict });
   });
 
+  const [notesOpen, setNotesOpen] = useState(() => Boolean(draft.note || draft.reason));
+  const tones: Record<Exclude<Verdict, "">, string> = {
+    confirmed: "aria-pressed:border-confirmed aria-pressed:bg-confirmed/10 aria-pressed:text-confirmed",
+    unsure: "aria-pressed:border-unsure aria-pressed:bg-unsure/10 aria-pressed:text-unsure",
+    rejected: "aria-pressed:border-rejected aria-pressed:bg-rejected/10 aria-pressed:text-rejected",
+  };
+
   return (
-    <footer ref={footer} className="shrink-0 border-t border-line bg-panel p-2">
-      <div className="flex items-center justify-between gap-2 pb-1.5">
-        <span className="cap">Twoja ocena powiązania</span>
+    <footer ref={footer} className="shrink-0 border-t border-line bg-panel px-3 py-2.5">
+      <div className="flex items-center justify-between gap-2 pb-2">
+        {expert ? <span className="cap">Twoja ocena powiązania</span> : <span className="font-medium">Twoja ocena<span className="hidden sm:inline">: czy hipoteza się zgadza?</span></span>}
         <span className="flex items-center gap-2 text-xs text-muted">
-          <span role="status">{busy ? "Zapisywanie…" : dirty ? "Szkic" : edge.verdict ? "Zapisana ocena" : "Do oceny"}</span>
-          <VerdictTag verdict={edge.verdict} />
-          {edge.verdict_at && <Mono>{dateTime(edge.verdict_at)}</Mono>}
+          <span role="status">{busy ? "Zapisywanie…" : dirty ? (selected ? "Wybrano, teraz zapisz ocenę" : "Szkic") : edge.verdict ? "Zapisana ocena" : expert ? "Do oceny" : ""}</span>
+          {(expert || edge.verdict) && <VerdictTag verdict={edge.verdict} />}
+          {expert && edge.verdict_at && <Mono>{dateTime(edge.verdict_at)}</Mono>}
         </span>
       </div>
-      <label className="flex flex-wrap items-center gap-2 py-1">Powód decyzji
-        <select className="max-w-full border border-line bg-panel p-1" value={reason}
-          disabled={!reasons.data?.verdict_reasons?.length || busy}
-          onChange={event => edit({ reason: event.target.value as typeof reason })}>
-          <option value="">{reasons.loading ? "Pobieranie powodów…" : reasons.data?.verdict_reasons?.length ? "Bez podanego powodu" : "Lista powodów niedostępna"}</option>
-          {reasons.data?.verdict_reasons?.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
-        </select>
-      </label>
-      <label className="block">Dodaj uzasadnienie<textarea disabled={busy}
-        value={note}
-        onChange={(event) => edit({ note: event.target.value })}
-        rows={2}
-        placeholder="Uzasadnienie (opcjonalne). Trafia do dziennika audytu razem z decyzją."
-        className="w-full resize-none rounded-sm border border-line bg-bg px-2 py-1 outline-none placeholder:text-faint focus:border-accent"
-      /></label>
-      <div className="flex flex-wrap items-center gap-1.5 pt-1.5">
+      <div className="grid grid-cols-3 gap-2">
         {DECISIONS.map(({ verdict, label, key, icon: Icon }) => (
-          <Btn key={verdict} disabled={busy || stale} active={selected === verdict} onClick={() => edit({ selected: verdict })} className="flex-1">
-            <Icon size={13} />
+          <button key={verdict} type="button" disabled={busy || stale} aria-pressed={selected === verdict} onClick={() => edit({ selected: verdict })}
+            className={`flex min-h-11 items-center justify-center gap-1.5 rounded-md border-2 border-line-strong bg-raised px-1.5 text-sm leading-tight font-medium transition-colors hover:bg-hover disabled:opacity-40 sm:gap-2 sm:text-base ${tones[verdict]}`}>
+            <Icon size={18} aria-hidden className="shrink-0" />
             {label}
-            <Kbd>{key}</Kbd>
-          </Btn>
+            <span className="hidden sm:inline-flex"><Kbd>{key}</Kbd></span>
+          </button>
         ))}
       </div>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-muted" title={edge.updated_at}>Wersja dowodów · {dateTime(edge.updated_at)}</span>
-        {dirty && <button type="button" disabled={busy} onClick={discardDraft} className="text-accent underline">Cofnij zmiany szkicu</button>}
-        <Btn disabled={!dirty || !selected || busy || stale} onClick={() => selected && decide(selected)}>Zapisz ocenę</Btn></div>
+      {notesOpen && <div className="mt-2 grid gap-2">
+        <label className="flex flex-wrap items-center gap-2">Powód decyzji
+          <select className="max-w-full min-w-0 flex-1 rounded-sm border border-line bg-panel p-1" value={reason}
+            disabled={!reasons.data?.verdict_reasons?.length || busy}
+            onChange={event => edit({ reason: event.target.value as typeof reason })}>
+            <option value="">{reasons.loading ? "Pobieranie powodów…" : reasons.data?.verdict_reasons?.length ? "Bez podanego powodu" : "Lista powodów niedostępna"}</option>
+            {reasons.data?.verdict_reasons?.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+          </select>
+        </label>
+        <label className="block">Uzasadnienie<textarea disabled={busy}
+          value={note}
+          onChange={(event) => edit({ note: event.target.value })}
+          rows={2}
+          placeholder="Opcjonalne. Trafia do dziennika audytu razem z decyzją."
+          className="mt-1 w-full resize-none rounded-sm border border-line bg-bg px-2 py-1 outline-none placeholder:text-faint focus:border-accent"
+        /></label>
+      </div>}
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <button type="button" aria-expanded={notesOpen} onClick={() => setNotesOpen(!notesOpen)} className="text-accent hover:underline">
+          {notesOpen ? "Ukryj uzasadnienie" : note || reason ? "Uzasadnienie dodane, pokaż" : "Dodaj uzasadnienie"}
+        </button>
+        {expert && <span className="text-xs text-muted" title={edge.updated_at}>Wersja dowodów · {dateTime(edge.updated_at)}</span>}
+        <span className="ml-auto flex items-center gap-3">
+          {dirty && <button type="button" disabled={busy} onClick={discardDraft} className="text-muted underline hover:text-fg">Cofnij</button>}
+          <button type="button" disabled={!dirty || !selected || busy || stale} onClick={() => selected && decide(selected)}
+            className="min-h-10 rounded-md border border-accent bg-accent px-4 font-medium text-on-accent transition hover:brightness-110 disabled:border-line-strong disabled:bg-raised disabled:text-muted">Zapisz ocenę</button>
+        </span>
+      </div>
       {stale && <p role="alert" className="mt-2 rounded border border-unsure p-2">Dowody tej pary zmieniły się od wczytania (np. po zakwestionowaniu przesłanki), więc ocena nie została zapisana. <button className="text-accent underline" onClick={refresh}>Odśwież dane</button> i oceń ponownie.</p>}
       {error && <p className="pt-1 text-rejected">Decyzja nie została zapisana: {error}</p>}
     </footer>

@@ -8,6 +8,8 @@ import { useApi } from "@/lib/hooks";
 import { EdgePanel, regroupMessage } from "@/components/edge-panel";
 import { ErrorBox, Loading } from "@/components/ui";
 import { VERDICT_LABELS } from "@/lib/format";
+import { useExpert } from "@/lib/expert";
+import { CircleCheck, X } from "lucide-react";
 
   function navigate(targetPage: number, edge: number | null, compare: boolean, replace = false) {
     const url = new URL(window.location.href);
@@ -29,6 +31,7 @@ export default function ReviewPage() {
   const requestedEdge = params.get("edge");
   const selected = requestedEdge === null ? null : Number(requestedEdge);
   const comparing = params.get("view") === "compare";
+  const { expert } = useExpert();
   const queue = useApi("review:" + page, () => api.review({ page }));
 
   const outOfRange = page > 1 && queue.status === 404;
@@ -63,7 +66,11 @@ export default function ReviewPage() {
       </>}
     </aside>
     <section className={`min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-line bg-panel lg:flex ${comparing ? "flex" : "hidden"}`}>
-      {message && <p role="status" className="border-b border-line border-l-4 border-l-confirmed bg-accent-soft p-3">{message}</p>}
+      {message && <div role="status" className="flex items-start gap-2 border-b border-line border-l-4 border-l-confirmed bg-confirmed/10 p-3">
+        <CircleCheck size={18} aria-hidden className="mt-0.5 shrink-0 text-confirmed" />
+        <p className="min-w-0 flex-1">{message}</p>
+        <button type="button" aria-label="Zamknij komunikat" onClick={() => setMessage("")} className="shrink-0 text-muted hover:text-fg"><X size={16} aria-hidden /></button>
+      </div>}
       {missing && <div role="status" className="grid justify-items-start gap-3 p-4">
         <h2 className="font-semibold">Wskazanej pary nie ma na tej stronie kolejki.</h2>
         {Number.isSafeInteger(selected) && selected > 0 && <Link className="text-accent underline" href={`/investigation?scope=all&edge=${selected}`}>Sprawdź krawędź #{selected} w śledztwie</Link>}
@@ -71,9 +78,12 @@ export default function ReviewPage() {
       </div>}
       {!current && comparing && !missing && (queue.loading ? <Loading/> : queue.error ? <ErrorBox message={queue.error} onRetry={queue.reload}/> : <button onClick={() => navigate(page, null, false)}>Wróć do kolejki</button>)}
       {current && <EdgePanel key={current.id} edgeId={current.id} review={current} onVerdict={saved => {
-        setMessage(regroupMessage(saved.regroup, `Zapisano ocenę pary #${saved.ad_a} ↔ #${saved.ad_b}${saved.verdict ? ": " + VERDICT_LABELS[saved.verdict].toLowerCase() : ""}.`));
         const index = rows.findIndex(row => row.id === saved.id);
         const next = (rows[index+1] ?? rows.find(row => row.id !== saved.id))?.id ?? null;
+        const verdict = saved.verdict ? VERDICT_LABELS[saved.verdict].toLowerCase() : "";
+        setMessage(regroupMessage(saved.regroup, expert
+          ? `Zapisano ocenę pary #${saved.ad_a} ↔ #${saved.ad_b}${verdict ? ": " + verdict : ""}.`
+          : `Ocena zapisana${verdict ? ": " + verdict : ""}. ${next !== null || page > 1 ? "Otwarto następną parę." : "To była ostatnia para na tej stronie."}`));
         if (rows.length === 1 && page > 1) navigate(page-1, null, true, true);
         else {
           navigate(page, next, comparing, true);

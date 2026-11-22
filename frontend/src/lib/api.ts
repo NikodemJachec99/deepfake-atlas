@@ -441,10 +441,19 @@ export interface CoreMarker {
   display_value: string; // nazwisko zamiast person:ID; dla pozostałych typów równe value
   in_group: number;
   ad_count: number;
+  // Wkład w grupę: suma weight_bits dowodów tego śladu na krawędziach grupy (null, gdy żadna krawędź go nie używa).
+  bits: number | null;
+  // Ile krawędzi grupy ma dowód z tym śladem.
+  edges: number;
+}
+
+// Reklama na karcie grupy: lista reklam plus miniatura (pierwsza kreacja albo zrzut strony; null, gdy brak obrazu).
+export interface GroupAd extends AdSummary {
+  thumbnail: { sha256: string; image: string } | null;
 }
 
 export interface GroupDetail extends Group {
-  ads: AdSummary[];
+  ads: GroupAd[];
   edges: Edge[];
   core_markers: CoreMarker[];
 }

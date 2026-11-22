@@ -137,9 +137,12 @@ def limitations(edge: Edge, rows, reason: str) -> list[str]:
             out.append("kopia treści bez wspólnej infrastruktury")
     if edge.relation in (Edge.Relation.SAME_OPERATOR, Edge.Relation.SAME_CAMPAIGN) and sum(1 for r in rows if r.decisive) == 1 and len(_independent_families(rows)) < 2:
         out.append("jeden decydujący ślad, bez niezależnego potwierdzenia")
-    shared = sorted(((r.df, r) for r in rows if r.df >= HIGH_DF), key=lambda t: -t[0])
-    for df, row in shared[:2]:
-        label = KINDS[row.kind].label if row.kind in KINDS else row.kind
+    shared: dict[str, int] = {}
+    for row in rows:
+        if row.df >= HIGH_DF:
+            label = KINDS[row.kind].label if row.kind in KINDS else row.kind
+            shared[label] = max(shared.get(label, 0), row.df)
+    for label, df in sorted(shared.items(), key=lambda t: -t[1])[:2]:
         out.append(f"ślad „{label}” współdzielony przez {df} reklam")
     if rows and all(KINDS[r.kind].motif for r in rows if r.kind in KINDS):
         out.append("tylko wspólny motyw (osoba, marka, tematyka)")
@@ -152,7 +155,7 @@ def limitations(edge: Edge, rows, reason: str) -> list[str]:
     return out
 
 
-def _thumbnails(ads) -> dict[int, str | None]:
+def thumbnails(ads) -> dict[int, str | None]:
     """Pierwsza kreacja reklamy, a gdy jej nie ma zrzut strony docelowej z ostatniej analizy."""
     thumbs: dict[int, str | None] = {}
     for ad in ads:
@@ -182,7 +185,7 @@ def serialize(items: list[dict]) -> list[dict]:
     for item in items:
         for ad in (item["edge"].ad_a, item["edge"].ad_b):
             ads[ad.pk] = ad
-    thumbs = _thumbnails(ads.values())
+    thumbs = thumbnails(ads.values())
     names = person_names()
 
     def ad_out(ad) -> dict:

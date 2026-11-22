@@ -43,7 +43,7 @@ from similarity import (
     timeline,
     weakest,
 )
-from similarity.models import Alert, Campaign, CampaignMembership, Edge, EdgeDecision, Operator, OperatorMembership, Premise
+from similarity.models import Alert, Campaign, CampaignMembership, Edge, EdgeDecision, EdgeEvidence, Operator, OperatorMembership, Premise
 from similarity.service import assign_campaign, assign_operator, recluster
 from workflows import runner
 
@@ -462,6 +462,21 @@ def campaign_package(request, pk):
     return _package_response(request, "campaign", Campaign, pk)
 
 
+def _trace_contribution(edges, traces: set[tuple[str, str]]) -> dict[tuple[str, str], dict]:
+    """Wkład śladu w grupę: suma `weight_bits` jego dowodów na krawędziach grupy (`bits`) i liczba tych krawędzi (`edges`).
+    Dowód liczy się, gdy ma rodzaj śladu i jego wartość po stronie A albo B; krawędzie odrzucone nie liczą się. Ślad bez dowodu na krawędzi nie ma wpisu."""
+    kinds = {kind for kind, _ in traces}
+    totals: dict[tuple[str, str], dict] = {}
+    rows = EdgeEvidence.objects.filter(edge__in=edges.exclude(verdict=Edge.Verdict.REJECTED), kind__in=kinds).values_list("edge_id", "kind", "value_a", "value_b", "weight_bits")
+    for edge_id, kind, value_a, value_b, bits in rows:
+        for value in {value_a, value_b}:
+            if (kind, value) in traces:
+                entry = totals.setdefault((kind, value), {"bits": 0.0, "edge_ids": set()})
+                entry["bits"] += bits
+                entry["edge_ids"].add(edge_id)
+    return {key: {"bits": round(v["bits"], 2), "edges": len(v["edge_ids"])} for key, v in totals.items()}
+
+
 def _group_detail(group, serializer, relations: list[str]) -> dict:
     """Wspólny kształt karty kampanii i operatora: reklamy, krawędzie i markery, które grupę spinają."""
     ad_ids = list(group.memberships.values_list("ad_id", flat=True))
@@ -476,9 +491,17 @@ def _group_detail(group, serializer, relations: list[str]) -> dict:
         .order_by("-in_group")[:80]
     )
     names = person_names()
+    ads = list(ads)
+    thumbs = review.thumbnails(ads)
+    ads_data = s.AdListSerializer(ads, many=True).data
+    for row, ad in zip(ads_data, ads, strict=True):
+        sha = thumbs.get(ad.pk)
+        row["thumbnail"] = {"sha256": sha, "image": f"/api/artifacts/{sha}/image"} if sha else None
+    core = list(core)
+    contribution = _trace_contribution(edges, {(r["marker__kind"], r["marker__value"]) for r in core})
     return {
         **serializer(group).data,
-        "ads": s.AdListSerializer(ads, many=True).data,
+        "ads": ads_data,
         "edges": s.EdgeSerializer(edges, many=True).data,
         "core_markers": [
             {
@@ -490,6 +513,7 @@ def _group_detail(group, serializer, relations: list[str]) -> dict:
                 "display_value": display_value(row["marker__kind"], row["marker__value"], names),
                 "in_group": row["in_group"],
                 "ad_count": row["marker__ad_count"],
+                **contribution.get((row["marker__kind"], row["marker__value"]), {"bits": None, "edges": 0}),
             }
             for row in core
         ],

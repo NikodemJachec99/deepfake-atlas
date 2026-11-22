@@ -32,7 +32,7 @@ Frontend niczego nie liczy sam. Każda wartość na ekranie pochodzi z tych wywo
 | GET | `/api/premises/{id}` | | `Premise` ze stanem przed, po i po przywróceniu |
 | POST | `/api/premises/{id}/restore` | | `Premise` plus `regroup`: ślad wraca, krawędzie i grupy przeliczone |
 | GET | `/api/campaigns` | `?page=`, `?source=capture` (po przecinku kilka) | strona `GroupListItem`: grupy z `size`, `sources`, `cases`, `cert_pl` |
-| GET | `/api/campaigns/{id}` | | reklamy, krawędzie, markery rdzeniowe |
+| GET | `/api/campaigns/{id}` | | reklamy (z `thumbnail`), krawędzie, markery rdzeniowe (z `bits` i `edges`), opis niżej |
 | GET | `/api/operators` | `?page=`, `?source=capture` | strona `GroupListItem`, jak kampanie |
 | GET | `/api/operators/{id}` | | jak kampania, plus lista `campaigns` operatora |
 | GET | `/api/campaigns/{id}/timeline` | | `Timeline`: oś obserwacji kampanii (opis niżej) |
@@ -497,6 +497,18 @@ Alert powstaje w etapie `cluster`, gdy reklama (import paczki, upload, skan bibl
 | `seen`, `seen_at` | czy przejrzany i kiedy |
 
 Lista jest stronicowana jak inne (`count`, `next`, `previous`, `results`). `?unseen=1` zostawia nieprzejrzane.
+
+## Karta grupy: miniatury i wkład śladów
+
+`GET /api/operators/{id}` i `GET /api/campaigns/{id}` zwracają `ads` (jak lista reklam), `edges` i `core_markers`. Pola dodane na potrzeby karty:
+
+| Pole | Znaczenie |
+|---|---|
+| `ads[].thumbnail` | `{sha256, image}` albo `null`. Źródło: pierwsza kreacja reklamy (`raw.creatives`), a gdy jej nie ma zrzut strony docelowej z ostatniej analizy. `image` to `/api/artifacts/{sha256}/image`. `null` oznacza brak obrazu, nic nie jest podstawiane |
+| `core_markers[].bits` | wkład śladu w grupę: suma `weight_bits` dowodów (`EdgeEvidence`) o tym rodzaju i tej wartości (po stronie A albo B) na krawędziach grupy z tej odpowiedzi bez odrzuconych (`verdict: rejected`), czyli o relacjach karty (kampania: `same_campaign`, operator: `same_campaign` i `same_operator`), zaokrąglona do 0,01. To miara sumaryczna, rośnie z liczbą krawędzi, nie z siłą jednego śladu. `null`, gdy żadna krawędź grupy nie ma dowodu z tym śladem |
+| `core_markers[].edges` | liczba krawędzi grupy z takim dowodem (`0`, gdy `bits` jest `null`) |
+
+Istniejące `decisive`, `in_group` i `ad_count` zostają bez zmian.
 
 ## Kolejka "Do oceny" (`ReviewItem`)
 

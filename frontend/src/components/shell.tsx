@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardCheck, ScanSearch, Scale, Bell, Archive, Compass, FolderOpen, Network, UsersRound } from "lucide-react";
+import { History, ClipboardCheck, ScanSearch, Scale, Bell, Archive, Compass, FolderOpen, Network, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -13,14 +13,14 @@ const sections: Record<string, string> = {
   "/operators": "Operatorzy", "/campaigns": "Kampanie", "/ads": "Reklamy", "/alerts": "Alerty", "/weights": "Wagi markerów",
 };
 
-const compactSections: Record<string, string> = { "/hunt": "Domeny", "/weights": "Wagi" };
+const compactSections: Record<string, string> = { "/hunt": "Domeny", "/weights": "Wagi", "/premises": "Historia" };
 
 const navigation = [
   { label: "", links: [{ href: "/review", Icon: ClipboardCheck }] },
   { label: "Materiały", links: [{ href: "/", Icon: Compass }, { href: "/archive", Icon: Archive }] },
   { label: "Powiązania", links: [{ href: "/investigation", Icon: Network }, { href: "/campaigns", Icon: FolderOpen }, { href: "/operators", Icon: UsersRound }] },
   { label: "Monitoring", links: [{ href: "/alerts", Icon: Bell }, { href: "/hunt", Icon: ScanSearch }] },
-  { label: "Model i jakość", links: [{ href: "/weights", Icon: Scale }] },
+  { label: "Model i jakość", links: [{ href: "/weights", Icon: Scale }, { href: "/premises", Icon: History }] },
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {

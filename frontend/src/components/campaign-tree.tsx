@@ -63,10 +63,11 @@ export function CampaignTree({ groups, map, onMapChange, expanded, toggleCampaig
       <div className="flex rounded-lg bg-panel p-1">{["Drzewo kampanii", "Mapa węzłów"].map((name,i) =>
         <button key={name} aria-pressed={map === Boolean(i)} className="rounded-md px-3 py-2 font-medium aria-pressed:bg-raised aria-pressed:text-accent aria-pressed:shadow-sm"
           onClick={() => onMapChange(Boolean(i))}>{name}</button>)}</div>
-      {!map && <input type="search" aria-label="Szukaj kampanii" placeholder="Szukaj kampanii…" value={query} onChange={e=>setQuery(e.target.value)} className="max-w-full rounded-md border border-line-strong px-3 py-2" />}
+      <input type="search" aria-label="Szukaj kampanii" placeholder="Szukaj kampanii…" value={query} onChange={e=>setQuery(e.target.value)} className="max-w-full rounded-md border border-line-strong px-3 py-2" />
     </div>
-    {map ? <CampaignMap loadOperators={loadOperators} groups={groups} expanded={expanded} onToggle={toggleCampaign} /> : <section aria-label="Drzewo kampanii">
-      {!visible.length && <p>Brak kampanii odpowiadających wyszukiwaniu.</p>}
+    {!visible.length ? <p role="status">Brak kampanii odpowiadających wyszukiwaniu.</p> : map ?
+      <CampaignMap key={visible.map(group => group.id).join(",")} loadOperators={loadOperators} groups={visible} expanded={expanded} onToggle={toggleCampaign} /> :
+      <section aria-label="Drzewo kampanii">
       {visible.map(group => {
         const open = expanded.has(group.id);
         const Icon = open ? ChevronDown : ChevronRight;

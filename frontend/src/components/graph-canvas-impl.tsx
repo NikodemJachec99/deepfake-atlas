@@ -1,7 +1,7 @@
 "use client";
 
 // Płótno grafu: Sigma.js + Graphology. Węzeł to reklama, krawędź to relacja z dowodami.
-// Styl krawędzi koduje relację, kolor dominującą rodzinę markerów, grubość pewność.
+// Styl krawędzi koduje relację, kolor dominującą rodzinę markerów, grubość wynik modelu (niekalibrowany).
 
 import { layerBorder } from "@sigma/node-border";
 import Graph from "graphology";
@@ -344,7 +344,7 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
       const isSelected = edge.id === selectedEdge;
       const touchesNode = selectedNode != null && (edge.source === selectedNode || edge.target === selectedNode);
       const base = edge.verdict === "rejected" ? faint : edge.family ? family[edge.family] : muted;
-      // Pewność koduje grubość i nasycenie. Relacja koduje styl linii.
+      // Wynik modelu (niekalibrowany) koduje grubość i nasycenie. Relacja koduje styl linii.
       const strength = 0.45 + 0.55 * edge.probability;
       const opacity = edge.verdict === "rejected" ? 0.35 : anySelection && !isSelected && !touchesNode ? 0.18 : strength;
       const width = edge.relation === "same_campaign" ? 1.5 + 2.5 * edge.probability : edge.relation === "same_operator" ? 0.6 + 0.9 * edge.probability : 1.2;
@@ -456,7 +456,7 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
             <span>{RELATION_LABELS[hoveredEdge.relation]}</span>
             {hoveredEdge.duplicate && <span className="text-new">duplikat</span>}
             <span>
-              pewność <Mono>{prob(hoveredEdge.probability)}</Mono>
+              wynik modelu (niekalibrowany) <Mono>{prob(hoveredEdge.probability)}</Mono>
             </span>
             {hoveredEdge.family && (
               <span className="flex items-center gap-1">

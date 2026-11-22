@@ -15,8 +15,8 @@ import type { VerdictReason } from "@/lib/api";
 import { EvidenceLab } from "./evidence-lab";
 import { useState } from "react";
 
-import { api, artifactDownloadUrl, artifactImageUrl, type AdDetail, type AdSummary, type EdgeDetail, type Evidence, type Verdict } from "@/lib/api";
-import { markerValue, RELATION_HINT, adTitle, bits, dateTime, errorText, famVar, hostOf, num, plural } from "@/lib/format";
+import { api, ApiError, artifactDownloadUrl, artifactImageUrl, type AdDetail, type AdSummary, type EdgeDetail, type Evidence, type Verdict } from "@/lib/api";
+import { utcEdgeVersion, markerValue, RELATION_HINT, adTitle, bits, dateTime, errorText, famVar, hostOf, num, plural } from "@/lib/format";
 import { isTyping, useApi, useHotkey } from "@/lib/hooks";
 
 import { Btn, Empty, ErrorBox, FamilyBar, FamilyDot, GroupLink, Kbd, Loading, Meter, Mono, RelationTag, Tag, VerdictTag } from "./ui";
@@ -70,7 +70,7 @@ function AdSide({ ad, detail, side, onOpenAd }: { ad: AdSummary; detail?: AdDeta
 }
 
 // Karta dowodu. Zwinięta: rodzina, marker, wartość, rzadkość, wkład. Rozwinięta: obie strony, wagi, artefakty.
-function EvidenceCard({ item, max, ads }: { item: Evidence; max: number; ads: [AdDetail | undefined, AdDetail | undefined] }) {
+function EvidenceCard({ item, max }: { item: Evidence; max: number }) {
   const [open, setOpen] = useState(false);
   const soft = item.df === 0;
   const same = item.value_a === item.value_b;
@@ -132,17 +132,11 @@ function EvidenceCard({ item, max, ads }: { item: Evidence; max: number; ads: [A
                   </p>
                 </div>
               )}
-              {VISUAL_KINDS.has(item.kind) && (ads[0]?.creatives.length || ads[1]?.creatives.length) ? (
-                <div className="grid grid-cols-2 gap-2">
-                  {ads.map((ad, index) => (
-                    <div key={index} className="flex min-w-0 flex-col gap-1">
-                      {(ad?.creatives ?? []).slice(0, 2).map((sha) => (
-                        <Creative key={sha} sha={sha} label={`Zrzut reklamy ${index === 0 ? "A" : "B"}`} />
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              ) : null}
+              {VISUAL_KINDS.has(item.kind) && <div className="grid grid-cols-2 gap-2">
+                {([["A", item.artifact_a], ["B", item.artifact_b]] as const).map(([side, sha]) => sha
+                  ? <Creative key={side} sha={sha} label={`Artefakt dowodu · ${side}`} />
+                  : <p key={side} className="text-muted">{side} · Brak artefaktu dowodu</p>)}
+              </div>}
               <p className="text-muted">
                 Wkład <Mono className="text-fg">{bits(item.weight_bits)}</Mono> bita
                 {discounted && (
@@ -181,7 +175,7 @@ const DECISIONS: { verdict: Exclude<Verdict, "">; label: string; key: string; ic
   { verdict: "rejected", label: "Odrzuć", key: "O", icon: X },
 ];
 
-function Decision({ edge, onSaved }: { edge: EdgeDetail; onSaved: (edge: EdgeDetail) => void }) {
+function Decision({ edge, onSaved, refresh }: { edge: EdgeDetail; refresh: () => void; onSaved: (edge: EdgeDetail) => void }) {
   const reasons = useApi("verdict-reasons", api.kinds);
   const [reason, setReason] = useState<Exclude<VerdictReason, "unknown"> | "">(
     edge.verdict_reason && edge.verdict_reason !== "unknown" ? edge.verdict_reason : ""
@@ -190,20 +184,22 @@ function Decision({ edge, onSaved }: { edge: EdgeDetail; onSaved: (edge: EdgeDet
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  const [stale, setStale] = useState(false);
   async function decide(verdict: Exclude<Verdict, "">) {
     setBusy(true);
     setError("");
     try {
-      onSaved(await api.setVerdict(edge.id, verdict, note, reason || undefined));
+      onSaved(await api.setVerdict(edge.id, verdict, note, reason || undefined, utcEdgeVersion(edge.updated_at)));
     } catch (reason) {
-      setError(errorText(reason));
+      if (reason instanceof ApiError && reason.status === 409) setStale(true);
+      else setError(errorText(reason));
     } finally {
       setBusy(false);
     }
   }
 
   useHotkey((event) => {
-    if (isTyping(event) || event.ctrlKey || event.metaKey || event.altKey || busy) return;
+    if (isTyping(event) || event.ctrlKey || event.metaKey || event.altKey || busy || stale) return;
     const decision = DECISIONS.find((d) => d.key.toLowerCase() === event.key.toLowerCase());
     if (decision) void decide(decision.verdict);
   });
@@ -234,7 +230,7 @@ function Decision({ edge, onSaved }: { edge: EdgeDetail; onSaved: (edge: EdgeDet
       />
       <div className="flex items-center gap-1.5 pt-1.5">
         {DECISIONS.map(({ verdict, label, key, icon: Icon }) => (
-          <Btn key={verdict} disabled={busy} active={edge.verdict === verdict} onClick={() => decide(verdict)} className="flex-1">
+          <Btn key={verdict} disabled={busy || stale} active={edge.verdict === verdict} onClick={() => decide(verdict)} className="flex-1">
             <Icon size={13} />
             {label}
             <Kbd>{key}</Kbd>
@@ -242,6 +238,7 @@ function Decision({ edge, onSaved }: { edge: EdgeDetail; onSaved: (edge: EdgeDet
         ))}
       </div>
       <p className="pt-1 text-[0.85rem] text-faint">Odrzucona krawędź przestaje spinać kampanię i operatora.</p>
+      {stale && <p role="alert">Dane krawędzi zmieniły się. <button className="text-accent underline" onClick={refresh}>Odśwież dane</button></p>}
       {error && <p className="pt-1 text-rejected">Decyzja nie została zapisana: {error}</p>}
     </footer>
   );
@@ -281,7 +278,7 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict }: { edgeId: number; onO
           </p>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
             <span className="flex items-center gap-2">
-              <span className="text-muted">pewność</span>
+              <span className="text-muted">wynik modelu (niekalibrowany)</span>
               <Meter value={data.probability} width={96} />
             </span>
             <span>
@@ -313,12 +310,13 @@ export function EdgePanel({ edgeId, onOpenAd, onVerdict }: { edgeId: number; onO
         ) : (
           <ul>
             {evidence.map((item, index) => (
-              <EvidenceCard key={`${item.kind}:${item.value_a}:${index}`} item={item} max={max} ads={[adA.data, adB.data]} />
+              <EvidenceCard key={`${item.kind}:${item.value_a}:${index}`} item={item} max={max} />
             ))}
           </ul>
         )}
       <Decision
-        key={`${data.id}:${data.verdict}:${data.verdict_at}`}
+        key={`${data.id}:${data.updated_at}:${data.verdict_at}`}
+        refresh={edge.reload}
         edge={data}
         onSaved={(saved) => {
           edge.set(saved);

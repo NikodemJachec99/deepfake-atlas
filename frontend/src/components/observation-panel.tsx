@@ -5,16 +5,24 @@ import Link from "next/link";
 import { useState } from "react";
 import { api, artifactDownloadUrl, type ObservationSide } from "@/lib/api";
 import { dateTime } from "@/lib/format";
+import { useExpert } from "@/lib/expert";
 import { useApi } from "@/lib/hooks";
 import { ErrorBox, Loading } from "./ui";
 
 function Capture({ side }: { side: ObservationSide }) {
-  return <article className="min-w-0 space-y-1 break-words border border-line p-2">
-    <h4><Link href={`/ads/${side.ad}`} className="text-accent underline">Materiał #{side.ad}</Link> · {side.title || "Brak tytułu"}</h4>
+  const { expert } = useExpert();
+  const technical = <>
     <p className="break-all font-mono">{side.exact_url || "Adres nieznany"}</p>
-    <p>{dateTime(side.captured_at) || "Data nieznana"} · {side.time_source || "Źródło daty nieznane"}</p>
+    {expert && <p>{dateTime(side.captured_at) || "Data nieznana"} · {side.time_source || "Źródło daty nieznane"}</p>}
     <p>Źródła obserwacji · {side.sources.join(", ") || "Brak informacji"}</p>
     <p>Kontekst · {side.context ? [side.context.browser, side.context.platform, side.context.accept_language].filter(Boolean).join(", ") || "Nieznany" : "Nieznany"}</p>
+  </>;
+  return <article className={expert ? "min-w-0 space-y-1 break-words border border-line p-2" : "min-w-0 space-y-2 break-words rounded-lg border border-line p-3"}>
+    <h4><Link href={`/ads/${side.ad}`} className="text-accent underline">Materiał #{side.ad}</Link> · {side.title || "Brak tytułu"}</h4>
+    {expert ? technical : <>
+      <p className="text-muted">Przechwycono {dateTime(side.captured_at) || "w nieznanym terminie"}</p>
+      <details className="text-sm"><summary className="cursor-pointer text-accent">Adres i kontekst przechwycenia</summary><div className="mt-1 space-y-1">{technical}</div></details>
+    </>}
     {side.artifacts?.page_screenshot ? <CrawlShot sha={side.artifacts.page_screenshot.sha256} /> : <p>Brak zrzutu strony docelowej.</p>}
     {side.text_excerpt?.text ? <figure>
       <figcaption className="text-muted">Fragment tekstu strony · {side.text_excerpt.source}</figcaption>
@@ -35,6 +43,12 @@ export function ObservationPanel({ adId }: { adId: number }) {
   const partner = candidates?.find(item => item.ad === chosen) ?? candidates?.[0];
   const pair = useApi(open && partner ? `${adId}/${partner.ad}` : null, () => api.compareObservations(adId, partner!.ad));
   const result = pair.data;
+  const { expert } = useExpert();
+  const differences = result && <>
+    <h3 className={expert ? undefined : "font-semibold"}>Różnice między obserwacjami</h3>
+    {result.differences.length ? <ul className={expert ? undefined : "list-disc pl-5"}>{result.differences.map(text => <li key={text}>{text}</li>)}</ul> : <p>API nie wskazało różnic.</p>}
+    {!!result.hypotheses.length && <section><h3 className={expert ? undefined : "font-semibold"}>Możliwe wyjaśnienia</h3><ul className={expert ? undefined : "list-disc pl-5"}>{result.hypotheses.map(text => <li key={text}>{text}</li>)}</ul></section>}
+  </>;
   return <section className="grid gap-2 border-y border-line p-2">
     <button className="w-fit rounded-md border border-line bg-panel px-3 py-2 text-sm font-medium text-accent hover:underline" aria-expanded={open} onClick={() => setOpen(!open)}>Dwie twarze jednego linku</button>
     {open && (observations.loading ? <Loading /> : observations.error ? <ErrorBox message={observations.error} onRetry={observations.reload} /> :
@@ -43,11 +57,10 @@ export function ObservationPanel({ adId }: { adId: number }) {
           {candidates?.map(item => <option key={item.ad} value={item.ad}>#{item.ad} · {item.url_match_label} · {item.title || item.external_id}</option>)}
         </select></label>
         {pair.loading ? <Loading /> : pair.error ? <ErrorBox message={pair.error} onRetry={pair.reload} /> : result && <>
-          <p aria-live="polite">{result.url_match_label} · {result.verdict_label}</p>
+          <p aria-live="polite" className={expert ? undefined : "text-lg font-medium"}>{result.url_match_label} · {result.verdict_label}</p>
+          {!expert && differences}
           <div className="grid gap-2 lg:grid-cols-2"><Capture side={result.a} /><Capture side={result.b} /></div>
-          <h3>Różnice między obserwacjami</h3>
-          {result.differences.length ? <ul>{result.differences.map(text => <li key={text}>{text}</li>)}</ul> : <p>API nie wskazało różnic.</p>}
-          {!!result.hypotheses.length && <section><h3>Możliwe wyjaśnienia</h3><ul>{result.hypotheses.map(text => <li key={text}>{text}</li>)}</ul></section>}
+          {expert && differences}
           {result.limitations.map(text => <p key={text}>{text}</p>)}
           {result.edge && <Link className="text-accent underline" href={`/investigation?ad=${adId}&edge=${result.edge.id}`}>Dowody powiązania #{result.edge.id}</Link>}
           <p>{result.note}</p>

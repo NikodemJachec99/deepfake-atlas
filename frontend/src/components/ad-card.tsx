@@ -44,8 +44,9 @@ function AdText({ ad }: { ad: AdDetail }) {
 
 function Speech({ speech }: { speech: NonNullable<AdDetail["videos"][number]["speech"]> }) {
   const [expanded, setExpanded] = useState(false);
+  const { expert } = useExpert();
   return <section className="mt-2">
-    <h3 className="font-medium">Mowa z nagrania (Whisper {speech.model}, pierwsze {speech.audio_s.toLocaleString("pl-PL")} s)</h3>
+    <h3 className="font-medium">Mowa z nagrania ({expert && `Whisper ${speech.model}, `}pierwsze {speech.audio_s.toLocaleString("pl-PL")} s)</h3>
     <p className={expanded ? "whitespace-pre-wrap" : "line-clamp-3"}>{speech.text}</p>
     <button aria-expanded={expanded} className="text-accent underline" onClick={() => setExpanded(!expanded)}>{expanded ? "Zwiń transkrypcję" : "Rozwiń transkrypcję"}</button>
     {speech.truncated && <p className="text-muted">Transkrypcja obejmuje tylko początek nagrania.</p>}
@@ -53,14 +54,15 @@ function Speech({ speech }: { speech: NonNullable<AdDetail["videos"][number]["sp
 }
 
 function Recordings({ videos = [] }: { videos?: AdDetail["videos"] }) {
+  const { expert } = useExpert();
   if (!videos.length) return null;
   return <section className="grid gap-3">
     <h2 className="text-lg font-semibold">Nagrania</h2>
     {videos.map(video => <figure key={video.sha256} className="min-w-0">
-      <figcaption className="break-words font-medium">{video.name}</figcaption>
+      <figcaption className={expert ? "break-words font-medium" : "break-words text-sm text-muted"}>{video.name}</figcaption>
       <p className="text-muted">
         {video.duration_s != null && <span>Czas trwania: {video.duration_s.toLocaleString("pl-PL")} s </span>}
-        {video.width != null && video.height != null && <span> · {video.width} × {video.height} px</span>}
+        {expert && video.width != null && video.height != null && <span> · {video.width} × {video.height} px</span>}
       </p>
       {video.playable && video.url ? <>
         <video controls preload="metadata" aria-label={video.name} src={API_URL + video.url}

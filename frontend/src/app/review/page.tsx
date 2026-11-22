@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { useApi, useStored } from "@/lib/hooks";
 import type { ReviewReason } from "@/lib/api";
@@ -51,6 +51,11 @@ export default function ReviewPage() {
   const rows = queue.data?.results ?? [];
   const current = selected === null ? rows[0] : rows.find(row => row.id === selected);
   const missing = selected !== null && queue.data && !current;
+  const queuePanel = useRef<HTMLElement>(null);
+  // Po zapisie kolejka przechodzi do następnej pary; jej wiersz ma być widoczny bez szukania.
+  useEffect(() => {
+    queuePanel.current?.querySelector<HTMLElement>('[aria-pressed="true"]')?.scrollIntoView({ block: "nearest" });
+  }, [current?.id]);
   const [hint, setHint] = useStored("scamdna.review-hint", "1");
   const [hintClosed, setHintClosed] = useState(false); // gdy przeglądarka nie zapisuje localStorage
   const pages = queue.data ? Math.max(page, Math.ceil(queue.data.count / PAGE_SIZE)) : 1;
@@ -59,7 +64,7 @@ export default function ReviewPage() {
       <button aria-pressed={!comparing} className="min-h-9 rounded-md px-3 aria-pressed:bg-accent-soft" onClick={() => navigate(page, selected, false)}>Kolejka</button>
       <button disabled={!current} aria-pressed={comparing} className="min-h-9 rounded-md px-3 aria-pressed:bg-accent-soft" onClick={() => navigate(page, current?.id ?? null, true)}>Porównanie</button>
     </nav>
-    <aside className={`min-h-0 min-w-0 overflow-auto rounded-lg border border-line bg-panel p-3 lg:block ${comparing ? "hidden" : "block"}`}>
+    <aside ref={queuePanel} className={`min-h-0 min-w-0 overflow-auto rounded-lg border border-line bg-panel p-3 lg:block ${comparing ? "hidden" : "block"}`}>
       <h1 className="mb-3 flex items-baseline gap-2 px-1 text-xl font-semibold">Do oceny {queue.data && <span className="rounded-full bg-accent-soft px-2 py-0.5 text-sm font-medium text-accent">{queue.data.count} {plural(queue.data.count, "para", "pary", "par")}</span>}</h1>
       {hint === "1" && !hintClosed && <div className="mb-3 flex items-start gap-2 rounded-lg border border-line bg-bg p-3">
         <Lightbulb size={16} aria-hidden className="mt-0.5 shrink-0 text-accent" />
@@ -93,7 +98,7 @@ export default function ReviewPage() {
       </div>}
       {missing && <div role="status" className="grid justify-items-start gap-3 p-4">
         <h2 className="font-semibold">Wskazanej pary nie ma na tej stronie kolejki.</h2>
-        {Number.isSafeInteger(selected) && selected > 0 && <Link className="text-accent underline" href={`/investigation?scope=all&edge=${selected}`}>Sprawdź krawędź #{selected} w śledztwie</Link>}
+        {Number.isSafeInteger(selected) && selected > 0 && <Link className="text-accent underline" href={`/investigation?scope=all&edge=${selected}`}>{expert ? `Sprawdź krawędź #${selected} w śledztwie` : "Zobacz tę parę w śledztwie"}</Link>}
         <button className="text-accent underline" onClick={() => navigate(page, null, false)}>Wybierz parę z kolejki</button>
       </div>}
       {!current && comparing && !missing && (queue.loading ? <Loading/> : queue.error ? <ErrorBox message={queue.error} onRetry={queue.reload}/> : <button onClick={() => navigate(page, null, false)}>Wróć do kolejki</button>)}

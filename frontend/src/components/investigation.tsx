@@ -309,11 +309,11 @@ export function Investigation() {
               </td></tr>}
               {visible.map((edge) => (
                 <tr key={edge.id} data-selected={edge.id === edgeId} onClick={() => { setMobileView("Porównanie"); set({ edge: edge.id }); }} className="cursor-pointer">
-                  <td className="max-w-64 truncate">
+                  <td className="max-w-44 truncate">
                     <button type="button" className="table-action" aria-label={`Dowody powiązania reklam #${edge.source} i #${edge.target}`}>#{edge.source}</button>{" "}
                     <span className="text-muted" title={nodeById.get(edge.source)?.label}>{nodeById.get(edge.source)?.label}</span>
                   </td>
-                  <td className="max-w-64 truncate"><Mono className="text-muted">#{edge.target}</Mono> <span className="text-muted" title={nodeById.get(edge.target)?.label}>{nodeById.get(edge.target)?.label}</span></td>
+                  <td className="max-w-44 truncate"><Mono className="text-muted">#{edge.target}</Mono> <span className="text-muted" title={nodeById.get(edge.target)?.label}>{nodeById.get(edge.target)?.label}</span></td>
                   <td><RelationTag relation={edge.relation} duplicate={edge.duplicate} /></td>
                   <td>{edge.verdict ? <VerdictTag verdict={edge.verdict} /> : <span className="text-faint">do oceny</span>}</td>
                 </tr>

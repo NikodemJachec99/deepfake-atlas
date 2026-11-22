@@ -499,8 +499,8 @@ export default function GraphCanvasImpl({ nodes, edges, colorBy, layout, selecte
         ) : (
           expert ? <span>
             {nodes.length} węzłów · {drawn.size} z {edges.length} krawędzi{dense && !showAll && " · najsilniejsze dla każdego węzła"} · kółko zmienia skalę, Shift z kółkiem obraca graf · krawędź otwiera dowody, węzeł kartę reklamy
-          </span> : <span>
-            Punkt to reklama, linia to powiązanie. Kliknij linię, żeby zobaczyć dowody, albo punkt, żeby otworzyć reklamę.
+          </span> : <span className="block truncate" title="Punkt to reklama, linia to powiązanie. Kliknij linię, żeby zobaczyć dowody, albo punkt, żeby otworzyć reklamę.">
+            Kliknij linię: dowody powiązania. Kliknij punkt: karta reklamy.
           </span>
         )}
       </div>

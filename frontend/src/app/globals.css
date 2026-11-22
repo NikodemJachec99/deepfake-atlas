@@ -181,7 +181,7 @@ select {
 .atlas-group li { padding-block: .4rem; border-top: 1px solid var(--line); }
 .atlas-investigation { flex: 1; display: flex; min-height: 0; padding: .65rem; background: var(--panel); }
 .atlas-investigation > div { border: 1px solid var(--line); border-radius: .8rem; overflow: hidden; }
-@media (min-width: 1100px) { .atlas-sidebar { width: 13rem; } }
+@media (min-width: 768px) { .atlas-sidebar { width: 13rem; } }
 @media (max-width: 1000px) {
   .atlas-investigation { flex: none; display: block; }
   .atlas-investigation [data-split] { display: grid; gap: .6rem; }
@@ -196,6 +196,8 @@ select {
     position: sticky;
     left: 0;
     z-index: 1;
+    width: 7rem;
+    min-width: 7rem;
     max-width: 9rem;
     white-space: normal;
     overflow-wrap: anywhere;
